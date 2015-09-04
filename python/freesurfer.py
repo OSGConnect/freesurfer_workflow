@@ -61,6 +61,7 @@ def generate_dax():
         sys.stderr.write("{0} is not present and is needed, exiting".format(subject_file))
         return True
     dax_subject_file = Pegasus.DAX3.File(subject_file)
+    print("file://{0}".format(subject_file))
     dax_subject_file.addPFN(Pegasus.DAX3.PFN("file://{0}".format(subject_file)))
     dax.addFile(dax_subject_file)
 
@@ -183,6 +184,6 @@ def create_final_job(dax, args, subject_file):
     return errors
 
 
-if __name__ == 'main':
+if __name__ == '__main__':
     failed = generate_dax()
     sys.exit(int(failed))
