@@ -21,7 +21,7 @@ def generate_dax():
     parser.add_argument('--Sub', dest='subject', default=None, required=True,
                         help='Subject id to process')
     parser.add_argument('--nCore', dest='num_cores', default=2, type=int,
-                        required=True, help='number of cores to use')
+                        help='number of cores to use')
     parser.add_argument('--SkipRecon', dest='skip_recon',
                         action='store_true',
                         help='Skip recon processing')
