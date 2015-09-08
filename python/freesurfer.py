@@ -100,6 +100,7 @@ def create_single_job(dax, args, subject_file):
     full_recon_job.uses(subject_file, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_output.tar.gz".format(args.subject))
     full_recon_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT)
+    dax.addJob(full_recon_job)
     return errors
 
 
