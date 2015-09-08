@@ -52,7 +52,7 @@ def generate_dax():
     if not os.path.isfile(subject_file):
         sys.stderr.write("{0} is not present and is needed, exiting".format(subject_file))
         return True
-    dax_subject_file = Pegasus.DAX3.File(subject_file)
+    dax_subject_file = Pegasus.DAX3.File("{0}_defaced.mgz".format(args.subject))
     dax_subject_file.addPFN(Pegasus.DAX3.PFN("file://{0}".format(subject_file), "local"))
     dax.addFile(dax_subject_file)
 
@@ -82,9 +82,12 @@ def create_single_job(dax, args, subject_file):
     """
     errors = False
 
-    current_dir = os.getcwd()
-    full_recon = Pegasus.DAX3.Executable(name="autorecon-all.sh", arch="x86_64", installed=False)
-    full_recon.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR, "autorecon-all.sh")), "local"))
+    full_recon = Pegasus.DAX3.Executable(name="autorecon-all.sh",
+                                         arch="x86_64",
+                                         installed=False)
+    full_recon.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR,
+                                                                        "autorecon-all.sh")),
+                                       "local"))
     dax.addExecutable(full_recon)
     full_recon_job = Pegasus.DAX3.Job(name="autorecon-all")
     full_recon_job.addArguments(args.subject, subject_file, str(args.num_cores))
