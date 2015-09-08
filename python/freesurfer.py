@@ -20,7 +20,7 @@ def generate_dax():
     parser = argparse.ArgumentParser(description="generate a pegasus workflow")
     parser.add_argument('--Sub', dest='subject', default=None, required=True,
                         help='Subject id to process')
-    parser.add_argument('--nCore', dest='num_cores', default=2, type=int,
+    parser.add_argument('--nCore', dest='num_cores', default=1, type=int,
                         help='number of cores to use')
     parser.add_argument('--SkipRecon', dest='skip_recon',
                         action='store_true',
@@ -62,7 +62,7 @@ def generate_dax():
         return True
     dax_subject_file = Pegasus.DAX3.File(subject_file)
     print("file://{0}".format(subject_file))
-    dax_subject_file.addPFN(Pegasus.DAX3.PFN("file://{0}".format(subject_file)))
+    dax_subject_file.addPFN(Pegasus.DAX3.PFN("file://{0}".format(subject_file), "local"))
     dax.addFile(dax_subject_file)
 
     if args.single_job:
@@ -96,7 +96,7 @@ def create_single_job(dax, args, subject_file):
     full_recon.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(current_dir, "autorecon-all.sh")), "local"))
     dax.addExecutable(full_recon)
     full_recon_job = Pegasus.DAX3.Job(name="autorecon-all")
-    full_recon_job.addArguments(args.subject, subject_file, args.num_cores - 1)
+    full_recon_job.addArguments(args.subject, subject_file, str(args.num_cores))
     full_recon_job.uses(subject_file, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_output.tar.gz".format(args.subject))
     full_recon_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT)
@@ -120,7 +120,7 @@ def create_initial_job(dax, args, subject_file):
     autorecon_one.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(current_dir, "autorecon1.sh")), "local"))
     dax.addExecutable(autorecon_one)
     autorecon1_job = Pegasus.DAX3.Job(name="autorecon1")
-    autorecon1_job.addArguments(args.subject, subject_file, args.num_cores - 1)
+    autorecon1_job.addArguments(args.subject, subject_file, str(args.num_cores1))
     autorecon1_job.uses(subject_file, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_recon1_output.tar.gz".format(args.subject))
     autorecon1_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT)
@@ -148,7 +148,7 @@ def create_hemi_job(dax, args, hemisphere, subject_file):
     autorecon_two.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(current_dir, "autorecon2.sh")), "local"))
     dax.addExecutable(autorecon_two)
     autorecon2_job = Pegasus.DAX3.Job(name="autorecon2-{0}".format(hemisphere))
-    autorecon2_job.addArguments(args.subject, hemisphere, args.num_cores - 1)
+    autorecon2_job.addArguments(args.subject, hemisphere, str(args.num_cores))
     output = Pegasus.DAX3.File("{0}_recon1_output.tar.gz".format(args.subject))
     autorecon2_job.uses(output, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_recon2_output.tar.gz".format(args.subject))
@@ -173,7 +173,7 @@ def create_final_job(dax, args, subject_file):
     autorecon_one.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(current_dir, "autorecon3.sh")), "local"))
     dax.addExecutable(autorecon_one)
     autorecon3_job = Pegasus.DAX3.Job(name="autorecon3")
-    autorecon3_job.addArguments(args.subject, subject_file, args.num_cores - 1)
+    autorecon3_job.addArguments(args.subject, subject_file, str(args.num_cores ))
     lh_output = Pegasus.DAX3.File("{0}_recon2_lh_output.tar.gz".format(args.subject))
     autorecon3_job.uses(lh_output, link=Pegasus.DAX3.Link.INPUT)
     rh_output = Pegasus.DAX3.File("{0}_recon2_rh_output.tar.gz".format(args.subject))
