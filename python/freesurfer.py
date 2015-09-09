@@ -98,7 +98,7 @@ def create_single_job(dax, args, subject_file, subject):
                                        "local"))
     if not dax.hasExecutable(full_recon):
         dax.addExecutable(full_recon)
-    full_recon_job = Pegasus.DAX3.Job(name="autorecon-all_{0}".format(subject))
+    full_recon_job = Pegasus.DAX3.Job(name="autorecon-all.sh".format(subject))
     full_recon_job.addArguments(args.subject, subject_file, str(args.num_cores))
     full_recon_job.uses(subject_file, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_output.tar.gz".format(args.subject))
