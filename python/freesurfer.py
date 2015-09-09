@@ -59,14 +59,14 @@ def generate_dax():
         dax.addFile(dax_subject_file)
 
         if args.single_job:
-            errors &= create_single_job(dax, args, dax_subject_file)
+            errors &= create_single_job(dax, args, dax_subject_file, subject)
         else:
             # setup autorecon1 run
             if not args.skip_recon:
-                errors &= create_initial_job(dax, args, dax_subject_file)
-            errors &= create_hemi_job(dax, args, 'rh', dax_subject_file)
-            errors &= create_hemi_job(dax, args, 'lh', dax_subject_file)
-            errors &= create_final_job(dax, args, dax_subject_file)
+                errors &= create_initial_job(dax, args, dax_subject_file, subject)
+            errors &= create_hemi_job(dax, args, 'rh', subject)
+            errors &= create_hemi_job(dax, args, 'lh', subject)
+            errors &= create_final_job(dax, args, subject)
         if not errors:  # no problems while generating DAX
             curr_date = time.strftime("%Y%m%d_%H%M%S", time.gmtime(time.time()))
             if args.single_job:
@@ -146,7 +146,6 @@ def create_hemi_job(dax, args, hemisphere, subject):
     :param dax: Pegasus ADAG
     :param args: parsed arguments from command line
     :param hemisphere: hemisphere to process (should be rh or lh)
-    :param subject_file: pegasus File object pointing to the subject mri file
     :param subject: name of subject being processed
     :return: True if errors occurred, False otherwise
     """
@@ -177,13 +176,13 @@ def create_hemi_job(dax, args, hemisphere, subject):
     return errors
 
 
-def create_final_job(dax, args, subject_file):
+def create_final_job(dax, args, subject):
     """
     Set up jobs for the autorecon1 process for freesurfer
 
     :param dax: Pegasus ADAG
     :param args: parsed arguments from command line
-    :param subject_file: pegasus File object pointing to the subject mri file
+    :param subject: name of subject being processed
     :return: True if errors occurred, False otherwise
     """
     errors = False
