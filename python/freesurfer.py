@@ -67,14 +67,14 @@ def generate_dax():
             errors &= create_hemi_job(dax, args, 'rh', subject)
             errors &= create_hemi_job(dax, args, 'lh', subject)
             errors &= create_final_job(dax, args, subject)
-        if not errors:  # no problems while generating DAX
-            curr_date = time.strftime("%Y%m%d_%H%M%S", time.gmtime(time.time()))
-            if args.single_job:
-                dax_name = "single_dax_{0}.xml".format(curr_date)
-            else:
-                dax_name = "diamond_dax.xml_{0}".format(curr_date)
-            with open(dax_name, 'w') as f:
-                dax.writeXML(f)
+    if not errors:  # no problems while generating DAX
+        curr_date = time.strftime("%Y%m%d_%H%M%S", time.gmtime(time.time()))
+        if args.single_job:
+            dax_name = "single_dax_{0}.xml".format(curr_date)
+        else:
+            dax_name = "diamond_dax.xml_{0}".format(curr_date)
+        with open(dax_name, 'w') as f:
+            dax.writeXML(f)
     return errors
 
 
