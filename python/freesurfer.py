@@ -70,9 +70,9 @@ def generate_dax():
         if not errors:  # no problems while generating DAX
             curr_date = time.strftime("%Y%m%d_%H%M%S", time.gmtime(time.time()))
             if args.single_job:
-                dax_name = "single_dax_{1}.xml".format(curr_date)
+                dax_name = "single_dax_{0}.xml".format(curr_date)
             else:
-                dax_name = "diamond_dax.xml_{1}".format(curr_date)
+                dax_name = "diamond_dax.xml_{0Use }".format(curr_date)
             with open(dax_name, 'w') as f:
                 dax.writeXML(f)
     return errors
