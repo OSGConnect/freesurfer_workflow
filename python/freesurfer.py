@@ -70,20 +70,21 @@ def generate_dax():
         if not errors:  # no problems while generating DAX
             curr_date = time.strftime("%Y%m%d_%H%M%S", time.gmtime(time.time()))
             if args.single_job:
-                dax_name = "{0}_single_dax_{1}.xml".format(args.subject,curr_date)
+                dax_name = "single_dax_{1}.xml".format(curr_date)
             else:
-                dax_name = "{0}_diamond_dax.xml_{1}".format(args.subject, curr_date)
+                dax_name = "diamond_dax.xml_{1}".format(curr_date)
             with open(dax_name, 'w') as f:
                 dax.writeXML(f)
     return errors
 
 
-def create_single_job(dax, args, subject_file):
+def create_single_job(dax, args, subject_file, subject):
     """
 
     :param dax: Pegasus ADAG
     :param args: parsed arguments from command line
     :param subject_file: pegasus File object pointing to the subject mri file
+    :param subject: name of subject being processed
     :return: exit code (0 for success, 1 for failure)
     :return: True if errors occurred, False otherwise
     """
@@ -95,8 +96,9 @@ def create_single_job(dax, args, subject_file):
     full_recon.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR,
                                                                         "autorecon-all.sh")),
                                        "local"))
-    dax.addExecutable(full_recon)
-    full_recon_job = Pegasus.DAX3.Job(name="autorecon-all")
+    if not dax.hasExecutable(full_recon):
+        dax.addExecutable(full_recon)
+    full_recon_job = Pegasus.DAX3.Job(name="autorecon-all_{0}".format(subject))
     full_recon_job.addArguments(args.subject, subject_file, str(args.num_cores))
     full_recon_job.uses(subject_file, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_output.tar.gz".format(args.subject))
@@ -110,21 +112,24 @@ def create_single_job(dax, args, subject_file):
     return errors
 
 
-def create_initial_job(dax, args, subject_file):
+def create_initial_job(dax, args, subject_file, subject):
     """
     Set up jobs for the autorecon1 process for freesurfer
 
     :param dax: Pegasus ADAG
     :param args: parsed arguments from command line
     :param subject_file: pegasus File object pointing to the subject mri file
+    :param subject: name of subject being processed
     :return: True if errors occurred, False otherwise
     """
     errors = False
 
     autorecon_one = Pegasus.DAX3.Executable(name="autorecon1.sh", arch="x86_64", installed=False)
     autorecon_one.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR, "autorecon1.sh")), "local"))
-    dax.addExecutable(autorecon_one)
-    autorecon1_job = Pegasus.DAX3.Job(name="autorecon1")
+    if not dax.hasExecutable(autorecon_one):
+        dax.addExecutable(autorecon_one)
+
+    autorecon1_job = Pegasus.DAX3.Job(name="autorecon1_{0}".format(subject))
     autorecon1_job.addArguments(args.subject, subject_file, str(args.num_cores1))
     autorecon1_job.uses(subject_file, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_recon1_output.tar.gz".format(args.subject))
@@ -134,7 +139,7 @@ def create_initial_job(dax, args, subject_file):
     return errors
 
 
-def create_hemi_job(dax, args, hemisphere, subject_file):
+def create_hemi_job(dax, args, hemisphere, subject):
     """
     Set up job for processing a given hemisphere
 
@@ -142,19 +147,21 @@ def create_hemi_job(dax, args, hemisphere, subject_file):
     :param args: parsed arguments from command line
     :param hemisphere: hemisphere to process (should be rh or lh)
     :param subject_file: pegasus File object pointing to the subject mri file
+    :param subject: name of subject being processed
     :return: True if errors occurred, False otherwise
     """
     errors = False
     autorecon_two = Pegasus.DAX3.Executable(name="autorecon2.sh", arch="x86_64", installed=False)
     autorecon_two.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR, "autorecon2.sh")), "local"))
-    dax.addExecutable(autorecon_two)
+    if not dax.hasExecutable(autorecon_two):
+        dax.addExecutable(autorecon_two)
     current_dir = os.getcwd()
     if hemisphere not in ['rh', 'lh']:
         return True
     autorecon_two = Pegasus.DAX3.Executable(name="autorecon2.sh", arch="x86_64", installed=False)
     autorecon_two.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(current_dir, "autorecon2.sh")), "local"))
     dax.addExecutable(autorecon_two)
-    autorecon2_job = Pegasus.DAX3.Job(name="autorecon2-{0}".format(hemisphere))
+    autorecon2_job = Pegasus.DAX3.Job(name="autorecon2-{0}_{1}".format(hemisphere, subject))
     autorecon2_job.addArguments(args.subject, hemisphere, str(args.num_cores))
     output = Pegasus.DAX3.File("{0}_recon1_output.tar.gz".format(args.subject))
     autorecon2_job.uses(output, link=Pegasus.DAX3.Link.INPUT)
@@ -182,8 +189,9 @@ def create_final_job(dax, args, subject_file):
     errors = False
     autorecon_three = Pegasus.DAX3.Executable(name="autorecon3.sh", arch="x86_64", installed=False)
     autorecon_three.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR, "autorecon3.sh")), "local"))
-    dax.addExecutable(autorecon_three)
-    autorecon3_job = Pegasus.DAX3.Job(name="autorecon3")
+    if not dax.hasExecutable(autorecon_three):
+        dax.addExecutable(autorecon_three)
+    autorecon3_job = Pegasus.DAX3.Job(name="autorecon3_{0}".format(subject))
     autorecon3_job.addArguments(args.subject, subject_file, str(args.num_cores ))
     lh_output = Pegasus.DAX3.File("{0}_recon2_lh_output.tar.gz".format(args.subject))
     autorecon3_job.uses(lh_output, link=Pegasus.DAX3.Link.INPUT)
