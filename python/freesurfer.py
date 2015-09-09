@@ -5,6 +5,7 @@
 import sys
 import os
 import argparse
+import time
 
 import Pegasus.DAX3
 
@@ -21,8 +22,8 @@ def generate_dax():
     errors = False
     parser = argparse.ArgumentParser(description="generate a pegasus workflow")
     parser.add_argument('--Sub', dest='subject', default=None, required=True,
-                        help='Subject id to process')
-    parser.add_argument('--nCore', dest='num_cores', default=1, type=int,
+                        help='Subject id(s) to process (e.g. --Sub 182,64,43)')
+    parser.add_argument('--nCore', dest='num_cores', default=2, type=int,
                         help='number of cores to use')
     parser.add_argument('--SkipRecon', dest='skip_recon',
                         action='store_true',
@@ -30,8 +31,6 @@ def generate_dax():
     parser.add_argument('--single-job', dest='single_job',
                         action='store_true',
                         help='Do all processing in a single job')
-    parser.add_argument('--tokenID', dest='token_id', default=None,
-                        help='Token id to process')
     parser.add_argument('--hemi', dest='hemisphere', default=None,
                         choices=['rh', 'lh'],
                         help='hemisphere to process (rh or lh)')
@@ -39,35 +38,43 @@ def generate_dax():
                         help='Filename to use for logging')
     parser.add_argument('--subject_dir', dest='subject_dir', default=None,
                         required=True, help='Directory with subject data files (mgz)')
-    parser.add_argument('--debug', dest='debug',
+    parser.add_argument('--debug', dest='debug', default=False,
                         action='store_true',
                         help='Enable debugging output')
     args = parser.parse_args(sys.argv[1:])
 
     dax = Pegasus.DAX3.ADAG('freesurfer')
     # setup data file locations
+    subjects = args.subject.split(',')
     subject_dir = args.subject_dir
-    subject_file = os.path.join(subject_dir, "{0}_defaced.mgz".format(args.subject))
-    subject_file = os.path.abspath(subject_file)
-    if not os.path.isfile(subject_file):
-        sys.stderr.write("{0} is not present and is needed, exiting".format(subject_file))
-        return True
-    dax_subject_file = Pegasus.DAX3.File("{0}_defaced.mgz".format(args.subject))
-    dax_subject_file.addPFN(Pegasus.DAX3.PFN("file://{0}".format(subject_file), "local"))
-    dax.addFile(dax_subject_file)
 
-    if args.single_job:
-        errors &= create_single_job(dax, args, dax_subject_file)
-    else:
-        # setup autorecon1 run
-        if not args.skip_recon:
-            errors &= create_initial_job(dax, args, dax_subject_file)
-        errors &= create_hemi_job(dax, args, 'rh', dax_subject_file)
-        errors &= create_hemi_job(dax, args, 'lh', dax_subject_file)
-        errors &= create_final_job(dax, args, dax_subject_file)
-    if not errors:  # no problems while generating DAX
-        with open("dax.xml", 'w') as f:
-            dax.writeXML(f)
+    for subject in subjects:
+        subject_file = os.path.join(subject_dir, "{0}_defaced.mgz".format(subject))
+        subject_file = os.path.abspath(subject_file)
+        if not os.path.isfile(subject_file):
+            sys.stderr.write("{0} is not present and is needed, exiting".format(subject_file))
+            return True
+        dax_subject_file = Pegasus.DAX3.File("{0}_defaced.mgz".format(subject))
+        dax_subject_file.addPFN(Pegasus.DAX3.PFN("file://{0}".format(subject_file), "local"))
+        dax.addFile(dax_subject_file)
+
+        if args.single_job:
+            errors &= create_single_job(dax, args, dax_subject_file)
+        else:
+            # setup autorecon1 run
+            if not args.skip_recon:
+                errors &= create_initial_job(dax, args, dax_subject_file)
+            errors &= create_hemi_job(dax, args, 'rh', dax_subject_file)
+            errors &= create_hemi_job(dax, args, 'lh', dax_subject_file)
+            errors &= create_final_job(dax, args, dax_subject_file)
+        if not errors:  # no problems while generating DAX
+            curr_date = time.strftime("%Y%m%d_%H%M%S", time.gmtime(time.time()))
+            if args.single_job:
+                dax_name = "{0}_single_dax_{1}.xml".format(args.subject,curr_date)
+            else:
+                dax_name = "{0}_diamond_dax.xml_{1}".format(args.subject, curr_date)
+            with open(dax_name, 'w') as f:
+                dax.writeXML(f)
     return errors
 
 
@@ -93,7 +100,12 @@ def create_single_job(dax, args, subject_file):
     full_recon_job.addArguments(args.subject, subject_file, str(args.num_cores))
     full_recon_job.uses(subject_file, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_output.tar.gz".format(args.subject))
-    full_recon_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT)
+    full_recon_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=True)
+    full_recon_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
+    if args.num_cores != 2:
+        full_recon_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cores", args.num_cores))
+    else:
+        full_recon_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cores", "2"))
     dax.addJob(full_recon_job)
     return errors
 
@@ -148,6 +160,11 @@ def create_hemi_job(dax, args, hemisphere, subject_file):
     autorecon2_job.uses(output, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_recon2_output.tar.gz".format(args.subject))
     autorecon2_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT)
+    autorecon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
+    if args.num_cores != 2:
+        autorecon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cores", args.num_cores))
+    else:
+        autorecon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cores", "2"))
     dax.addJob(autorecon2_job)
 
     return errors
@@ -173,9 +190,8 @@ def create_final_job(dax, args, subject_file):
     rh_output = Pegasus.DAX3.File("{0}_recon2_rh_output.tar.gz".format(args.subject))
     autorecon3_job.uses(rh_output, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_output.tar.gz".format(args.subject))
-    autorecon3_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT)
+    autorecon3_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=True)
     dax.addJob(autorecon3_job)
-
     return errors
 
 
