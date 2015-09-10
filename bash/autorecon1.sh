@@ -1,4 +1,4 @@
-#!/usr/bin/envbash
+#!/usr/bin/env bash
 
 module load freesurfer/5.3.0
 date
