@@ -105,9 +105,9 @@ def create_single_job(dax, args, subject_file, subject):
     full_recon_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=True)
     full_recon_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
     if args.num_cores != 2:
-        full_recon_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cores", args.num_cores))
+        full_recon_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cpus", args.num_cores))
     else:
-        full_recon_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cores", "2"))
+        full_recon_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cpus", "2"))
     dax.addJob(full_recon_job)
     return errors
 
@@ -165,9 +165,9 @@ def create_hemi_job(dax, args, hemisphere, subject):
     autorecon2_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT)
     autorecon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
     if args.num_cores != 2:
-        autorecon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cores", args.num_cores))
+        autorecon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cpus", args.num_cores))
     else:
-        autorecon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cores", "2"))
+        autorecon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cpus", "2"))
     dax.addJob(autorecon2_job)
 
     return errors
