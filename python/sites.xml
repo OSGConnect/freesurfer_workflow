@@ -23,7 +23,7 @@
         </head-fs>
         <profile namespace="pegasus" key="style" >condor</profile>
         <profile namespace="condor" key="universe" >vanilla</profile>
-        <profile namespace="condor" key="requirements" >(HAS_CVMFS_oasis_opensciencegrid_org =?= TRUE) && !regexp("uc3-c[0-3][0-9][0-9].*", Machine)</profile>
+        <profile namespace="condor" key="requirements" >(HAS_CVMFS_oasis_opensciencegrid_org =?= TRUE) &amp;&amp; !regexp("uc3-c[0-3][0-9][0-9].*", Machine)</profile>
 
     </site>
 </sitecatalog>

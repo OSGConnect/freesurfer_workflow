@@ -72,7 +72,7 @@ def generate_dax():
         if args.single_job:
             dax_name = "single_dax_{0}.xml".format(curr_date)
         else:
-            dax_name = "diamond_dax.xml_{0}".format(curr_date)
+            dax_name = "diamond_dax_{0}.xml".format(curr_date)
         with open(dax_name, 'w') as f:
             dax.writeXML(f)
     return errors

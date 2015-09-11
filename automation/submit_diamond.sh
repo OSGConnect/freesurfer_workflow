@@ -4,20 +4,20 @@
 
 curr_dir="$PWD"
 cd ../python
-subject_files=`ls $4/*_defaced.mgz`
 subjects=""
-for file in subject_files;
+for i in `ls $4/*_defaced.mgz`;
 do
-  subject_name=`basename $file | sed 's/\(.*\)_defaced.mgz/\1/' `
-  subjects="$subjects,$subject_name"
+  subject_name=`basename $i | sed 's/\(.*\)_defaced.mgz/\1/'`
+  subjects="$subjects$subject_name,"
 done
-for i in {1..$1}
+subjects=`echo $subjects | sed 's/.$//'`
+for i in `seq $1`
 do
     ./freesurfer.py --Sub $subjects --subject_dir=$4 --nCore $2
     sleep 1
 done
 
-for i in single*.xml
+for i in `ls diamond*.xml`;
 do
     pegasus-plan --conf pegasusrc    \
                  --sites condorpool  \
