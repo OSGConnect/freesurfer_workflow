@@ -133,7 +133,7 @@ def create_initial_job(dax, args, subject_file, subject):
     autorecon1_job.addArguments(subject, subject_file, str(args.num_cores))
     autorecon1_job.uses(subject_file, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_recon1_output.tar.gz".format(subject))
-    autorecon1_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT)
+    autorecon1_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=False)
     dax.addJob(autorecon1_job)
 
     return errors
@@ -162,7 +162,7 @@ def create_hemi_job(dax, args, hemisphere, subject):
     output = Pegasus.DAX3.File("{0}_recon1_output.tar.gz".format(subject))
     autorecon2_job.uses(output, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_recon2_{1}_output.tar.gz".format(subject, hemisphere))
-    autorecon2_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT)
+    autorecon2_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=False)
     autorecon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
     if args.num_cores != 2:
         autorecon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cpus", args.num_cores))
