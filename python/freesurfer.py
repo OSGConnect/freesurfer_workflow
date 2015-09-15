@@ -99,15 +99,12 @@ def create_single_job(dax, args, subject_file, subject):
     if not dax.hasExecutable(full_recon):
         dax.addExecutable(full_recon)
     full_recon_job = Pegasus.DAX3.Job(name="autorecon-all.sh".format(subject))
-    full_recon_job.addArguments(args.subject, subject_file, str(args.num_cores))
+    full_recon_job.addArguments(subject, subject_file, str(args.num_cores))
     full_recon_job.uses(subject_file, link=Pegasus.DAX3.Link.INPUT)
-    output = Pegasus.DAX3.File("{0}_output.tar.gz".format(args.subject))
+    output = Pegasus.DAX3.File("{0}_output.tar.gz".format(subject))
     full_recon_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=True)
     full_recon_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
-    if args.num_cores != 2:
-        full_recon_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cpus", args.num_cores))
-    else:
-        full_recon_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cpus", "2"))
+    full_recon_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cpus", args.num_cores))
     dax.addJob(full_recon_job)
     return errors
 
@@ -164,10 +161,7 @@ def create_hemi_job(dax, args, hemisphere, subject):
     output = Pegasus.DAX3.File("{0}_recon2_{1}_output.tar.gz".format(subject, hemisphere))
     autorecon2_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=False)
     autorecon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
-    if args.num_cores != 2:
-        autorecon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cpus", args.num_cores))
-    else:
-        autorecon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cpus", "2"))
+    autorecon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cpus", args.num_cores))
     dax.addJob(autorecon2_job)
 
     return errors
