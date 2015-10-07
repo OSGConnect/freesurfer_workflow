@@ -26,4 +26,4 @@ do
                  --dax $i            \
                  --submit
 done
-rm single*.xml
+rm serial*.xml
