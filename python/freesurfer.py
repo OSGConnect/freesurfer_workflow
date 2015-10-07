@@ -118,13 +118,12 @@ def create_single_job(dax, args, subject_file, subject):
     return errors
 
 
-def create_recon2_job(dax, args, subject_file, subject):
+def create_recon2_job(dax, args, subject):
     """
     Set up jobs for the autorecon1 process for freesurfer
 
     :param dax: Pegasus ADAG
     :param args: parsed arguments from command line
-    :param subject_file: pegasus File object pointing to the subject mri file
     :param subject: name of subject being processed
     :return: True if errors occurred, False otherwise
     """
