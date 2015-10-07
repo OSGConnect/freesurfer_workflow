@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# usage submit_single.sh [# of submits] [# of cores] [workflow_dir] [subject_dir]
+# usage submit_serial.sh [# of submits] [# of cores] [workflow_dir] [subject_dir]
 
 curr_dir="$PWD"
 cd ../python
@@ -13,7 +13,7 @@ done
 subjects=`echo $subjects | sed 's/.$//'`
 for i in `seq $1`
 do
-    ./freesurfer.py --single-job --Sub $subjects --subject_dir=$4 --nCore $2
+    ./freesurfer.py --serial-job --Sub $subjects --subject_dir=$4 --nCore $2
     sleep 1
 done
 
