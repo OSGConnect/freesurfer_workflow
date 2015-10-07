@@ -31,6 +31,9 @@ def generate_dax():
     parser.add_argument('--single-job', dest='single_job',
                         action='store_true',
                         help='Do all processing in a single job')
+    parser.add_argument('--serial-job', dest='serial_job',
+                        action='store_true',
+                        help='Do all processing as a serial workflow')
     parser.add_argument('--hemi', dest='hemisphere', default=None,
                         choices=['rh', 'lh'],
                         help='hemisphere to process (rh or lh)')
@@ -60,6 +63,12 @@ def generate_dax():
 
         if args.single_job:
             errors &= create_single_job(dax, args, dax_subject_file, subject)
+        elif args.serial_job:
+            # setup autorecon1 run
+            if not args.skip_recon:
+                errors &= create_initial_job(dax, args, dax_subject_file, subject)
+            errors &= create_recon2_job(dax, args, subject)
+            errors &= create_final_job(dax, args, subject)
         else:
             # setup autorecon1 run
             if not args.skip_recon:
@@ -109,6 +118,36 @@ def create_single_job(dax, args, subject_file, subject):
     return errors
 
 
+def create_recon2_job(dax, args, subject_file, subject):
+    """
+    Set up jobs for the autorecon1 process for freesurfer
+
+    :param dax: Pegasus ADAG
+    :param args: parsed arguments from command line
+    :param subject_file: pegasus File object pointing to the subject mri file
+    :param subject: name of subject being processed
+    :return: True if errors occurred, False otherwise
+    """
+    errors = False
+
+    full_recon = Pegasus.DAX3.Executable(name="autorecon2-whole.sh",
+                                         arch="x86_64",
+                                         installed=False)
+    full_recon.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR,
+                                                                        "autorecon2-whole.sh")),
+                                       "local"))
+    if not dax.hasExecutable(full_recon):
+        dax.addExecutable(full_recon)
+    full_recon_job = Pegasus.DAX3.Job(name="autorecon2-whole.sh".format(subject))
+    full_recon_job.addArguments(subject, subject_file, str(args.num_cores))
+    full_recon_job.uses(subject_file, link=Pegasus.DAX3.Link.INPUT)
+    output = Pegasus.DAX3.File("{0}_recon2_output.tar.gz".format(subject))
+    full_recon_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=True)
+    full_recon_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
+    full_recon_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cpus", args.num_cores))
+    dax.addJob(full_recon_job)
+    return errors
+
 def create_initial_job(dax, args, subject_file, subject):
     """
     Set up jobs for the autorecon1 process for freesurfer
@@ -126,7 +165,7 @@ def create_initial_job(dax, args, subject_file, subject):
     if not dax.hasExecutable(autorecon_one):
         dax.addExecutable(autorecon_one)
 
-    autorecon1_job = Pegasus.DAX3.Job(name="autorecon1.sh")
+    autorecon1_job = Pegasus.DAX3.Job(name="autorecon2.sh")
     autorecon1_job.addArguments(subject, subject_file, str(args.num_cores))
     autorecon1_job.uses(subject_file, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_recon1_output.tar.gz".format(subject))
@@ -183,10 +222,14 @@ def create_final_job(dax, args, subject):
         dax.addExecutable(autorecon_three)
     autorecon3_job = Pegasus.DAX3.Job(name="autorecon3.sh")
     autorecon3_job.addArguments(subject, str(args.num_cores))
-    lh_output = Pegasus.DAX3.File("{0}_recon2_lh_output.tar.gz".format(subject))
-    autorecon3_job.uses(lh_output, link=Pegasus.DAX3.Link.INPUT)
-    rh_output = Pegasus.DAX3.File("{0}_recon2_rh_output.tar.gz".format(subject))
-    autorecon3_job.uses(rh_output, link=Pegasus.DAX3.Link.INPUT)
+    if args.serial_job:
+        recon2_output = Pegasus.DAX3.File("{0}_recon2_output.tar.gz".format(subject))
+        autorecon3_job.uses(recon2_output, link=Pegasus.DAX3.Link.INPUT)
+    else:
+        lh_output = Pegasus.DAX3.File("{0}_recon2_lh_output.tar.gz".format(subject))
+        autorecon3_job.uses(lh_output, link=Pegasus.DAX3.Link.INPUT)
+        rh_output = Pegasus.DAX3.File("{0}_recon2_rh_output.tar.gz".format(subject))
+        autorecon3_job.uses(rh_output, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_output.tar.gz".format(subject))
     autorecon3_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=True)
     dax.addJob(autorecon3_job)
