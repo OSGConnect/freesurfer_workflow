@@ -80,6 +80,8 @@ def generate_dax():
         curr_date = time.strftime("%Y%m%d_%H%M%S", time.gmtime(time.time()))
         if args.single_job:
             dax_name = "single_dax_{0}.xml".format(curr_date)
+        elif args.serial_job:
+            dax_name = "serial_dax_{0}.xml".format(curr_date)
         else:
             dax_name = "diamond_dax_{0}.xml".format(curr_date)
         with open(dax_name, 'w') as f:
@@ -129,22 +131,23 @@ def create_recon2_job(dax, args, subject):
     """
     errors = False
 
-    full_recon = Pegasus.DAX3.Executable(name="autorecon2-whole.sh",
+    recon2 = Pegasus.DAX3.Executable(name="autorecon2-whole.sh",
                                          arch="x86_64",
                                          installed=False)
-    full_recon.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR,
+    recon2.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR,
                                                                         "autorecon2-whole.sh")),
                                        "local"))
-    if not dax.hasExecutable(full_recon):
-        dax.addExecutable(full_recon)
-    full_recon_job = Pegasus.DAX3.Job(name="autorecon2-whole.sh".format(subject))
-    full_recon_job.addArguments(subject, subject_file, str(args.num_cores))
-    full_recon_job.uses(subject_file, link=Pegasus.DAX3.Link.INPUT)
+    if not dax.hasExecutable(recon2):
+        dax.addExecutable(recon2)
+    recon2_job = Pegasus.DAX3.Job(name="autorecon2-whole.sh".format(subject))
+    recon2_job.addArguments(subject, str(args.num_cores))
+    output = Pegasus.DAX3.File("{0}_recon1_output.tar.gz".format(subject))
+    recon2_job.uses(output, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_recon2_output.tar.gz".format(subject))
-    full_recon_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=True)
-    full_recon_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
-    full_recon_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cpus", args.num_cores))
-    dax.addJob(full_recon_job)
+    recon2_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=True)
+    recon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
+    recon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cpus", args.num_cores))
+    dax.addJob(recon2_job)
     return errors
 
 def create_initial_job(dax, args, subject_file, subject):
