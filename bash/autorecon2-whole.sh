@@ -17,6 +17,6 @@ tar xvzf $1_recon1_output.tar.gz
 recon-all                                                               \
         -s $1                                                           \
         -autorecon2                                                     \
-        -openmp $3
+        -openmp $2
 
 tar cvzf $WD/$1_recon2_output.tar.gz $SUBJECTS_DIR/*
