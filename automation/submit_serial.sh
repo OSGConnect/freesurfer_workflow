@@ -17,7 +17,7 @@ do
     sleep 1
 done
 
-for i in `ls single*.xml`;
+for i in `ls serial*.xml`;
 do
     pegasus-plan --conf pegasusrc    \
                  --sites condorpool  \
