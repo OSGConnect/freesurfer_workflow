@@ -167,7 +167,7 @@ def create_initial_job(dax, args, subject_file, subject):
     if not dax.hasExecutable(autorecon_one):
         dax.addExecutable(autorecon_one)
 
-    autorecon1_job = Pegasus.DAX3.Job(name="autorecon2.sh")
+    autorecon1_job = Pegasus.DAX3.Job(name="autorecon1.sh")
     autorecon1_job.addArguments(subject, subject_file, str(args.num_cores))
     autorecon1_job.uses(subject_file, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_recon1_output.tar.gz".format(subject))
