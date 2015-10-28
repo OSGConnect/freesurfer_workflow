@@ -89,6 +89,8 @@ def get_user_params(environ):
     :return: tuple with userid, security_token
     """
     query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
+    if 'userid' not in query_dict  or 'token' not in query_dict:
+        return '', ''
     user_id = query_dict['userid']
     token = query_dict['token']
     return user_id, token
