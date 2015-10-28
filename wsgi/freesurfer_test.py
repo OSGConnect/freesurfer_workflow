@@ -7,7 +7,6 @@ from wsgiref.simple_server import make_server
 import socket
 import sys
 
-import psycopg2
 
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
@@ -157,6 +156,12 @@ def application(environ, start_response):
     :return: a list with the response_body to return to client
     """
 
+    if 'REQUEST_METHOD' not in environ:
+        response_body = "No request method"
+        response_headers = [('Content-Type', 'text/html'),
+                            ('Content-Length', str(len(response_body)))]
+        print response_body
+        return [response_body]
     if environ['REQUEST_METHOD'] == 'GET':
         response_body, status = get_current_jobs(environ)
     elif environ['REQUEST_METHOD'] == 'POST':
@@ -178,5 +183,5 @@ if __name__ == '__main__':
     parser.add_argument('--dbparams', dest='db_param_file', default=PARAM_FILE_LOCATION,
                         help='location of file with database information')
     args = parser.parse_args(sys.argv[1:])
-    srv = make_server(args.hostname, args.db_param_file, 8080, application)
+    srv = make_server(args.hostname, 8080, application)
     srv.serve_forever()
