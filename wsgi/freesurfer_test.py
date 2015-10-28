@@ -76,7 +76,7 @@ def delete_job(environ):
     :return: a tuple with response_body, status
     """
     response_body = "{ \"status\": 200,\n \"result\": \"success\" }"
-    status = 200
+    status = '200 OK'
     return (response_body, status)
 
 
@@ -118,21 +118,21 @@ def get_current_jobs(environ):
     userid, secret = get_user_params(environ)
     if not validate_user(userid, secret):
         response_body = "{ \"status\": 401,\n \"result\": \"invalid user\" }"
-        status = 401
+        status = '401 Not Authorized'
         return response_body, status
 
-    response_body = "{ \n"
+    response_body = "{{ \n"
     response_body += " jobs: ["
     jobs = [(1, 'subj_1.mgz', 'job_name1', 'PROCESSING', 'http://test.url/output_1.mgz'),
             (23, 'subj_182.mgz', 'my_job2', 'COMPLETED', 'http://test.url/output_182.mgz'),]
     for job in jobs:
-        response_body += '{ "id" : "{0}",'.format(job[0])
-        response_body += ' "input" : "{0}"", "job_name": "{1}, "url": "{2}"}'.format(job[1], job[2], job[3])
-        response_body += "},\n"
+        response_body += '{{ "id" : "{0}",'.format(job[0])
+        response_body += ' "input" : "{0}"", "job_name": "{1}, "url": "{2}"}}'.format(job[1], job[2], job[3])
+        response_body += "}},\n"
     if response_body[-2:-1] == ",\n":
         response_body = response_body[:-2] + "\n"
     response_body += "]\n}"
-    status = 200
+    status = '200 OK'
     return response_body, status
 
 
@@ -145,7 +145,7 @@ def submit_job(environ):
     :return: a tuple with response_body, status
     """
     response_body = "{ \"status\": 200,\n \"result\": \"success\" }"
-    status = 200
+    status = '200 OK'
     return response_body, status
 
 
