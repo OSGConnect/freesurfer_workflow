@@ -6,24 +6,9 @@ import argparse
 from wsgiref.simple_server import make_server
 import socket
 import sys
+import random
 
-
-
-PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
 TIMEZONE = "US/Central"
-
-
-def save_file(environ, file_name):
-    """
-    Save a file that's uploaded using POST
-
-    :param environ:
-    :param file_name:
-    :return:
-    """
-    uploaded_file = open(file_name, 'w')
-    uploaded_file.write(environ['wsgi.input'].read())
-    uploaded_file.close()
 
 
 def get_db_parameters():
@@ -41,16 +26,6 @@ def get_db_parameters():
             parameters['user'],
             parameters['password'],
             parameters['hostname'])
-
-
-def get_db_client():
-    """
-    Get a postgresql client instance and return it
-
-    :return: a redis client instance or None if failure occurs
-    """
-    db, user, password, host = get_db_parameters()
-    return psycopg2.connect(database=db, user=user, host=host)
 
 
 def publish_record(record, channel, redis_client):
@@ -77,7 +52,10 @@ def delete_job(environ):
     """
     response_body = "{ \"status\": 200,\n \"result\": \"success\" }"
     status = '200 OK'
-    return (response_body, status)
+    if (random.random() > 0.9):
+        # give an error in 10% of the cases
+        return "{ \"status\": 500,\n \"result\": \"Server Error\" }", '500 Server Error'
+    return response_body, status
 
 
 def get_user_params(environ):
@@ -103,6 +81,10 @@ def validate_user(userid, token):
     :param token:  security token
     :return: True if credentials are valid, false otherwise
     """
+    import random
+    if random.random() > 0.9:
+        # give an error in 10% of the cases
+        return False
 
     return True
 
@@ -144,9 +126,12 @@ def submit_job(environ):
     :param environ: dictionary with environment variables (See PEP 333)
     :return: a tuple with response_body, status
     """
-    response_body = "{ \"status\": 200,\n \"result\": \"success\" }"
     status = '200 OK'
-    return response_body, status
+    if random.random() > 0.9:
+        # give an error in 10% of the cases
+        return "{ \"status\": 500,\n \"result\": \"server error\" }", '500 Server Error'
+
+    return "{ \"status\": 200,\n \"result\": \"success\" }", '200 OK'
 
 
 def application(environ, start_response):
@@ -162,6 +147,7 @@ def application(environ, start_response):
         response_body = "No request method"
         response_headers = [('Content-Type', 'text/html'),
                             ('Content-Length', str(len(response_body)))]
+        start_response('200 OK', response_headers)
         print response_body
         return [response_body]
     if environ['REQUEST_METHOD'] == 'GET':
