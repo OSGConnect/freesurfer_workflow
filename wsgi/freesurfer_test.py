@@ -11,18 +11,29 @@ import random
 TIMEZONE = "US/Central"
 
 
-def publish_record(record, channel, redis_client):
+def validate_parameters(query_dict, parameters):
     """
-    Publishes a record to a Redis pub/sub channel
+    Check parameters in query_dict using the parameters specified
+    :param query_dict: a dictionary with key / value pairs to test
+    :param parameters: a dictionary with parameter name / type
+                       specifying the type of parameters in the query_dict
+    :return: true or false depending on whether the parameters are valid
+    """
 
-    :param record: dictionary representing record to publish
-    :param redis_client: a redis client instance to use
-    :return: None
-    """
-    if not redis_client or not channel:
-        return
-    redis_client.publish(channel, json.dumps(record))
-    return
+    for key, val in parameters:
+        if key not in query_dict:
+            return False
+        if val == int:
+           try:
+               int(query_dict[key])
+           except ValueError:
+               return False
+        elif val == bool:
+           try:
+               bool(query_dict[key])
+           except ValueError:
+               return False
+    return True
 
 
 def delete_job(environ):
@@ -35,6 +46,14 @@ def delete_job(environ):
     """
     response_body = "{ \"status\": 200,\n \"result\": \"success\" }"
     status = '200 OK'
+    query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
+    parameters = {'userid': str,
+                  'token': str,
+                  'jobid': int}
+    if not validate_parameters(query_dict, parameters):
+        return "{ \"status\": 400,\n \"result\": \"invalid or missing parameter\" }", \
+               '400 Bad Request'
+
     if random.random() > 0.9:
         # give an error in 10% of the cases
         return "{ \"status\": 500,\n \"result\": \"Server Error\" }", '500 Server Error'
@@ -80,6 +99,13 @@ def get_current_jobs(environ):
     :param environ: dictionary with environment variables (See PEP 333)
     :return: a tuple with response_body, status
     """
+    query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
+    parameters = {'userid': str,
+                  'token': str}
+    if not validate_parameters(query_dict, parameters):
+        return "{ \"status\": 400,\n \"result\": \"invalid or missing parameter\" }", \
+               '400 Bad Request'
+
     userid, secret = get_user_params(environ)
     if not validate_user(userid, secret):
         response_body = "{ \"status\": 401,\n \"result\": \"invalid user\" }"
@@ -89,13 +115,13 @@ def get_current_jobs(environ):
     response_body = "{ \n"
     response_body += ' "jobs": [' + "\n"
     jobs = [(1, 'subj_1.mgz', 'job_name1', 'PROCESSING', 'http://test.url/output_1.mgz'),
-            (23, 'subj_182.mgz', 'my_job2', 'COMPLETED', 'http://test.url/output_182.mgz'),]
+            (23, 'subj_182.mgz', 'my_job2', 'COMPLETED', 'http://test.url/output_182.mgz')]
+    buf = ""
     for job in jobs:
-        response_body += '{{ "id" : "{0}",'.format(job[0])
-        response_body += ' "input" : "{0}", "job_name": "{1}", "url": "{2}"'.format(job[1], job[2], job[3])
-        response_body += "},\n"
-    if response_body[-2:-1] == ",\n":
-        response_body = response_body[:-2] + "\n"
+        buf += '{{ "id" : "{0}",'.format(job[0])
+        buf += ' "input" : "{0}", "job_name": "{1}", "url": "{2}"'.format(job[1], job[2], job[3])
+        buf += "},\n"
+    response_body += buf[:-2] + "\n"
     response_body += "]\n}"
     status = '200 OK'
     return response_body, status
@@ -109,13 +135,21 @@ def submit_job(environ):
     :param environ: dictionary with environment variables (See PEP 333)
     :return: a tuple with response_body, status
     """
+    query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
+    parameters = {'userid': str,
+                  'token': str,
+                  'filename': str,
+                  'singlecore': bool,
+                  'jobname': str}
+    if not validate_parameters(query_dict, parameters):
+        return "{ \"status\": 400,\n \"result\": \"invalid or missing parameter\" }", \
+               '400 Bad Request'
     status = '200 OK'
     if random.random() > 0.9:
         # give an error in 10% of the cases
         return "{ \"status\": 500,\n \"result\": \"server error\" }", '500 Server Error'
 
     return "{ \"status\": 200,\n \"result\": \"success\" }", '200 OK'
-
 
 
 def application(environ, start_response):
