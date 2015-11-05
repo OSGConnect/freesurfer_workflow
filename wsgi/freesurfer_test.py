@@ -20,17 +20,17 @@ def validate_parameters(query_dict, parameters):
     :return: true or false depending on whether the parameters are valid
     """
 
-    for key, val in parameters:
+    for key, val in parameters.iteritems():
         if key not in query_dict:
             return False
         if val == int:
            try:
-               int(query_dict[key])
+               int(query_dict[key][0])
            except ValueError:
                return False
         elif val == bool:
            try:
-               bool(query_dict[key])
+               bool(query_dict[key][0])
            except ValueError:
                return False
     return True
