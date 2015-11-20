@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-import json
-import urlparse
 import argparse
-from wsgiref.simple_server import make_server
+import random
 import socket
 import sys
-import random
+import urlparse
+import json
+from wsgiref.simple_server import make_server
 
 TIMEZONE = "US/Central"
 
@@ -44,20 +44,24 @@ def delete_job(environ):
     :param environ: dictionary with environment variables (See PEP 333)
     :return: a tuple with response_body, status
     """
-    response_body = "{ \"status\": 200,\n \"result\": \"success\" }"
+    response = {"status": 200,
+                "result": "success"}
     status = '200 OK'
     query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
     parameters = {'userid': str,
                   'token': str,
                   'jobid': int}
     if not validate_parameters(query_dict, parameters):
-        return "{ \"status\": 400,\n \"result\": \"invalid or missing parameter\" }", \
-               '400 Bad Request'
+        response = {'status': 400,
+                    'result': "invalid or missing parameter"}
+        return json.dumps(response), '400 Bad Request'
 
     if random.random() > 0.9:
         # give an error in 10% of the cases
-        return "{ \"status\": 500,\n \"result\": \"Server Error\" }", '500 Server Error'
-    return response_body, status
+        response = {'status': 500,
+                    'result': "Server Error"}
+        return json.dumps(response), '500 Server Error'
+    return json.dumps(response), status
 
 
 def get_user_params(environ):
@@ -103,28 +107,30 @@ def get_current_jobs(environ):
     parameters = {'userid': str,
                   'token': str}
     if not validate_parameters(query_dict, parameters):
-        return "{ \"status\": 400,\n \"result\": \"invalid or missing parameter\" }", \
-               '400 Bad Request'
+        response = {'status': 400,
+                    'result': "invalid or missing parameter"}
+        return json.dumps(response), '400 Bad Request'
 
     userid, secret = get_user_params(environ)
     if not validate_user(userid, secret):
-        response_body = "{ \"status\": 401,\n \"result\": \"invalid user\" }"
-        status = '401 Not Authorized'
-        return response_body, status
+        response = {'status': 401,
+                    'result': "invalid user"}
+        return json.dumps(response), '401 Not Authorized'
 
-    response_body = "{ \n"
-    response_body += ' "jobs": [' + "\n"
-    jobs = [(1, 'subj_1.mgz', 'job_name1', 'PROCESSING', 'http://test.url/output_1.mgz'),
-            (23, 'subj_182.mgz', 'my_job2', 'COMPLETED', 'http://test.url/output_182.mgz')]
-    buf = ""
-    for job in jobs:
-        buf += '{{ "id" : "{0}",'.format(job[0])
-        buf += ' "input" : "{0}", "job_name": "{1}", "url": "{2}"'.format(job[1], job[2], job[3])
-        buf += "},\n"
-    response_body += buf[:-2] + "\n"
-    response_body += "]\n}"
+    response = {'status': 200,
+                'jobs': [(1,
+                          'subj_1.mgz',
+                          'job_name1',
+                          'PROCESSING',
+                          'http://test.url/output_1.mgz'),
+                         (23,
+                          'subj_182.mgz',
+                          'my_job2',
+                          'COMPLETED',
+                          'http://test.url/output_182.mgz')]}
+
     status = '200 OK'
-    return response_body, status
+    return json.dumps(response), status
 
 
 def submit_job(environ):
@@ -142,14 +148,18 @@ def submit_job(environ):
                   'singlecore': bool,
                   'jobname': str}
     if not validate_parameters(query_dict, parameters):
-        return "{ \"status\": 400,\n \"result\": \"invalid or missing parameter\" }", \
-               '400 Bad Request'
-    status = '200 OK'
+        response = {'status': 400,
+                    'result': "invalid or missing parameter"}
+        return json.dumps(response), '400 Bad Request'
     if random.random() > 0.9:
         # give an error in 10% of the cases
-        return "{ \"status\": 500,\n \"result\": \"server error\" }", '500 Server Error'
+        response = {'status': 500,
+                    'result': "Server Error"}
+        return json.dumps(response), '500 Server Error'
+    response = {"status": 200,
+                "result": "success"}
 
-    return "{ \"status\": 200,\n \"result\": \"success\" }", '200 OK'
+    return json.dumps(response), '200 OK'
 
 
 def application(environ, start_response):

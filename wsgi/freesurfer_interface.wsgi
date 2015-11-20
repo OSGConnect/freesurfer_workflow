@@ -1,17 +1,41 @@
 #!/usr/bin/env python
 
-import json
-import urlparse
 import argparse
-from wsgiref.simple_server import make_server
+import json
 import socket
 import sys
+import urlparse
+from wsgiref.simple_server import make_server
 
 import psycopg2
 
-
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
 TIMEZONE = "US/Central"
+
+
+def validate_parameters(query_dict, parameters):
+    """
+    Check parameters in query_dict using the parameters specified
+    :param query_dict: a dictionary with key / value pairs to test
+    :param parameters: a dictionary with parameter name / type
+                       specifying the type of parameters in the query_dict
+    :return: true or false depending on whether the parameters are valid
+    """
+
+    for key, val in parameters:
+        if key not in query_dict:
+            return False
+        if val == int:
+            try:
+                int(query_dict[key])
+            except ValueError:
+                return False
+        elif val == bool:
+            try:
+                bool(query_dict[key])
+            except ValueError:
+                return False
+    return True
 
 
 def save_file(environ, file_name):
@@ -54,20 +78,6 @@ def get_db_client():
     return psycopg2.connect(database=db, user=user, host=host)
 
 
-def publish_record(record, channel, redis_client):
-    """
-    Publishes a record to a Redis pub/sub channel
-
-    :param record: dictionary representing record to publish
-    :param redis_client: a redis client instance to use
-    :return: None
-    """
-    if not redis_client or not channel:
-        return
-    redis_client.publish(channel, json.dumps(record))
-    return
-
-
 def delete_job(environ):
     """
     Remove a job from being processed
@@ -76,9 +86,18 @@ def delete_job(environ):
     :param environ: dictionary with environment variables (See PEP 333)
     :return: a tuple with response_body, status
     """
-    response_body = "{ \"status\": 200,\n \"result\": \"success\" }"
-    status = 200
-    return (response_body, status)
+    response = {"status": 200,
+                "result": "success"}
+    status = '200 OK'
+    query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
+    parameters = {'userid': str,
+                  'token': str,
+                  'jobid': int}
+    if not validate_parameters(query_dict, parameters):
+        response = {'status': 400,
+                    'result': "invalid or missing parameter"}
+        return json.dumps(response), '400 Bad Request'
+    return json.dumps(response), status
 
 
 def get_user_params(environ):
@@ -114,17 +133,39 @@ def get_current_jobs(environ):
     :param environ: dictionary with environment variables (See PEP 333)
     :return: a tuple with response_body, status
     """
+    query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
+    parameters = {'userid': str,
+                  'token': str}
+    if not validate_parameters(query_dict, parameters):
+        response = {'status': 400,
+                    'result': "invalid or missing parameter"}
+        return json.dumps(response), '400 Bad Request'
+
     userid, secret = get_user_params(environ)
     if not validate_user(userid, secret):
-        response_body = "{ \"status\": 401,\n \"result\": \"invalid user\" }"
-        status = 401
-        return response_body, status
+        response = {'status': 401,
+                    'result': "invalid user"}
+        return json.dumps(response), '401 Not Authorized'
 
-    response_body = "{ \n"
-    response_body += " jobs: ["
-    jobs = [(1, 'subj_1.mgz', 'PROCESSING', 'http://test.url/output_1.mgz')]
-    status = 200
-    return response_body, status
+    response = {'status': 200,
+                'jobs': []}
+    conn = get_db_client()
+    cursor = conn.cursor()
+    job_query = "SELECT id, name, image_filename, state, job_date " \
+                "FROM jobs " \
+                "WHERE purged IS NOT TRUE AND age(job_date) < '7 days' AND userid = %s;"
+    try:
+        cursor.execute(job_query, userid)
+        for row in cursor.fetchall():
+            response['jobs'].append((row[0], row[1], row[2], row[3], row[4]))
+    except Exception, e:
+        response = {'status': 500,
+                    'result': str(e)}
+        return json.dumps(response), '500 Server Error'
+
+    conn.close()
+    status = '200 OK'
+    return json.dumps(response), status
 
 
 def submit_job(environ):
@@ -135,9 +176,20 @@ def submit_job(environ):
     :param environ: dictionary with environment variables (See PEP 333)
     :return: a tuple with response_body, status
     """
-    response_body = "{ \"status\": 200,\n \"result\": \"success\" }"
-    status = 200
-    return response_body, status
+    query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
+    parameters = {'userid': str,
+                  'token': str,
+                  'filename': str,
+                  'singlecore': bool,
+                  'jobname': str}
+    if not validate_parameters(query_dict, parameters):
+        response = {'status': 400,
+                    'result': "invalid or missing parameter"}
+        return json.dumps(response), '400 Bad Request'
+
+    response = {"status": 200,
+                "result": "success"}
+    return json.dumps(response), '200 OK'
 
 
 def application(environ, start_response):
@@ -155,6 +207,9 @@ def application(environ, start_response):
         response_body, status = submit_job(environ)
     elif environ['REQUEST_METHOD'] == 'DELETE':
         response_body, status = delete_job(environ)
+    else:
+        response_body = "Invalid request"
+        status = "400 Bad Request"
 
     response_headers = [('Content-Type', 'text/html'),
                         ('Content-Length', str(len(response_body)))]
