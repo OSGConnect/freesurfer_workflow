@@ -46,7 +46,7 @@ def query_user(parameter, echo=True):
     :return: user input
     """
     user_input = ""
-    while user_input != "":
+    while user_input == "":
         if echo:
             user_input = raw_input("Please enter {0}: ".format(parameter))
         else:
