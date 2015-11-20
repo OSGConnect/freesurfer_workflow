@@ -10,14 +10,17 @@ import psycopg2
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
 
-def get_db_parameters():
+
+def get_db_parameters(config_file=None):
     """
     Read database parameters from a file and return it
 
     :return: a tuple of (database_name, user, password, hostname)
     """
     parameters = {}
-    with open(PARAM_FILE_LOCATION) as param_file:
+    if config_file is None:
+        config_file = PARAM_FILE_LOCATION
+    with open(config_file) as param_file:
         line = param_file.readline()
         key, val = line.strip().split('=')
         parameters[key.strip()] = val.strip()
@@ -100,7 +103,7 @@ def main(args):
                   "                                       salt) " \
                   "VALUES(%s, %s, %s, %s, %s, %s, %s, %s)"
     try:
-        conn = get_db_client()
+        conn = get_db_client(args)
         with conn.cursor() as cursor:
             cursor.execute(user_insert, (username,
                                          first_name,
