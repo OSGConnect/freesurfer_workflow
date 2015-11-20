@@ -15,6 +15,7 @@ def get_db_parameters(config_file=None):
     """
     Read database parameters from a file and return it
 
+    :param config_file: location of file with database parameters
     :return: a tuple of (database_name, user, password, hostname)
     """
     parameters = {}
@@ -30,13 +31,14 @@ def get_db_parameters(config_file=None):
             parameters['hostname'])
 
 
-def get_db_client():
+def get_db_client(config_file=None):
     """
     Get a postgresql client instance and return it
 
+    :param config_file: location of file with database parameters
     :return: a redis client instance or None if failure occurs
     """
-    db, user, password, host = get_db_parameters()
+    db, user, password, host = get_db_parameters(config_file)
     return psycopg2.connect(database=db, user=user, host=host)
 
 
