@@ -9,8 +9,6 @@ import time
 import psycopg2
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
-TIMEZONE = "US/Central"
-
 
 def get_db_parameters():
     """
@@ -47,10 +45,13 @@ def query_user(parameter, echo=True):
     :param echo: boolean to indicate whether to echo what the user types or not
     :return: user input
     """
-    if echo:
-        return raw_input("Please enter {0}:".format(parameter))
-    else:
-        return getpass.getpass("Please enter {0}".format(parameter))
+    user_input = ""
+    while user_input != "":
+        if echo:
+            user_input = raw_input("Please enter {0}: ".format(parameter))
+        else:
+            user_input = getpass.getpass("Please enter {0}: ".format(parameter))
+    return user_input
 
 
 def main(args):
