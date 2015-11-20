@@ -117,7 +117,8 @@ def main(args):
                 return 1
         conn.close()
         return 0
-    except Exception:
+    except Exception, e:
+        sys.stderr.write("Got exception: {0}\n".format(e))
         return 1
 
 if __name__ == '__main__':
