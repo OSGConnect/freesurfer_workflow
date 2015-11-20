@@ -90,14 +90,14 @@ def main(args):
     salt = hashlib.sha256(str(time.time())).hexdigest()
     password = hashlib.sha256(salt + password).hexdigest()
 
-    user_insert = "INSERT INTO users(username," \
-                  "                  first_name," \
-                  "                  last_name," \
-                  "                  email," \
-                  "                  institution," \
-                  "                  phone," \
-                  "                  password," \
-                  "                  salt) " \
+    user_insert = "INSERT INTO freesurfer_interface.users(username," \
+                  "                                       first_name," \
+                  "                                       last_name," \
+                  "                                       email," \
+                  "                                       institution," \
+                  "                                       phone," \
+                  "                                       password," \
+                  "                                       salt) " \
                   "VALUES(%s, %s, %s, %s, %s, %s, %s, %s)"
     try:
         conn = get_db_client()
