@@ -54,18 +54,19 @@ def create_job(dax, num_jobs=50, num_cores=1):
     """
     errors = False
     sleep_job = Pegasus.DAX3.Executable(name="sleep.sh",
-                                         arch="x86_64",
-                                         installed=False)
+                                        arch="x86_64",
+                                        installed=False)
     sleep_job.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR,
                                                                        "sleep.sh")),
                                       "local"))
     if not dax.hasExecutable(sleep_job):
         dax.addExecutable(sleep_job)
-    sleep_job = Pegasus.DAX3.Job(name="sleep.sh".format(subject))
-    sleep_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR,
+
+    for x in range(0, num_jobs):
+        sleep_job = Pegasus.DAX3.Job(name="sleep_{0}_{1}".format(num_cores, x))
+        sleep_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR,
                                               "request_cpus",
                                               num_cores))
-    for x in range(0, num_jobs):
         dax.addJob(sleep_job)
     return errors
 
