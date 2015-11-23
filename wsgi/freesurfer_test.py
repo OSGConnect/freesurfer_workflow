@@ -72,7 +72,7 @@ def get_user_params(environ):
     :return: tuple with userid, security_token
     """
     query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
-    if 'userid' not in query_dict  or 'token' not in query_dict:
+    if 'userid' not in query_dict or 'token' not in query_dict:
         return '', ''
     user_id = query_dict['userid']
     token = query_dict['token']
@@ -118,16 +118,16 @@ def get_current_jobs(environ):
         return json.dumps(response), '401 Not Authorized'
 
     response = {'status': 200,
-                'jobs': [(1,
-                          'subj_1.mgz',
-                          'job_name1',
-                          'PROCESSING',
-                          'http://test.url/output_1.mgz'),
-                         (23,
-                          'subj_182.mgz',
-                          'my_job2',
-                          'COMPLETED',
-                          'http://test.url/output_182.mgz')]}
+                'jobs': [{'id': 1,
+                          'input': 'subj_1.mgz',
+                          'name': 'job_name1',
+                          'status': 'PROCESSING',
+                          'output': 'http://test.url/output_1.mgz'},
+                         {'id': 23,
+                          'input': 'subj_182.mgz',
+                          'name': 'my_job2',
+                          'status': 'COMPLETED',
+                          'output': 'http://test.url/output_182.mgz'}]}
 
     status = '200 OK'
     return json.dumps(response), status
