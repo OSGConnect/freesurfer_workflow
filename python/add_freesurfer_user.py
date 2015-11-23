@@ -22,9 +22,9 @@ def get_db_parameters(config_file=None):
     if config_file is None:
         config_file = PARAM_FILE_LOCATION
     with open(config_file) as param_file:
-        line = param_file.readline()
-        key, val = line.strip().split('=')
-        parameters[key.strip()] = val.strip()
+        for line in param_file.readlines():
+            key, val = line.strip().split('=')
+            parameters[key.strip()] = val.strip()
     return (parameters['database'],
             parameters['user'],
             parameters['password'],
@@ -39,7 +39,7 @@ def get_db_client(config_file=None):
     :return: a redis client instance or None if failure occurs
     """
     db, user, password, host = get_db_parameters(config_file)
-    return psycopg2.connect(database=db, user=user, host=host)
+    return psycopg2.connect(database=db, user=user, host=host, password=password)
 
 
 def query_user(parameter, echo=True):
@@ -105,7 +105,7 @@ def main(args):
                   "                                       salt) " \
                   "VALUES(%s, %s, %s, %s, %s, %s, %s, %s)"
     try:
-        conn = get_db_client(args)
+        conn = get_db_client(args.db_param_file)
         with conn.cursor() as cursor:
             cursor.execute(user_insert, (username,
                                          first_name,
@@ -115,8 +115,11 @@ def main(args):
                                          phone,
                                          password,
                                          salt))
-            if cursor.statusmessage != 'INSERT 0 1':
+            if cursor.rowcount != 1:
+                sys.stderr.wrote("{0}\n".format(cursor.statusmessage))
                 return 1
+            print cursor.query
+        conn.commit()
         conn.close()
         return 0
     except Exception, e:
