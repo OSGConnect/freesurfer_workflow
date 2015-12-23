@@ -33,7 +33,7 @@ def check_and_create_workflow_dir(workflow_dir=WORKFLOW_DIRECTORY):
                              "is already present and not a directory\n")
             return False
         else:
-            sys.stdout.write("Creating directory for workflows")
+            sys.stdout.write("Creating directory for workflows\n")
             os.makedirs(workflow_dir, 0o700)
             return True
     except OSError:
@@ -269,23 +269,22 @@ def main():
     """
     parser = argparse.ArgumentParser(description="Process freesurfer information")
     parser.add_argument('--submit', dest='action',
-                        action='store', const='submit',
+                        action='store_const', const='submit',
                         help='Submit job for processing')
     parser.add_argument('--list', dest='action',
-                        action='store', const='list',
+                        action='store_const', const='list',
                         help='List current jobs')
     parser.add_argument('--status', dest='action',
-                        action='store', const='status',
+                        action='store_const', const='status',
                         help='Submit job for processing')
     parser.add_argument('--remove', dest='action',
-                        action='store', const='remove',
+                        action='store_const', const='remove',
                         help='Submit job for processing')
     parser.add_argument('--output', dest='action',
-                        action='store', const='output',
+                        action='store_const', const='output',
                         help='Submit job for processing')
     parser.add_argument('--workflow-id', dest='workflow_id',
-                        action='store', const='output',
-                        help='Pegasus workflow id to use')
+                        action='store', help='Pegasus workflow id to use')
     parser.add_argument('--subject', dest='subject', default=None,
                         help='Subject id to process ')
     parser.add_argument('--input-file', dest='input_file', default=None,
