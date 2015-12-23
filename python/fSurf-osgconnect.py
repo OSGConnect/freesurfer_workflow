@@ -12,6 +12,35 @@ import shutil
 import freesurfer
 import Pegasus.DAX3
 
+WORKFLOW_DIRECTORY = os.path.join('/stash/user',
+                                  getpass.getuser(),
+                                  'freesurfer_scratch',
+                                  'freesurfer')
+
+def check_and_create_workflow_dir(workflow_dir=WORKFLOW_DIRECTORY):
+    """
+    Check for the presence of a directory to hold workflows and
+    create one if necessary
+
+    :param workflow_dir: path to directory for workflows
+    :return: True if directory exists or has been created, False otherwise
+    """
+    try:
+        if os.path.isdir(workflow_dir):
+            return True
+        elif os.path.exists(workflow_dir) and not os.path.isdir(workflow_dir):
+            sys.stdout.write("Can't create {0} because it ".format(workflow_dir) +
+                             "is already present and not a directory\n")
+            return False
+        else:
+            sys.stdout.write("Creating directory for workflows")
+            os.makedirs(workflow_dir, 0o700)
+            return True
+    except OSError:
+        sys.stdout.write("Can't create {0} for workflows, "
+                         "exiting...\n".format(workflow_dir))
+        return False
+
 
 def run_pegasus(action, **kwargs):
     """
@@ -27,14 +56,12 @@ def run_pegasus(action, **kwargs):
     :param action:      a string specifying the action (remove, status, submit)
     :return:            the output from pegasus
     """
-
+    if not check_and_create_workflow_dir():
+        return 1, "Can't create workflow directory"
     if action in ['status', 'remove']:
         if 'workflow_id' not in kwargs:
             return 1, "Workflow id missing"
-        workflow_location = os.path.join('/stash/user',
-                                         getpass.getuser(),
-                                         'freesurfer_scratch',
-                                         'freesurfer',
+        workflow_location = os.path.join(WORKFLOW_DIRECTORY,
                                          kwargs['workflow_id'])
         if not os.path.isdir(workflow_location):
             return 1, "Invalid workflow id, {0} is not a directory".format(workflow_location)
@@ -117,13 +144,10 @@ def list_workflows():
     :return: 0 on success, 1 on error
     """
     try:
-        user_dir = os.path.join('/stash/user',
-                                getpass.getuser(),
-                                'freesurfer_scratch',
-                                'freesurfer')
+        check_and_create_workflow_dir()
         sys.stdout.write("Current workflows:\n")
-        for entry in os.listdir(user_dir):
-            if os.path.isdir(os.path.join(user_dir, entry)):
+        for entry in os.listdir(WORKFLOW_DIRECTORY):
+            if os.path.isdir(os.path.join(WORKFLOW_DIRECTORY, entry)):
                 sys.stdout.write("{0}\n".format(entry))
         return 0
     except IOError:
@@ -137,12 +161,9 @@ def remove_workflow(workflow_id):
     :param workflow_id: pegasus id for workflow
     :return: 0 on success, 1 on error
     """
-    workflow_location = os.path.join('/stash/user',
-                                     getpass.getuser(),
-                                     'freesurfer_scratch',
-                                     'freesurfer',
+    workflow_location = os.path.join(WORKFLOW_DIRECTORY,
                                      workflow_id)
-    exit_code, output = run_pegasus('remove', workflow_location)
+    exit_code, output = run_pegasus('remove', workflow_id=workflow_id)
     if exit_code == 0:
         sys.stdout.write("Workflow {0} removed successfully\n".format(workflow_id))
         job_id = re.match(r'Job (\d+.\d+) marked for removal', output)
@@ -152,7 +173,7 @@ def remove_workflow(workflow_id):
             while True:
                 time.sleep(10)
                 try:
-                    output = subprocess.check_output("condor_q {0}".format(job_id.match(1)))
+                    output = subprocess.check_output("condor_q {0}".format(job_id.group(1)))
                 except subprocess.CalledProcessError:
                     sys.stdout.write("An error occurred while checking for "
                                      "running jobs, exiting...\n")
@@ -192,10 +213,7 @@ def submit_workflow(input_file, subject_name, multicore=False):
         cores = 8
     else:
         cores = 2
-    workflow_dir = os.path.join('/stash/user',
-                                getpass.getuser(),
-                                'freesurfer_scratch',
-                                'freesurfer')
+
     dax = Pegasus.DAX3.ADAG('freesurfer')
     subject_file = os.path.abspath(input_file)
     if not os.path.isfile(subject_file):
@@ -217,13 +235,14 @@ def submit_workflow(input_file, subject_name, multicore=False):
                              dax="{0}".format(dax_name),
                              conf="pegasusrc",
                              sites="condorpool",
-                             workflow_directory=workflow_dir)
+                             workflow_directory=WORKFLOW_DIRECTORY)
         capture_id = False
         for line in cStringIO.StringIO(output).readlines():
             if 'Your workflow has been started' in line:
                 capture_id = True
-            if capture_id == True and workflow_dir in line:
-                id_match = re.match(r'{0}/(\d*-\d{4})'.format(workflow_dir), output)
+            if capture_id and WORKFLOW_DIRECTORY in line:
+                id_match = re.match(r'{0}/(\d*-\d{4})'.format(WORKFLOW_DIRECTORY),
+                                    output)
                 if id_match is not None:
                     sys.stdout.write("Workflow submitted with an "
                                      "id of {0}\n".format(id_match.group(1)))
@@ -292,6 +311,8 @@ def main():
         status = submit_workflow(args.input_file, args.subject_name, args.multicore)
     elif args.action == 'output':
         status = get_output(args.workflow_id)
+    else:
+        status = 0
     sys.exit(status)
 
 if __name__ == '__main__':
