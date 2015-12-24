@@ -238,11 +238,14 @@ def submit_workflow(input_file, subject_name, multicore=False):
         dax_name = "serial_dax_{0}.xml".format(curr_date)
         with open(dax_name, 'w') as f:
             dax.writeXML(f)
-        output = run_pegasus('submit',
-                             dax="{0}".format(dax_name),
-                             conf="pegasusrc",
-                             sites="condorpool",
-                             workflow_directory=WORKFLOW_DIRECTORY)
+        exit_code, output = run_pegasus('submit',
+                                        dax="{0}".format(dax_name),
+                                        conf="pegasusrc",
+                                        sites="condorpool",
+                                        workflow_directory=WORKFLOW_DIRECTORY)
+        if exit_code != 0:
+            sys.stdout("An error occurred when generating and submitting workflow, exiting...\n")
+            return 1
         capture_id = False
         for line in cStringIO.StringIO(output).readlines():
             if 'Your workflow has been started' in line:
@@ -330,8 +333,6 @@ if __name__ == '__main__':
 
             Backported from Python 2.7 as it's implemented as pure python on stdlib.
 
-            >>> check_output(['/usr/bin/python', '--version'])
-            Python 2.6.2
             """
             process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
             output, unused_err = process.communicate()
