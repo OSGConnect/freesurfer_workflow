@@ -12,6 +12,8 @@ import shutil
 import freesurfer
 import Pegasus.DAX3
 
+## workaround missing subprocess.check_ouput
+
 WORKFLOW_DIRECTORY = os.path.join('/stash/user',
                                   getpass.getuser(),
                                   'freesurfer_scratch',
@@ -315,4 +317,26 @@ def main():
     sys.exit(status)
 
 if __name__ == '__main__':
+    if "check_output" not in dir(subprocess): # duck punch it in!
+        def check_output(*popenargs, **kwargs):
+            r"""Run command with arguments and return its output as a byte string.
+
+            Backported from Python 2.7 as it's implemented as pure python on stdlib.
+
+            >>> check_output(['/usr/bin/python', '--version'])
+            Python 2.6.2
+            """
+            process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+            output, unused_err = process.communicate()
+            retcode = process.poll()
+            if retcode:
+                cmd = kwargs.get("args")
+                if cmd is None:
+                    cmd = popenargs[0]
+                error = subprocess.CalledProcessError(retcode, cmd)
+                error.output = output
+                raise error
+            return output
+
+        subprocess.check_output = check_output
     main()
