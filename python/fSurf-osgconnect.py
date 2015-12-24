@@ -181,7 +181,8 @@ def remove_workflow(workflow_id):
             while True:
                 time.sleep(10)
                 try:
-                    output = subprocess.check_output("condor_q {0}".format(job_id.group(1)))
+                    output = subprocess.check_output(["/usr/bin/condor_q",  
+                                                      job_id.group(1)])
                 except subprocess.CalledProcessError:
                     sys.stdout.write("An error occurred while checking for "
                                      "running jobs, exiting...\n")
