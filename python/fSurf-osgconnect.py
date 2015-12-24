@@ -213,7 +213,12 @@ def submit_workflow(input_file, subject_name, multicore=False):
         cores = 8
     else:
         cores = 2
-
+    if input_file is None:
+        sys.stdout.write("Input file missing, exiting...\n")
+        return 1
+    if subject_name is None:
+        sys.stdout.write("Subject name is missing, exiting...\n")
+        return 1
     dax = Pegasus.DAX3.ADAG('freesurfer')
     subject_file = os.path.abspath(input_file)
     if not os.path.isfile(subject_file):
@@ -306,11 +311,13 @@ def main():
         status = list_workflows()
     elif args.action == 'remove':
         status = remove_workflow(args.workflow_id)
-    elif args.action == 'input':
-        status = submit_workflow(args.input_file, args.subject_name, args.multicore)
+    elif args.action == 'submit':
+        status = submit_workflow(args.input_file, args.subject, args.multicore)
     elif args.action == 'output':
         status = get_output(args.workflow_id)
     else:
+        sys.stdout.write("Must specify an action, exiting...\n")
+        parser.print_help()
         status = 0
     sys.exit(status)
 
