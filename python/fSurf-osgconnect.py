@@ -96,6 +96,8 @@ def run_pegasus(action, **kwargs):
                                               kwargs['workflow_directory'],
                                               '--conf',
                                               kwargs['conf'],
+                                              '--dax',
+                                              kwargs['dax'],
                                               '--submit'],
                                              stderr=subprocess.STDOUT)
         else:
@@ -249,19 +251,22 @@ def submit_workflow(input_file, subject_name, multicore=False):
                                         workflow_directory=WORKFLOW_DIRECTORY)
         if exit_code != 0:
             sys.stdout("An error occurred when generating and submitting workflow, exiting...\n")
+            sys.stdout.write("Error: \n")
+            sys.stdout.write(output)
             return 1
         capture_id = False
         for line in cStringIO.StringIO(output).readlines():
             if 'Your workflow has been started' in line:
                 capture_id = True
             if capture_id and WORKFLOW_DIRECTORY in line:
-                id_match = re.match(r'{0}/(\d*-\d{4})'.format(WORKFLOW_DIRECTORY),
-                                    output)
+                id_match = re.search(r'([T\d]+-\d+)'.format(WORKFLOW_DIRECTORY),
+                                    line)
                 if id_match is not None:
                     sys.stdout.write("Workflow submitted with an "
                                      "id of {0}\n".format(id_match.group(1)))
                 else:
                     sys.stdout.write("Workflow submitted but could not get workflow id\n")
+                break
     return errors
 
 
