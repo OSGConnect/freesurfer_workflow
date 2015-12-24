@@ -12,14 +12,18 @@ import shutil
 import freesurfer
 import Pegasus.DAX3
 
-## workaround missing subprocess.check_ouput
 
-WORKFLOW_DIRECTORY = os.path.join('/stash/user',
+WORKFLOW_BASE_DIRECTORY = os.path.join('/stash/user',
                                   getpass.getuser(),
                                   'freesurfer_scratch',
                                   'freesurfer')
+WORKFLOW_DIRECTORY = os.path.join(WORKFLOW_BASE_DIRECTORY,
+                                  getpass.getuser(),
+                                  'pegasus',
+                                  'freesurfer')
 
-def check_and_create_workflow_dir(workflow_dir=WORKFLOW_DIRECTORY):
+
+def check_and_create_workflow_dir(workflow_dir=WORKFLOW_BASE_DIRECTORY):
     """
     Check for the presence of a directory to hold workflows and
     create one if necessary
@@ -327,6 +331,7 @@ def main():
     sys.exit(status)
 
 if __name__ == '__main__':
+    # workaround missing subprocess.check_ouput
     if "check_output" not in dir(subprocess): # duck punch it in!
         def check_output(*popenargs, **kwargs):
             r"""Run command with arguments and return its output as a byte string.
