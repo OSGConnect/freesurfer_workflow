@@ -124,15 +124,28 @@ def print_status(workflow_id, verbose=False):
     if verbose:
         sys.stdout.write("{0}\n".format(output))
         return exit_code
-    job_summary = re.match(r'Summary: (\d+) Condor jobs.*\(\s+I:(\d+)\s+R:(\d+)\s+H:(\d+).*',
-                           output)
+    job_summary = re.search(r'Summary: (\d+) Condor jobs(.*)', output)
     if job_summary is not None:
+        idle_jobs = re.search(r'I:(\d+)', job_summary.group(2))
+        num_idle = 0 
+        if idle_jobs is not None:
+            num_idle = idle_jobs.group(1)
+        running_jobs = re.search(r'R:(\d+)', job_summary.group(2))
+        num_running = 0 
+        if running_jobs is not None:
+            num_running = running_jobs.group(1)
+        held_jobs = re.search(r'H:(\d+)', job_summary.group(2))
+        num_held = 0 
+        if held_jobs is not None:
+            num_held = held_jobs.group(1)
         sys.stdout.write("Job information:\n")
-        sys.stdout.write("{0} Idle jobs\n".format(job_summary.group(1)))
-        sys.stdout.write("{0} Running jobs\n".format(job_summary.group(2)))
-        sys.stdout.write("{0} Held jobs\n".format(job_summary.group(3)))
-        sys.stdout.write("{0} Total jobs\n".format(job_summary.group(0)))
+        sys.stdout.write("{0} Idle jobs\n".format(num_idle))
+        sys.stdout.write("{0} Running jobs\n".format(num_running))
+        sys.stdout.write("{0} Held jobs\n".format(num_held))
+        sys.stdout.write("{0} Total jobs\n".format(job_summary.group(1)))
+        sys.stdout.write("\n")
     in_dag_status = False
+    sys.stdout.write("Workflow information: \n")
     for line in cStringIO.StringIO(output).readlines():
         if 'UNRDY' in line or 'UNREADY' in line:
             sys.stdout.write(line + "\n")
