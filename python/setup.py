@@ -12,11 +12,11 @@ setup(name='fsurf',
       author_email='sthapa@ci.uchicago.edu',
       url='https://github.com/OSGConnect/freesurfer_workflow',
       packages=['fsurfer'],
-      scripts=['fsurf-osgconnect', 'get_job_status.py'],
+      scripts=['fsurf-osgconnect'],
       data_files=[('/usr/share/fsurfer/scripts', ['../bash/autorecon1.sh']),
                   ('/usr/share/fsurfer/scripts', ['../bash/autorecon2.sh']),
                   ('/usr/share/fsurfer/scripts', ['../bash/autorecon2-whole.sh']),
                   ('/usr/share/fsurfer/scripts', ['../bash/autorecon3.sh']),
-                  ('/usr/share/fsurfer/scripts', ['../bash/autorecon-all.sh'])]
+                  ('/usr/share/fsurfer/scripts', ['../bash/autorecon-all.sh'])],
       license='Apache 2.0'
      )
