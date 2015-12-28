@@ -8,15 +8,21 @@ import re
 import cStringIO
 import time
 import shutil
+import tarfile
 
 import freesurfer
 import Pegasus.DAX3
 
 
 WORKFLOW_BASE_DIRECTORY = os.path.join('/stash/user',
-                                  getpass.getuser(),
-                                  'freesurfer_scratch',
-                                  'freesurfer')
+                                       getpass.getuser(),
+                                       'freesurfer_scratch',
+                                       'freesurfer')
+WORKFLOW_OUTPUT_DIRECTORY = os.path.join(WORKFLOW_BASE_DIRECTORY,
+                                         'output',
+                                         getpass.getuser(),
+                                         'pegasus',
+                                         'freesurfer')
 WORKFLOW_DIRECTORY = os.path.join(WORKFLOW_BASE_DIRECTORY,
                                   getpass.getuser(),
                                   'pegasus',
@@ -267,6 +273,7 @@ def submit_workflow(input_file, subject_name, multicore=False):
             sys.stdout("An error occurred when generating and submitting workflow, exiting...\n")
             sys.stdout.write("Error: \n")
             sys.stdout.write(output)
+            os.unlink(dax_name)
             return 1
         capture_id = False
         for line in cStringIO.StringIO(output).readlines():
@@ -281,6 +288,7 @@ def submit_workflow(input_file, subject_name, multicore=False):
                 else:
                     sys.stdout.write("Workflow submitted but could not get workflow id\n")
                 break
+        os.unlink(dax_name)
     return errors
 
 
@@ -290,6 +298,17 @@ def get_output(workflow_id):
     :param workflow_id: pegasus id for workflow
     :return: 0 on success, 1 on error
     """
+    current_dir = os.getcwd()
+    output_dir = os.path.join(WORKFLOW_OUTPUT_DIRECTORY, workflow_id)
+    if not os.path.isdir(output_dir):
+        sys.stdout.write("Output for workflow {0} does not exist\n".format(workflow_id))
+        return 1
+    os.chdir(WORKFLOW_OUTPUT_DIRECTORY)
+    output_file = os.path.join(current_dir,
+                               "{0}.tar.bz2")
+    tbz = tarfile.open(output_file, 'w:bz2')
+    tbz.add(output_dir)
+    os.chdir(current_dir)
     return 0
 
 
