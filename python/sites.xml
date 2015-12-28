@@ -16,6 +16,6 @@
     <site  handle="condorpool" arch="x86_64" os="LINUX">
         <profile namespace="pegasus" key="style">condor</profile>
         <profile namespace="condor" key="universe">vanilla</profile>
-        <profile namespace="condor" key="requirements">(HAS_MODULES == TRUE) &amp;&amp; (IS_RCC_syracuse =!= TRUE)</profile>
+        <profile namespace="condor" key="requirements">(HAS_MODULES == TRUE) &amp;&amp; (IS_RCC_syracuse =!= TRUE) &amp;&amp; (GLIDEIN_ResourceName =!= "SU-OG")</profile>
     </site>
 </sitecatalog>
