@@ -282,7 +282,7 @@ def submit_workflow(input_file, subject_name, multicore=False):
                 capture_id = True
             if capture_id and WORKFLOW_DIRECTORY in line:
                 id_match = re.search(r'([T\d]+-\d+)'.format(WORKFLOW_DIRECTORY),
-                                    line)
+                                     line)
                 if id_match is not None:
                     sys.stdout.write("Workflow submitted with an "
                                      "id of {0}\n".format(id_match.group(1)))
@@ -371,7 +371,7 @@ def main():
 
 if __name__ == '__main__':
     # workaround missing subprocess.check_ouput
-    if "check_output" not in dir(subprocess): # duck punch it in!
+    if "check_output" not in dir(subprocess):  # duck punch it in!
         def check_output(*popenargs, **kwargs):
             r"""Run command with arguments and return its output as a byte string.
 
