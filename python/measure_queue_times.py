@@ -63,7 +63,7 @@ def create_job(dax, num_jobs=50, num_cores=1):
         dax.addExecutable(sleep_job)
 
     for x in range(0, num_jobs):
-        sleep_job = Pegasus.DAX3.Executable(name="sleep_{0}_(1}.sh".format(num_cores, x),
+        sleep_job = Pegasus.DAX3.Executable(name="sleep_{0}_{1}.sh".format(num_cores, x),
                                             arch="x86_64",
                                             installed=False)
         sleep_job.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR,
