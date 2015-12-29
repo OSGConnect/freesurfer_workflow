@@ -27,7 +27,7 @@ WORKFLOW_DIRECTORY = os.path.join(WORKFLOW_BASE_DIRECTORY,
                                   getpass.getuser(),
                                   'pegasus',
                                   'freesurfer')
-PEGASUSRC_PATH = os.path.expanduser('~/.fsurfer/pegasusrc')
+PEGASUSRC_PATH = os.path.expanduser('~/.fsurf/pegasusrc')
 
 
 def check_and_create_workflow_dir(workflow_dir=WORKFLOW_BASE_DIRECTORY):
@@ -123,6 +123,9 @@ def print_status(workflow_id, verbose=False):
     :param verbose:      whether to give full workflow details or a summary
     :return:             0 on success, 1 on error
     """
+    if workflow_id is None:
+        sys.stdout.write("Workflow id not given\n")
+        return 0
     exit_code, output = run_pegasus('status', workflow_id=workflow_id)
     if exit_code != 0:
         sys.stdout.write("An error occurred while getting job status\n")
@@ -269,7 +272,7 @@ def submit_workflow(input_file, subject_name, multicore=False):
                                         dax="{0}".format(dax_name),
                                         conf=PEGASUSRC_PATH,
                                         sites="condorpool",
-                                        workflow_directory=WORKFLOW_DIRECTORY)
+                                        workflow_directory=WORKFLOW_BASE_DIRECTORY)
         if exit_code != 0:
             sys.stdout("An error occurred when generating and submitting workflow, exiting...\n")
             sys.stdout.write("Error: \n")
