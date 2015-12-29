@@ -4,8 +4,7 @@ import sys
 import os
 import getpass
 
-SITE_TEMPLATE = """
-<?xml version="1.0" encoding="UTF-8"?>
+SITE_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
 <sitecatalog xmlns="http://pegasus.isi.edu/schema/sitecatalog"
              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
              xsi:schemaLocation="http://pegasus.isi.edu/schema/sitecatalog http://pegasus.isi.edu/schema/sc-4.0.xsd"
@@ -23,7 +22,7 @@ SITE_TEMPLATE = """
     <site  handle="condorpool" arch="x86_64" os="LINUX">
         <profile namespace="pegasus" key="style">condor</profile>
         <profile namespace="condor" key="universe">vanilla</profile>
-        <profile namespace="condor" key="requirements">(HAS_MODULES == TRUE) &amp;&amp; (IS_RCC_syracuse =!= TRUE) &amp;&amp; (GLIDEIN_ResourceName =!= "SU-OG")</profile
+        <profile namespace="condor" key="requirements">(HAS_MODULES == TRUE) &amp;&amp; (IS_RCC_syracuse =!= TRUE) &amp;&amp; (GLIDEIN_ResourceName =!= "SU-OG")</profile>
     </site>
 
 </sitecatalog>
