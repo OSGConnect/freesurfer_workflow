@@ -58,12 +58,12 @@ def config_user_settings():
         return 1
     pegasusrc = os.path.join(conf_dir, 'pegasusrc')
     with open(pegasusrc, 'w') as f:
-        f.writable(PEGASUSRC_TEMPLATE.replace('CONF_DIR', conf_dir))
+        f.write(PEGASUSRC_TEMPLATE.replace('CONF_DIR', conf_dir))
     user = getpass.getuser()
     sitecatalog = os.path.join(conf_dir, 'sites.xml')
     with open(sitecatalog, 'w') as f:
         f.write(SITE_TEMPLATE.replace('USERNAME', user))
-    sys.stdout.write("Configuration setup for fSurf")
+    sys.stdout.write("Configuration created for fsurf")
     return 0
 
 if __name__ == "__main__":
