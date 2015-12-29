@@ -10,7 +10,7 @@ import time
 import shutil
 import tarfile
 
-import freesurfer
+import fsurfer
 import Pegasus.DAX3
 
 
@@ -27,6 +27,7 @@ WORKFLOW_DIRECTORY = os.path.join(WORKFLOW_BASE_DIRECTORY,
                                   getpass.getuser(),
                                   'pegasus',
                                   'freesurfer')
+PEGASUSRC_PATH = os.path.expanduser('~/.fsurfer/pegasusrc')
 
 
 def check_and_create_workflow_dir(workflow_dir=WORKFLOW_BASE_DIRECTORY):
@@ -256,9 +257,9 @@ def submit_workflow(input_file, subject_name, multicore=False):
     dax_subject_file.addPFN(Pegasus.DAX3.PFN("file://{0}".format(subject_file), "local"))
     dax.addFile(dax_subject_file)
     errors = False
-    errors &= freesurfer.create_initial_job(dax, cores, dax_subject_file, subject_name)
-    errors &= freesurfer.create_recon2_job(dax, cores, subject_name)
-    errors &= freesurfer.create_final_job(dax, cores, subject_name, serial_job=True)
+    errors &= fsurfer.create_initial_job(dax, cores, dax_subject_file, subject_name)
+    errors &= fsurfer.create_recon2_job(dax, cores, subject_name)
+    errors &= fsurfer.create_final_job(dax, cores, subject_name, serial_job=True)
     if not errors:
         curr_date = time.strftime("%Y%m%d_%H%M%S", time.gmtime(time.time()))
         dax_name = "serial_dax_{0}.xml".format(curr_date)
@@ -266,7 +267,7 @@ def submit_workflow(input_file, subject_name, multicore=False):
             dax.writeXML(f)
         exit_code, output = run_pegasus('submit',
                                         dax="{0}".format(dax_name),
-                                        conf="pegasusrc",
+                                        conf=PEGASUSRC_PATH,
                                         sites="condorpool",
                                         workflow_directory=WORKFLOW_DIRECTORY)
         if exit_code != 0:
@@ -281,7 +282,7 @@ def submit_workflow(input_file, subject_name, multicore=False):
                 capture_id = True
             if capture_id and WORKFLOW_DIRECTORY in line:
                 id_match = re.search(r'([T\d]+-\d+)'.format(WORKFLOW_DIRECTORY),
-                                    line)
+                                     line)
                 if id_match is not None:
                     sys.stdout.write("Workflow submitted with an "
                                      "id of {0}\n".format(id_match.group(1)))
@@ -370,7 +371,7 @@ def main():
 
 if __name__ == '__main__':
     # workaround missing subprocess.check_ouput
-    if "check_output" not in dir(subprocess): # duck punch it in!
+    if "check_output" not in dir(subprocess):  # duck punch it in!
         def check_output(*popenargs, **kwargs):
             r"""Run command with arguments and return its output as a byte string.
 
