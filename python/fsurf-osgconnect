@@ -10,7 +10,7 @@ import time
 import shutil
 import tarfile
 
-import freesurfer
+import fsurfer
 import Pegasus.DAX3
 
 
