@@ -3,6 +3,8 @@
 import sys
 import os
 import getpass
+import cPickle
+import types
 
 SITE_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
 <sitecatalog xmlns="http://pegasus.isi.edu/schema/sitecatalog"
@@ -42,6 +44,11 @@ pegasus.data.configuration = condorio
 dagman.maxidle = 1000
 """
 
+WORKFLOW_DIRECTORY = os.path.join('/stash/user',
+                                  getpass.getuser(),
+                                  'freesurfer_scratch',
+                                  'freesurfer')
+
 
 def config_user_settings():
     """
@@ -65,5 +72,48 @@ def config_user_settings():
     sys.stdout.write("Configuration created for fsurf")
     return 0
 
+
+def setup_fsurf_dirs(workflow_dir=WORKFLOW_DIRECTORY):
+    """
+    Setup directories and pickled files for fsurf
+
+    :return: exit code -- 0 on success, 1 on failure
+    """
+    try:
+        if os.path.isdir(workflow_dir):
+            pickle_filename = os.path.join(workflow_dir, 'fsurf_workflows.pkl')
+            if os.path.exists(pickle_filename):
+                with open(pickle_filename, 'rb') as f:
+                    workflows = cPickle.load(f)
+                if type(workflows) != dict:
+                    sys.stdout.write("Resetting saved workflow"
+                                     " information\n")
+                    with open(pickle_filename, 'wb') as f:
+                        cPickle.dump({}, f, cPickle.HIGHEST_PROTOCOL)
+
+            else:
+                with open(pickle_filename, 'wb') as f:
+                    cPickle.dump({}, f, cPickle.HIGHEST_PROTOCOL)
+            return 0
+        elif os.path.exists(workflow_dir) and not os.path.isdir(workflow_dir):
+            sys.stdout.write("Can't create {0} because it ".format(workflow_dir) +
+                             "is already present and not a directory\n")
+            return 1
+        else:
+            sys.stdout.write("Creating directory for workflows\n")
+            os.makedirs(workflow_dir, 0o700)
+            pickle_filename = os.path.join(workflow_dir, 'fsurf_workflows.pkl')
+            with open(pickle_filename, 'wb') as f:
+                pickle_file = cPickle.Pickler(f, cPickle.HIGHEST_PROTOCOL)
+                pickle_file.dump({}, cPickle.HIGHEST_PROTOCOL)
+            return True
+    except OSError:
+        sys.stdout.write("Can't create {0} for workflows, "
+                         "exiting...\n".format(workflow_dir))
+        return False
+
+
 if __name__ == "__main__":
-    sys.exit(config_user_settings())
+     exit_code = config_user_settings()
+     exit_code += setup_fsurf_dirs()
+

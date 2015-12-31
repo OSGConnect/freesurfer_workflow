@@ -9,6 +9,7 @@ import cStringIO
 import time
 import shutil
 import tarfile
+import cPickle
 
 import fsurfer
 import Pegasus.DAX3
@@ -168,6 +169,48 @@ def print_status(workflow_id, verbose=False):
     return exit_code
 
 
+def gettime(workflow_id):
+    """
+    Get the submission time and date for a workflow
+    :param workflow_id:  pegasus id for workflow
+    :return:  a string with time and date of submission
+    """
+    year = workflow_id[0:4]
+    month = workflow_id[4:6]
+    day = workflow_id[6:8]
+    hour = workflow_id[9:11]
+    minute = workflow_id[11:13]
+    return "{0}:{1} {2}-{3}-{4}".format(hour,
+                                        minute,
+                                        month,
+                                        day,
+                                        year)
+
+
+def get_status(workflow_id):
+    """
+    Check and return the status of a given workflow
+
+    :param workflow_id:  pegasus id for workflow
+    :return: status of given workflow
+    """
+    exit_code, output = run_pegasus('status', workflow_id=workflow_id)
+    if exit_code != 0:
+        return 'UNKNOWN'
+    in_dag_status = False
+    sys.stdout.write("Workflow information: \n")
+    for line in cStringIO.StringIO(output).readlines():
+        if 'UNRDY' in line or 'UNREADY' in line:
+            sys.stdout.write(line + "\n")
+            in_dag_status = True
+            continue
+        if in_dag_status:
+            status_match = re.search('(?:\s+\d+){7}\s+\d+.\d+\s+(\w*)\s+',
+                                     line)
+            if status_match:
+                return status_match.group(1)
+
+
 def list_workflows():
     """
     List the workflows currently in the system
@@ -176,13 +219,62 @@ def list_workflows():
     """
     try:
         check_and_create_workflow_dir()
-        sys.stdout.write("Current workflows:\n")
-        for entry in os.listdir(WORKFLOW_DIRECTORY):
-            if os.path.isdir(os.path.join(WORKFLOW_DIRECTORY, entry)):
-                sys.stdout.write("{0}\n".format(entry))
+        sys.stdout.write("Current workflows\n")
+        sys.stdout.write("{0:10} {1:20} {2:20} {3:15} {4:10}".format('Subject',
+                                                                     'Workflow',
+                                                                     'Submit time',
+                                                                     'Cores Used',
+                                                                     'Status'))
+        workflows = load_workflow_summary()
+        if type(workflows) != dict:
+            sys.stdout.write("Resetting saved workflow"
+                             " information\n")
+            workflows = regenerate_workflow_info()
+        for workflow in workflows:
+            if len(workflows[workflow]) == 2:
+                subject = workflows[workflow][0]
+                cores = workflows[workflow][1]
+                status = get_status(workflow)
+                if status.upper() in ['COMPLETED', 'FAILED']:
+                    workflows[workflow].append(status)
+            else:
+                subject = workflows[workflow][0]
+                cores = workflows[workflow][1]
+                status = workflows[workflow][2]
+
+            sys.stdout.write("{0:10} {1:20} {2:20} {3:15} {4:10}".format(subject,
+                                                                         workflow,
+                                                                         gettime(workflow),
+                                                                         cores,
+                                                                         status))
+        save_workflow_summary(workflows)
         return 0
     except IOError:
         return 1
+
+
+def regenerate_workflow_info():
+    """
+    Scan workflow directories and regenerate the pickled info
+
+    :return: workflow dictionary with information on workflows
+    """
+    workflows = {}
+    for entry in os.listdir(WORKFLOW_DIRECTORY):
+        if os.path.isdir(os.path.join(WORKFLOW_DIRECTORY, entry)):
+            info_filename = os.path.isdir(os.path.join(WORKFLOW_DIRECTORY,
+                                                       entry,
+                                                       'fsurf_info'))
+            with open(info_filename, 'r') as f:
+                info = f.read(-1)
+                try:
+                    subject_name, cores = info.split(' ')
+                    cores = int(cores.strip())
+                    workflows[entry] = [subject_name.strip(), cores]
+                except:
+                    continue
+    save_workflow_summary(workflows)
+    return workflows
 
 
 def remove_workflow(workflow_id):
@@ -197,6 +289,10 @@ def remove_workflow(workflow_id):
     exit_code, output = run_pegasus('remove', workflow_id=workflow_id)
     if exit_code == 0:
         sys.stdout.write("Workflow {0} removed successfully\n".format(workflow_id))
+        workflows = load_workflow_summary()
+        if workflow_id in workflows:
+            del workflows[workflow_id]
+            save_workflow_summary(workflows)
         job_id = re.match(r'Job (\d+.\d+) marked for removal', output)
         if job_id is not None:
             sys.stdout.write("Waiting for running jobs to be removed...\n")
@@ -232,11 +328,34 @@ def remove_workflow(workflow_id):
     return exit_code
 
 
-def submit_workflow(input_file, subject_name, multicore=False):
+def save_workflow_info(workflow_id, subject_name, multicore):
+    """
+    Save workflow info to pickle file as well as saving a backup in case
+
+    :param workflow_id: id for workflow
+    :param subject_name: subject being processed
+    :param multicore: True if job is using 8 cores, false otherwise
+    :return: 0 on success, 1 on error
+    """
+    pickle_filename = os.path.join(WORKFLOW_BASE_DIRECTORY, 'fsurf_workflows.pkl')
+    if multicore:
+        cores = 8
+    else:
+        cores = 2
+    exit_code = 0
+    workflows = load_workflow_summary()
+    workflows[workflow_id] = [subject_name, cores]
+    save_workflow_summary(workflows)
+    with open(os.path.join(WORKFLOW_DIRECTORY, workflow_id, "fsurf_info"), "w") as f:
+        f.write("{0} {1}".format(subject_name, cores))
+    return exit_code
+
+
+def submit_workflow(input_directory, subject_name, multicore=False):
     """
     Submit a workflow to OSG for processing
 
-    :param input_file:    path to file with MRI data in mgz format
+    :param input_directory:    path to file with MRI data in mgz format
     :param subject_name:  name of subject in the file
     :param multicore:     boolean indicating whether to use a multicore workflow or not
     :return:              0 on success, 1 on error
@@ -245,17 +364,16 @@ def submit_workflow(input_file, subject_name, multicore=False):
         cores = 8
     else:
         cores = 2
-    if input_file is None:
-        sys.stdout.write("Input file missing, exiting...\n")
-        return 1
     if subject_name is None:
         sys.stdout.write("Subject name is missing, exiting...\n")
         return 1
-    dax = Pegasus.DAX3.ADAG('freesurfer')
-    subject_file = os.path.abspath(input_file)
+    subject_file = os.path.join(input_directory,
+                                "{0}_defaced.mgz".format(subject_name))
+    subject_file = os.path.abspath(subject_file)
     if not os.path.isfile(subject_file):
         sys.stderr.write("{0} is not present and is needed, exiting".format(subject_file))
         return 1
+    dax = Pegasus.DAX3.ADAG('freesurfer')
     dax_subject_file = Pegasus.DAX3.File("{0}_defaced.mgz".format(subject_name))
     dax_subject_file.addPFN(Pegasus.DAX3.PFN("file://{0}".format(subject_file), "local"))
     dax.addFile(dax_subject_file)
@@ -289,9 +407,13 @@ def submit_workflow(input_file, subject_name, multicore=False):
                 if id_match is not None:
                     sys.stdout.write("Workflow submitted with an "
                                      "id of {0}\n".format(id_match.group(1)))
+                    save_workflow_info(id_match.group(1),
+                                       subject_name,
+                                       multicore)
                 else:
                     sys.stdout.write("Workflow submitted but could not get workflow id\n")
                 break
+
         os.unlink(dax_name)
     return errors
 
@@ -314,6 +436,35 @@ def get_output(workflow_id):
     tbz.add(output_dir)
     os.chdir(current_dir)
     return 0
+
+
+def save_workflow_summary(workflows):
+    """
+    Save workflow information to a file using pickle
+
+    :param workflows: dictionary with information on workflows
+    :return: None
+    """
+    pickle_filename = os.path.join(WORKFLOW_BASE_DIRECTORY, 'fsurf_workflows.pkl')
+    if os.path.exists(pickle_filename) and not os.path.isfile(pickle_filename):
+        sys.stdout.write("{0} is not a file, ".format(pickle_filename) +
+                         "can't save workflow information\n")
+        return
+    with open(pickle_filename, 'wb') as f:
+        cPickle.dump(workflows, f, cPickle.HIGHEST_PROTOCOL)
+
+
+def load_workflow_summary():
+    """
+    Load workflow information from a file
+
+    :return: dictionary with workflow information
+    """
+    pickle_filename = os.path.join(WORKFLOW_BASE_DIRECTORY, 'fsurf_workflows.pkl')
+    if not os.path.exists(pickle_filename):
+        return {}
+    with open(pickle_filename, 'rb') as f:
+        return cPickle.load(f)
 
 
 def main():
@@ -343,8 +494,8 @@ def main():
                         action='store', help='Pegasus workflow id to use')
     parser.add_argument('--subject', dest='subject', default=None,
                         help='Subject id to process ')
-    parser.add_argument('--input-file', dest='input_file', default=None,
-                        help='path to input file')
+    parser.add_argument('--input-directory', dest='input_directory',
+                        default='.', help='directory containing input file')
     parser.add_argument('--multicore', dest='multicore',
                         action='store_true',
                         help='Use 8 cores to')
