@@ -169,6 +169,48 @@ def print_status(workflow_id, verbose=False):
     return exit_code
 
 
+def gettime(workflow_id):
+    """
+    Get the submission time and date for a workflow
+    :param workflow_id:  pegasus id for workflow
+    :return:  a string with time and date of submission
+    """
+    year = workflow_id[0:4]
+    month = workflow_id[4:6]
+    day = workflow_id[6:8]
+    hour = workflow_id[9:11]
+    minute = workflow_id[11:13]
+    return "{0}:{1} {2}-{3}-{4}".format(hour,
+                                        minute,
+                                        month,
+                                        day,
+                                        year)
+
+
+def get_status(workflow_id):
+    """
+    Check and return the status of a given workflow
+
+    :param workflow_id:  pegasus id for workflow
+    :return: status of given workflow
+    """
+    exit_code, output = run_pegasus('status', workflow_id=workflow_id)
+    if exit_code != 0:
+        return 'UNKNOWN'
+    in_dag_status = False
+    sys.stdout.write("Workflow information: \n")
+    for line in cStringIO.StringIO(output).readlines():
+        if 'UNRDY' in line or 'UNREADY' in line:
+            sys.stdout.write(line + "\n")
+            in_dag_status = True
+            continue
+        if in_dag_status:
+            status_match = re.search('(?:\s+\d+){7}\s+\d+.\d+\s+(\w*)\s+',
+                                     line)
+            if status_match:
+                return status_match.group(1)
+
+
 def list_workflows():
     """
     List the workflows currently in the system
@@ -177,21 +219,35 @@ def list_workflows():
     """
     try:
         check_and_create_workflow_dir()
-        sys.stdout.write("Current workflows:\n")
-        pickle_filename = os.path.join(WORKFLOW_BASE_DIRECTORY, 'fsurf_workflows.pkl')
-        if os.path.exists(pickle_filename):
-            with open(pickle_filename, 'rb') as f:
-                workflows = cPickle.load(f)
-            if type(workflows) != dict:
-                sys.stdout.write("Resetting saved workflow"
-                                 " information\n")
-                workflows = regenerate_workflow_info(WORKFLOW_DIRECTORY)
-                with open(pickle_filename, 'wb') as f:
-                    cPickle.dump(workflows, f, cPickle.HIGHEST_PROTOCOL)
+        sys.stdout.write("Current workflows\n")
+        sys.stdout.write("{0:10} {1:20} {2:20} {3:15} {4:10}".format('Subject',
+                                                                     'Workflow',
+                                                                     'Submit time',
+                                                                     'Cores Used',
+                                                                     'Status'))
+        workflows = load_workflow_summary()
+        if type(workflows) != dict:
+            sys.stdout.write("Resetting saved workflow"
+                             " information\n")
+            workflows = regenerate_workflow_info()
+        for workflow in workflows:
+            if len(workflows[workflow]) == 2:
+                subject = workflows[workflow][0]
+                cores = workflows[workflow][1]
+                status = get_status(workflow)
+                if status.upper() in ['COMPLETED', 'FAILED']:
+                    workflows[workflow].append(status)
+            else:
+                subject = workflows[workflow][0]
+                cores = workflows[workflow][1]
+                status = workflows[workflow][2]
 
-        for entry in os.listdir(WORKFLOW_DIRECTORY):
-            if os.path.isdir(os.path.join(WORKFLOW_DIRECTORY, entry)):
-                sys.stdout.write("{0}\n".format(entry))
+            sys.stdout.write("{0:10} {1:20} {2:20} {3:15} {4:10}".format(subject,
+                                                                         workflow,
+                                                                         gettime(workflow),
+                                                                         cores,
+                                                                         status))
+        save_workflow_summary(workflows)
         return 0
     except IOError:
         return 1
@@ -203,7 +259,23 @@ def regenerate_workflow_info():
 
     :return: workflow dictionary with information on workflows
     """
-    pass
+    workflows = {}
+    for entry in os.listdir(WORKFLOW_DIRECTORY):
+        if os.path.isdir(os.path.join(WORKFLOW_DIRECTORY, entry)):
+            info_filename = os.path.isdir(os.path.join(WORKFLOW_DIRECTORY,
+                                                       entry,
+                                                       'fsurf_info'))
+            with open(info_filename, 'r') as f:
+                info = f.read(-1)
+                try:
+                    subject_name, cores = info.split(' ')
+                    cores = int(cores.strip())
+                    workflows[entry] = [subject_name.strip(), cores]
+                except:
+                    continue
+    save_workflow_summary(workflows)
+    return workflows
+
 
 def remove_workflow(workflow_id):
     """
@@ -217,6 +289,10 @@ def remove_workflow(workflow_id):
     exit_code, output = run_pegasus('remove', workflow_id=workflow_id)
     if exit_code == 0:
         sys.stdout.write("Workflow {0} removed successfully\n".format(workflow_id))
+        workflows = load_workflow_summary()
+        if workflow_id in workflows:
+            del workflows[workflow_id]
+            save_workflow_summary(workflows)
         job_id = re.match(r'Job (\d+.\d+) marked for removal', output)
         if job_id is not None:
             sys.stdout.write("Waiting for running jobs to be removed...\n")
@@ -267,20 +343,9 @@ def save_workflow_info(workflow_id, subject_name, multicore):
     else:
         cores = 2
     exit_code = 0
-    if os.path.exists(pickle_filename) and os.path.isfile(pickle_filename):
-        sys.stdout.write("{0} is not a file, ".format(pickle_filename) +
-                         "can't save workflow information\n")
-        exit_code = 1
-    if not os.path.exists(pickle_filename):
-        with open(pickle_filename, 'wb') as f:
-            workflows = {workflow_id: [subject_name, cores]}
-            cPickle.dump(workflows, f, cPickle.HIGHEST_PROTOCOL)
-    else:
-        with open(pickle_filename, 'rb') as f:
-            workflows = cPickle.load(f)
-        workflows[workflow_id] = [subject_name, cores]
-        with open(pickle_filename, 'wb') as f:
-            cPickle.dump(workflows, f, cPickle.HIGHEST_PROTOCOL)
+    workflows = load_workflow_summary()
+    workflows[workflow_id] = [subject_name, cores]
+    save_workflow_summary(workflows)
     with open(os.path.join(WORKFLOW_DIRECTORY, workflow_id, "fsurf_info"), "w") as f:
         f.write("{0} {1}".format(subject_name, cores))
     return exit_code
@@ -334,7 +399,6 @@ def submit_workflow(input_directory, subject_name, multicore=False):
             return 1
         capture_id = False
         for line in cStringIO.StringIO(output).readlines():
-            workflow_id = 0
             if 'Your workflow has been started' in line:
                 capture_id = True
             if capture_id and WORKFLOW_DIRECTORY in line:
@@ -343,11 +407,13 @@ def submit_workflow(input_directory, subject_name, multicore=False):
                 if id_match is not None:
                     sys.stdout.write("Workflow submitted with an "
                                      "id of {0}\n".format(id_match.group(1)))
-                    workflow_id = id_match.group(1)
+                    save_workflow_info(id_match.group(1),
+                                       subject_name,
+                                       multicore)
                 else:
                     sys.stdout.write("Workflow submitted but could not get workflow id\n")
                 break
-            save_workflow_info(workflow_id, subject_name, multicore)
+
         os.unlink(dax_name)
     return errors
 
@@ -370,6 +436,35 @@ def get_output(workflow_id):
     tbz.add(output_dir)
     os.chdir(current_dir)
     return 0
+
+
+def save_workflow_summary(workflows):
+    """
+    Save workflow information to a file using pickle
+
+    :param workflows: dictionary with information on workflows
+    :return: None
+    """
+    pickle_filename = os.path.join(WORKFLOW_BASE_DIRECTORY, 'fsurf_workflows.pkl')
+    if os.path.exists(pickle_filename) and not os.path.isfile(pickle_filename):
+        sys.stdout.write("{0} is not a file, ".format(pickle_filename) +
+                         "can't save workflow information\n")
+        return
+    with open(pickle_filename, 'wb') as f:
+        cPickle.dump(workflows, f, cPickle.HIGHEST_PROTOCOL)
+
+
+def load_workflow_summary():
+    """
+    Load workflow information from a file
+
+    :return: dictionary with workflow information
+    """
+    pickle_filename = os.path.join(WORKFLOW_BASE_DIRECTORY, 'fsurf_workflows.pkl')
+    if not os.path.exists(pickle_filename):
+        return {}
+    with open(pickle_filename, 'rb') as f:
+        return cPickle.load(f)
 
 
 def main():
