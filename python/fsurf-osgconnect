@@ -309,7 +309,7 @@ def get_output(workflow_id):
         return 1
     os.chdir(WORKFLOW_OUTPUT_DIRECTORY)
     output_file = os.path.join(current_dir,
-                               "{0}.tar.bz2")
+                               "{0}.tar.bz2".format(workflow_id))
     tbz = tarfile.open(output_file, 'w:bz2')
     tbz.add(output_dir)
     os.chdir(current_dir)
