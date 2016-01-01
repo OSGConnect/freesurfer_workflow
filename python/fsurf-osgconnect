@@ -198,10 +198,8 @@ def get_status(workflow_id):
     if exit_code != 0:
         return 'UNKNOWN'
     in_dag_status = False
-    sys.stdout.write("Workflow information: \n")
     for line in cStringIO.StringIO(output).readlines():
         if 'UNRDY' in line or 'UNREADY' in line:
-            sys.stdout.write(line + "\n")
             in_dag_status = True
             continue
         if in_dag_status:
@@ -220,11 +218,11 @@ def list_workflows():
     try:
         check_and_create_workflow_dir()
         sys.stdout.write("Current workflows\n")
-        sys.stdout.write("{0:10} {1:20} {2:20} {3:15} {4:10}".format('Subject',
-                                                                     'Workflow',
-                                                                     'Submit time',
-                                                                     'Cores Used',
-                                                                     'Status'))
+        sys.stdout.write("{0:10} {1:20} {2:20} {3:15} {4:10}\n".format('Subject',
+                                                                       'Workflow',
+                                                                       'Submit time',
+                                                                       'Cores Used',
+                                                                       'Status'))
         workflows = load_workflow_summary()
         if type(workflows) != dict:
             sys.stdout.write("Resetting saved workflow"
@@ -242,11 +240,11 @@ def list_workflows():
                 cores = workflows[workflow][1]
                 status = workflows[workflow][2]
 
-            sys.stdout.write("{0:10} {1:20} {2:20} {3:15} {4:10}".format(subject,
-                                                                         workflow,
-                                                                         gettime(workflow),
-                                                                         cores,
-                                                                         status))
+            sys.stdout.write("{0:10} {1:20} {2:20} {3:<15} {4:10}\n".format(subject,
+                                                                           workflow,
+                                                                           gettime(workflow),
+                                                                           cores,
+                                                                           status))
         save_workflow_summary(workflows)
         return 0
     except IOError:
@@ -514,7 +512,7 @@ def main():
     elif args.action == 'remove':
         status = remove_workflow(args.workflow_id)
     elif args.action == 'submit':
-        status = submit_workflow(args.input_file, args.subject, args.multicore)
+        status = submit_workflow(args.input_directory, args.subject, args.multicore)
     elif args.action == 'output':
         status = get_output(args.workflow_id)
     else:
