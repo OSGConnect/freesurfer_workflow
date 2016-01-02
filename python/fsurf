@@ -1,0 +1,366 @@
+#!/usr/bin/env python
+import argparse
+import cStringIO
+import getpass
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tarfile
+import time
+
+REST_ENDPOINT = "http://freesurfer.mwt2.org"
+
+def get_user_info():
+    """
+    Query user for username and password and return
+
+    :return: username, password
+    """
+    sys.stdout.write("Enter username: ")
+    username = sys.stdin.readline().strip()
+    password = getpass.getpass("Enter password: ")
+    return username, password
+
+
+def print_status(workflow_id, verbose=False):
+    """
+    Print the status of a workflow
+
+    :param workflow_id:  pegasus id for workflow
+    :param verbose:      whether to give full workflow details or a summary
+    :return:             0 on success, 1 on error
+    """
+    if workflow_id is None:
+        sys.stdout.write("Workflow id not given\n")
+        return 0
+    exit_code, output = run_pegasus('status', workflow_id=workflow_id)
+    if exit_code != 0:
+        sys.stdout.write("An error occurred while getting job status\n")
+        if output[1] is not None:
+            sys.stdout.write("{0}\n".format(output))
+    if verbose:
+        sys.stdout.write("{0}\n".format(output))
+        return exit_code
+    job_summary = re.search(r'Summary: (\d+) Condor jobs(.*)', output)
+    if job_summary is not None:
+        idle_jobs = re.search(r'I:(\d+)', job_summary.group(2))
+        num_idle = 0
+        if idle_jobs is not None:
+            num_idle = idle_jobs.group(1)
+        running_jobs = re.search(r'R:(\d+)', job_summary.group(2))
+        num_running = 0
+        if running_jobs is not None:
+            num_running = running_jobs.group(1)
+        held_jobs = re.search(r'H:(\d+)', job_summary.group(2))
+        num_held = 0
+        if held_jobs is not None:
+            num_held = held_jobs.group(1)
+        sys.stdout.write("Job information:\n")
+        sys.stdout.write("{0} Idle jobs\n".format(num_idle))
+        sys.stdout.write("{0} Running jobs\n".format(num_running))
+        sys.stdout.write("{0} Held jobs\n".format(num_held))
+        sys.stdout.write("{0} Total jobs\n".format(job_summary.group(1)))
+        sys.stdout.write("\n")
+    in_dag_status = False
+    sys.stdout.write("Workflow information: \n")
+    for line in cStringIO.StringIO(output).readlines():
+        if 'UNRDY' in line or 'UNREADY' in line:
+            sys.stdout.write(line + "\n")
+            in_dag_status = True
+            continue
+        if in_dag_status:
+            sys.stdout.write(line + "\n")
+            if 'Summary' in line:
+                break
+    return exit_code
+
+
+
+def get_status(workflow_id):
+    """
+    Check and return the status of a given workflow
+
+    :param workflow_id:  pegasus id for workflow
+    :return: status of given workflow
+    """
+    exit_code, output = run_pegasus('status', workflow_id=workflow_id)
+    if exit_code != 0:
+        return 'UNKNOWN'
+    in_dag_status = False
+    sys.stdout.write("Workflow information: \n")
+    for line in cStringIO.StringIO(output).readlines():
+        if 'UNRDY' in line or 'UNREADY' in line:
+            sys.stdout.write(line + "\n")
+            in_dag_status = True
+            continue
+        if in_dag_status:
+            status_match = re.search('(?:\s+\d+){7}\s+\d+.\d+\s+(\w*)\s+',
+                                     line)
+            if status_match:
+                return status_match.group(1)
+
+
+def list_workflows():
+    """
+    List the workflows currently in the system
+
+    :return: 0 on success, 1 on error
+    """
+    try:
+        check_and_create_workflow_dir()
+        sys.stdout.write("Current workflows\n")
+        sys.stdout.write("{0:10} {1:20} {2:20} {3:15} {4:10}".format('Subject',
+                                                                     'Workflow',
+                                                                     'Submit time',
+                                                                     'Cores Used',
+                                                                     'Status'))
+        workflows = load_workflow_summary()
+        if type(workflows) != dict:
+            sys.stdout.write("Resetting saved workflow"
+                             " information\n")
+            workflows = regenerate_workflow_info()
+        for workflow in workflows:
+            if len(workflows[workflow]) == 2:
+                subject = workflows[workflow][0]
+                cores = workflows[workflow][1]
+                status = get_status(workflow)
+                if status.upper() in ['COMPLETED', 'FAILED']:
+                    workflows[workflow].append(status)
+            else:
+                subject = workflows[workflow][0]
+                cores = workflows[workflow][1]
+                status = workflows[workflow][2]
+
+            sys.stdout.write("{0:10} {1:20} {2:20} {3:15} {4:10}".format(subject,
+                                                                         workflow,
+                                                                         gettime(workflow),
+                                                                         cores,
+                                                                         status))
+        save_workflow_summary(workflows)
+        return 0
+    except IOError:
+        return 1
+
+
+def remove_workflow(workflow_id):
+    """
+    Stop and remove a specified pegasus workflow
+
+    :param workflow_id: pegasus id for workflow
+    :return: 0 on success, 1 on error
+    """
+    workflow_location = os.path.join(WORKFLOW_DIRECTORY,
+                                     workflow_id)
+    exit_code, output = run_pegasus('remove', workflow_id=workflow_id)
+    if exit_code == 0:
+        sys.stdout.write("Workflow {0} removed successfully\n".format(workflow_id))
+        workflows = load_workflow_summary()
+        if workflow_id in workflows:
+            del workflows[workflow_id]
+            save_workflow_summary(workflows)
+        job_id = re.match(r'Job (\d+.\d+) marked for removal', output)
+        if job_id is not None:
+            sys.stdout.write("Waiting for running jobs to be removed...\n")
+            count = 0
+            while True:
+                time.sleep(10)
+                try:
+                    output = subprocess.check_output(["/usr/bin/condor_q",
+                                                      job_id.group(1)])
+                except subprocess.CalledProcessError:
+                    sys.stdout.write("An error occurred while checking for "
+                                     "running jobs, exiting...\n")
+                    return 1
+                if 'pegasus-dagman' not in output:
+                    break
+                count += 1
+                if count > 30:
+                    sys.stdout.write("Can't remove job, exiting...")
+                    return 1
+            sys.stdout.write("Jobs removed, removing workflow directory\n")
+            try:
+                shutil.rmtree(workflow_location)
+            except shutil.Error:
+                sys.stdout.write("Can't remove directory at "
+                                 "{0}, exiting...\n".format(workflow_location))
+                exit_code = 1
+    else:
+        sys.stdout.write("Workflow {0} was not removed\n".format(workflow_id))
+        sys.stdout.write("Following error occurred:\n")
+        sys.stdout.write(output)
+        sys.stdout.write("You may need to remove the workflow directory "
+                         "at {0} manually\n".format(workflow_location))
+    return exit_code
+
+
+def submit_workflow(input_directory, subject_name, multicore=False):
+    """
+    Submit a workflow to OSG for processing
+
+    :param input_directory:    path to file with MRI data in mgz format
+    :param subject_name:  name of subject in the file
+    :param multicore:     boolean indicating whether to use a multicore workflow or not
+    :return:              0 on success, 1 on error
+    """
+    if multicore:
+        cores = 8
+    else:
+        cores = 2
+    if subject_name is None:
+        sys.stdout.write("Subject name is missing, exiting...\n")
+        return 1
+    subject_file = os.path.join(input_directory,
+                                "{0}_defaced.mgz".format(subject_name))
+    subject_file = os.path.abspath(subject_file)
+    if not os.path.isfile(subject_file):
+        sys.stderr.write("{0} is not present and is needed, exiting".format(subject_file))
+        return 1
+    dax = Pegasus.DAX3.ADAG('freesurfer')
+    dax_subject_file = Pegasus.DAX3.File("{0}_defaced.mgz".format(subject_name))
+    dax_subject_file.addPFN(Pegasus.DAX3.PFN("file://{0}".format(subject_file), "local"))
+    dax.addFile(dax_subject_file)
+    errors = False
+    errors &= fsurfer.create_initial_job(dax, cores, dax_subject_file, subject_name)
+    errors &= fsurfer.create_recon2_job(dax, cores, subject_name)
+    errors &= fsurfer.create_final_job(dax, cores, subject_name, serial_job=True)
+    if not errors:
+        curr_date = time.strftime("%Y%m%d_%H%M%S", time.gmtime(time.time()))
+        dax_name = "serial_dax_{0}.xml".format(curr_date)
+        with open(dax_name, 'w') as f:
+            dax.writeXML(f)
+        exit_code, output = run_pegasus('submit',
+                                        dax="{0}".format(dax_name),
+                                        conf=PEGASUSRC_PATH,
+                                        sites="condorpool",
+                                        workflow_directory=WORKFLOW_BASE_DIRECTORY)
+        if exit_code != 0:
+            sys.stdout("An error occurred when generating and submitting workflow, exiting...\n")
+            sys.stdout.write("Error: \n")
+            sys.stdout.write(output)
+            os.unlink(dax_name)
+            return 1
+        capture_id = False
+        for line in cStringIO.StringIO(output).readlines():
+            if 'Your workflow has been started' in line:
+                capture_id = True
+            if capture_id and WORKFLOW_DIRECTORY in line:
+                id_match = re.search(r'([T\d]+-\d+)'.format(WORKFLOW_DIRECTORY),
+                                     line)
+                if id_match is not None:
+                    sys.stdout.write("Workflow submitted with an "
+                                     "id of {0}\n".format(id_match.group(1)))
+                    save_workflow_info(id_match.group(1),
+                                       subject_name,
+                                       multicore)
+                else:
+                    sys.stdout.write("Workflow submitted but could not get workflow id\n")
+                break
+
+        os.unlink(dax_name)
+    return errors
+
+
+def get_output(workflow_id):
+    """
+
+    :param workflow_id: pegasus id for workflow
+    :return: 0 on success, 1 on error
+    """
+    current_dir = os.getcwd()
+    output_dir = os.path.join(WORKFLOW_OUTPUT_DIRECTORY, workflow_id)
+    if not os.path.isdir(output_dir):
+        sys.stdout.write("Output for workflow {0} does not exist\n".format(workflow_id))
+        return 1
+    os.chdir(WORKFLOW_OUTPUT_DIRECTORY)
+    output_file = os.path.join(current_dir,
+                               "{0}.tar.bz2")
+    tbz = tarfile.open(output_file, 'w:bz2')
+    tbz.add(output_dir)
+    os.chdir(current_dir)
+    return 0
+
+
+def main():
+    """
+    Main function that parses arguments and generates the pegasus
+    workflow
+
+    :return: True if any errors occurred during DAX generaton
+    """
+    parser = argparse.ArgumentParser(description="Process freesurfer information")
+    parser.add_argument('--submit', dest='action',
+                        action='store_const', const='submit',
+                        help='Submit job for processing')
+    parser.add_argument('--list', dest='action',
+                        action='store_const', const='list',
+                        help='List current jobs')
+    parser.add_argument('--status', dest='action',
+                        action='store_const', const='status',
+                        help='Submit job for processing')
+    parser.add_argument('--remove', dest='action',
+                        action='store_const', const='remove',
+                        help='Submit job for processing')
+    parser.add_argument('--output', dest='action',
+                        action='store_const', const='output',
+                        help='Submit job for processing')
+    parser.add_argument('--workflow-id', dest='workflow_id',
+                        action='store', help='Pegasus workflow id to use')
+    parser.add_argument('--subject', dest='subject', default=None,
+                        help='Subject id to process ')
+    parser.add_argument('--input-directory', dest='input_directory',
+                        default='.', help='directory containing input file')
+    parser.add_argument('--rest-endpoint', dest='rest_endpoint',
+                        default=REST_ENDPOINT,
+                        help='url to rest endpoint (usually not needed')
+    parser.add_argument('--multicore', dest='multicore',
+                        action='store_true',
+                        help='Use 8 cores to')
+    parser.add_argument('--verbose', dest='verbose', default=False,
+                        action='store_true',
+                        help='Enable verbose output')
+    parser.add_argument('--debug', dest='debug', default=False,
+                        action='store_true',
+                        help='Enable debugging output')
+    args = parser.parse_args(sys.argv[1:])
+
+    if args.action == 'status':
+        status = print_status(args.workflow_id, args.verbose, args.reset_endpoint)
+    elif args.action == 'list':
+        status = list_workflows(args.reset_endpoint)
+    elif args.action == 'remove':
+        status = remove_workflow(args.workflow_id, args.reset_endpoint)
+    elif args.action == 'submit':
+        status = submit_workflow(args.input_directory, args.subject, args.multicore, args.reset_endpoint)
+    elif args.action == 'output':
+        status = get_output(args.workflow_id, args.reset_endpoint)
+    else:
+        sys.stdout.write("Must specify an action, exiting...\n")
+        parser.print_help()
+        status = 0
+    sys.exit(status)
+
+if __name__ == '__main__':
+    # workaround missing subprocess.check_ouput
+    if "check_output" not in dir(subprocess):  # duck punch it in!
+        def check_output(*popenargs, **kwargs):
+            r"""Run command with arguments and return its output as a byte string.
+
+            Backported from Python 2.7 as it's implemented as pure python on stdlib.
+
+            """
+            process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+            output, unused_err = process.communicate()
+            retcode = process.poll()
+            if retcode:
+                cmd = kwargs.get("args")
+                if cmd is None:
+                    cmd = popenargs[0]
+                error = subprocess.CalledProcessError(retcode, cmd)
+                error.output = output
+                raise error
+            return output
+
+        subprocess.check_output = check_output
+    main()
