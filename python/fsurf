@@ -115,14 +115,15 @@ def get_token(userid, password):
     :return: timestamp, token
     """
     parameters = {'userid': userid, 'id ': 'salt'}
-    code, response = get_response(parameters, 'userid', 'GET')
+    code, response = get_response(parameters, 'userid/salt', 'GET')
     if code != 200:
         sys.stdout.write("Can't get authentication token\n")
         return None, None
     timestamp = time.time()
     response_obj = json.loads(response)
     salt = response_obj['response']
-    token = hashlib.sha256(salt + password + str(timestamp)).hexdigest()
+    token = hashlib.sha256(salt + password).hexdigest()
+    token = hashlib.sha256(token + str(timestamp)).hexdigest()
     return str(timestamp), token
 
 
