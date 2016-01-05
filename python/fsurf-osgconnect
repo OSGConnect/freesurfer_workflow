@@ -481,18 +481,18 @@ def main():
                         help='List current jobs')
     parser.add_argument('--status', dest='action',
                         action='store_const', const='status',
-                        help='Submit job for processing')
+                        help='Get status of a specified job')
     parser.add_argument('--remove', dest='action',
                         action='store_const', const='remove',
-                        help='Submit job for processing')
+                        help='Remove specified job')
     parser.add_argument('--output', dest='action',
                         action='store_const', const='output',
-                        help='Submit job for processing')
-    parser.add_argument('--workflow-id', dest='workflow_id',
-                        action='store', help='Pegasus workflow id to use')
+                        help='Get output from specified job')
+    parser.add_argument('--id', dest='workflow_id',
+                        action='store', help='id that specifies job')
     parser.add_argument('--subject', dest='subject', default=None,
                         help='Subject id to process ')
-    parser.add_argument('--input-directory', dest='input_directory',
+    parser.add_argument('--dir', dest='input_directory',
                         default='.', help='directory containing input file')
     parser.add_argument('--multicore', dest='multicore',
                         action='store_true',
