@@ -104,6 +104,8 @@ def run_pegasus(action, **kwargs):
                                               kwargs['workflow_directory'],
                                               '--conf',
                                               kwargs['conf'],
+                                              '--output-dir',
+                                              WORKFLOW_OUTPUT_DIRECTORY,
                                               '--dax',
                                               kwargs['dax'],
                                               '--submit'],
