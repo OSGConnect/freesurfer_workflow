@@ -25,6 +25,8 @@ CREATE TABLE freesurfer_interface.jobs (
     id              SERIAL PRIMARY KEY,
     name            varchar(128) NOT NULL,
     user_id         varchar(128) NOT NULL REFERENCES freesurfer_interface.users(username),
+    subject         varchar(128) NOT NULL,
+    multicore       BOOLEAN NOT NULL DEFAULT FALSE,
     image_filename  varchar(128) NOT NULL,
     log_filename    varchar(128) NOT NULL,
     state           freesurfer_interface.job_state NOT NULL,

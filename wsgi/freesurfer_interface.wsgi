@@ -5,6 +5,7 @@ import json
 import socket
 import sys
 import urlparse
+import hashlib
 from wsgiref.simple_server import make_server
 
 import psycopg2
@@ -113,15 +114,63 @@ def get_user_params(environ):
     return user_id, token
 
 
-def validate_user(userid, token):
+def get_user_salt(environ):
+    """
+    Get salt for a userid and return it
+
+    :param environ: dictionary with environment variables (See PEP 333)
+    :return: tuple with userid, security_token
+    """
+    status = '200 OK'
+    userid, _ = get_user_params(environ)
+    conn = get_db_client()
+    cursor = conn.cursor()
+    salt_query = "SELECT salt " \
+                 "FROM users " \
+                 "WHERE userid = %s;"
+
+    try:
+        cursor.execute(salt_query, userid)
+        row = cursor.fetchone()
+        if row:
+            response = {'status': 200, 'result': row[0]}
+        else:
+            response = {'status': 400,
+                        'result': 'Userid not found'}
+            status = '400 Bad Request'
+    except Exception, e:
+        response = {'status': 500,
+                    'result': str(e)}
+        status = '500 Server Error'
+    conn.close()
+    return json.dumps(response), status
+
+
+def validate_user(userid, token, timestamp):
     """
     Given an userid and security token, validate this against database
 
     :param userid: string with user id
     :param token:  security token
-    :return: True if credentials are valid, false otherwise
+    :param timestamp: string with the unix timestamp of when token was made
+    :return: True if credentials are valid, False otherwise
     """
-
+    conn = get_db_client()
+    cursor = conn.cursor()
+    salt_query = "SELECT salt, password " \
+                 "FROM users " \
+                 "WHERE userid = %s;"
+    try:
+        cursor.execute(salt_query, userid)
+        row = cursor.fetchone()
+        if row:
+            db_hash = hashlib.sha256(row[1] + str(timestamp)).hexdigest()
+            return token == db_hash
+        return False
+    except Exception, e:
+        conn.close()
+        return False
+    conn.close()
     return True
 
 
@@ -201,16 +250,20 @@ def application(environ, start_response):
     :return: a list with the response_body to return to client
     """
 
-    if environ['REQUEST_METHOD'] == 'GET':
-        response_body, status = get_current_jobs(environ)
-    elif environ['REQUEST_METHOD'] == 'POST':
-        response_body, status = submit_job(environ)
-    elif environ['REQUEST_METHOD'] == 'DELETE':
-        response_body, status = delete_job(environ)
-    else:
-        response_body = "Invalid request"
-        status = "400 Bad Request"
-
+    if environ['PATH_INFO'] == '/job':
+        if environ['REQUEST_METHOD'] == 'GET':
+            response_body, status = get_current_jobs(environ)
+        elif environ['REQUEST_METHOD'] == 'POST':
+            response_body, status = submit_job(environ)
+        elif environ['REQUEST_METHOD'] == 'DELETE':
+            response_body, status = delete_job(environ)
+        else:
+            response_body = "Invalid request"
+            status = "400 Bad Request"
+    elif environ['PATH_INFO'] == '/job/output':
+        response_body, status = get_job_output(environ)
+    elif environ['PATH_INFO'] == '/userid/salt':
+        response_body, status = get_user_salt(environ)
     response_headers = [('Content-Type', 'text/html'),
                         ('Content-Length', str(len(response_body)))]
     start_response(status, response_headers)
