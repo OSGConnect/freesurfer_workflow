@@ -6,7 +6,10 @@ CREATE TYPE freesurfer_interface.job_state AS ENUM (
     'UPLOADED',
     'PROCESSING',
     'FAILED',
-    'COMPLETED'
+    'COMPLETED',
+    'DELETE PENDING',
+    'DELETED',
+    'ERROR'
 );
 
 CREATE TABLE freesurfer_interface.users (

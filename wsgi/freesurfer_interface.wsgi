@@ -6,11 +6,14 @@ import socket
 import sys
 import urlparse
 import hashlib
+import os
+import tempfile
 from wsgiref.simple_server import make_server
 
 import psycopg2
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
+
 TIMEZONE = "US/Central"
 
 
@@ -43,11 +46,11 @@ def save_file(environ, file_name):
     """
     Save a file that's uploaded using POST
 
-    :param environ:
-    :param file_name:
-    :return:
+    :param environ: wsgi environment dictionary
+    :param file_name: name of file to save to
+    :return: nothing
     """
-    uploaded_file = open(file_name, 'w')
+    uploaded_file = open(file_name, 'wb')
     uploaded_file.write(environ['wsgi.input'].read())
     uploaded_file.close()
 
@@ -93,11 +96,34 @@ def delete_job(environ):
     query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
     parameters = {'userid': str,
                   'token': str,
-                  'jobid': int}
+                  'jobid': str}
     if not validate_parameters(query_dict, parameters):
         response = {'status': 400,
                     'result': "invalid or missing parameter"}
         return json.dumps(response), '400 Bad Request'
+
+    userid, token = get_user_params(environ)
+    if not validate_user(userid, token):
+        response = {'status': 401,
+                    'result': "invalid user"}
+        return json.dumps(response), '401 Not Authorized'
+    job_id = environ['jobid']
+    conn = get_db_client()
+    cursor = conn.cursor()
+    job_query = "UPDATE jobs  " \
+                "SET state = 'DELETE PENDING'" \
+                "WHERE job_id = %s;"
+    try:
+        cursor.execute(job_query, job_id)
+        if cursor.rowcount != 1:
+            response = {'status': 400,
+                        'result': 'Job not found'}
+            status = '400 Bad Request'
+    except Exception, e:
+        response = {'status': 500,
+                    'result': str(e)}
+        status = '500 Server Error'
+    conn.close()
     return json.dumps(response), status
 
 
@@ -165,13 +191,13 @@ def validate_user(userid, token, timestamp):
         row = cursor.fetchone()
         if row:
             db_hash = hashlib.sha256(row[1] + str(timestamp)).hexdigest()
+            conn.close()
             return token == db_hash
+        conn.close()
         return False
     except Exception, e:
         conn.close()
         return False
-    conn.close()
-    return True
 
 
 def get_current_jobs(environ):
@@ -198,6 +224,7 @@ def get_current_jobs(environ):
 
     response = {'status': 200,
                 'jobs': []}
+    status = '200 OK'
     conn = get_db_client()
     cursor = conn.cursor()
     job_query = "SELECT id, name, image_filename, state, job_date " \
@@ -210,35 +237,122 @@ def get_current_jobs(environ):
     except Exception, e:
         response = {'status': 500,
                     'result': str(e)}
-        return json.dumps(response), '500 Server Error'
+        status = '500 Server Error'
 
     conn.close()
-    status = '200 OK'
     return json.dumps(response), status
 
 
 def submit_job(environ):
     """
     Submit a job to be processed
-    TODO: placeholder for now
 
     :param environ: dictionary with environment variables (See PEP 333)
     :return: a tuple with response_body, status
     """
+    response = {"status": 200,
+                "result": "success"}
+    status = '200 OK'
     query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
     parameters = {'userid': str,
                   'token': str,
                   'filename': str,
-                  'singlecore': bool,
+                  'multicore': bool,
+                  'subject': str,
                   'jobname': str}
     if not validate_parameters(query_dict, parameters):
         response = {'status': 400,
                     'result': "invalid or missing parameter"}
         return json.dumps(response), '400 Bad Request'
+    userid, token = get_user_params(environ)
+    if not validate_user(userid, token):
+        response = {'status': 401,
+                    'result': "invalid user"}
+        return json.dumps(response), '401 Not Authorized'
+    output_dir = os.path.join('/stash/user/freesurfer/',
+                              userid,
+                              'input')
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+    temp_dir = tempfile.mkdtemp(dir=output_dir)
+    input_file = os.path.join(temp_dir,
+                              "{0}_defaced.mgz".format(environ['subject']))
+    save_file(environ, input_file)
+    conn = get_db_client()
+    cursor = conn.cursor()
+    job_insert = "INSERT INTO jobs(name," \
+                 "                 image_filename," \
+                 "                 state," \
+                 "                 multicore," \
+                 "                 log_filename," \
+                 "                 userid," \
+                 "                 subject)" \
+                 "VALUES(%s, %s, 'UPLOADED', %s, %s, %s, %s)"
+    try:
+        cursor.execute(job_insert,
+                       environ['jobname'],
+                       input_file,
+                       environ['multicore'],
+                       "",
+                       userid,
+                       environ['subject'])
+    except Exception, e:
+        response = {'status': 500,
+                    'result': str(e)}
+        status = '500 Server Error'
+    conn.close()
+    return json.dumps(response), status
 
+
+def get_job_output(environ):
+    """
+    Return the output from a job
+
+    :param environ: dictionary with environment variables (See PEP 333)
+    :return: a tuple with response_body, status
+    """
     response = {"status": 200,
                 "result": "success"}
-    return json.dumps(response), '200 OK'
+    status = '200 OK'
+    query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
+    parameters = {'userid': str,
+                  'token': str,
+                  'jobname': str}
+    if not validate_parameters(query_dict, parameters):
+        response = {'status': 400,
+                    'result': "invalid or missing parameter"}
+        return json.dumps(response), '400 Bad Request'
+    userid, token = get_user_params(environ)
+    if not validate_user(userid, token):
+        response = {'status': 401,
+                    'result': "invalid user"}
+        return json.dumps(response), '401 Not Authorized'
+    output_dir = os.path.join('/stash/user/freesurfer/',
+                              userid,
+                              'results')
+    conn = get_db_client()
+    cursor = conn.cursor()
+    job_query = "SELECT id, subject, state" \
+                "FROM jobs " \
+                "WHERE job_id = %s AND userid = %s;"
+    try:
+        cursor.execute(job_query, environ['jobname'], userid)
+        row = cursor.fetchone()
+        if row[2] != 'COMPLETED':
+            response["result"] = "Workflow does not have any output to download"
+        else:
+            output_filename = os.path.join(output_dir,
+                                           "{0}_{1}_output.tar.bz2".format(row[0],
+                                                                           row[1]))
+            if os.path.isfile(output_filename):
+                response['result'] = "Output found"
+                response['filename'] = output_filename
+    except Exception, e:
+        response = {'status': 500,
+                    'result': str(e)}
+        status = '500 Server Error'
+    conn.close()
+    return json.dumps(response), status
 
 
 def application(environ, start_response):
@@ -261,7 +375,26 @@ def application(environ, start_response):
             response_body = "Invalid request"
             status = "400 Bad Request"
     elif environ['PATH_INFO'] == '/job/output':
+        # need to do something a bit special because
+        # we're returning a file
         response_body, status = get_job_output(environ)
+        if response_body['result'] == 'Output found':
+            filename = response_body['filename']
+            response_headers = [('Content-Type', 'application/x-bzip2'),
+                                ('Content-length', os.path.getsize(filename)),
+                                ('Content-Disposition',
+                                 'attachment; filename='+os.path.basename(filename))]
+            try:
+                fh = open(filename, 'rb')
+                start_response(status, response_headers)
+                if 'wsgi.file_wrapper' in environ:
+                    return environ['wsgi.file_wrapper'](fh, 4096)
+                else:
+                    return iter(lambda: fh.read(4096), '')
+            except IOError:
+                response = {'status': 500,
+                            'result': 'Could not read output file'}
+                status = '500 Server Error'
     elif environ['PATH_INFO'] == '/userid/salt':
         response_body, status = get_user_salt(environ)
     response_headers = [('Content-Type', 'text/html'),

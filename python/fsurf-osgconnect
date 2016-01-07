@@ -244,10 +244,10 @@ def list_workflows():
                 status = workflows[workflow][2]
 
             sys.stdout.write("{0:10} {1:20} {2:20} {3:<15} {4:10}\n".format(subject,
-                                                                           workflow,
-                                                                           gettime(workflow),
-                                                                           cores,
-                                                                           status))
+                                                                            workflow,
+                                                                            gettime(workflow),
+                                                                            cores,
+                                                                            status))
         save_workflow_summary(workflows)
         return 0
     except IOError:
@@ -272,7 +272,7 @@ def regenerate_workflow_info():
                     subject_name, cores = info.split(' ')
                     cores = int(cores.strip())
                     workflows[entry] = [subject_name.strip(), cores]
-                except:
+                except ValueError:
                     continue
     save_workflow_summary(workflows)
     return workflows
@@ -338,7 +338,6 @@ def save_workflow_info(workflow_id, subject_name, multicore):
     :param multicore: True if job is using 8 cores, false otherwise
     :return: 0 on success, 1 on error
     """
-    pickle_filename = os.path.join(WORKFLOW_BASE_DIRECTORY, 'fsurf_workflows.pkl')
     if multicore:
         cores = 8
     else:
