@@ -129,6 +129,7 @@ def print_status(workflow_id, verbose=False):
     if workflow_id is None:
         sys.stdout.write("Workflow id not given\n")
         return 0
+    sys.stdout.write("Processing submission\n")
     exit_code, output = run_pegasus('status', workflow_id=workflow_id)
     if exit_code != 0:
         sys.stdout.write("An error occurred while getting job status\n")
@@ -289,6 +290,7 @@ def remove_workflow(workflow_id):
     """
     workflow_location = os.path.join(WORKFLOW_DIRECTORY,
                                      workflow_id)
+    sys.stdout.write("Removing workflow\n")
     exit_code, output = run_pegasus('remove', workflow_id=workflow_id)
     if exit_code == 0:
         sys.stdout.write("Workflow {0} removed successfully\n".format(workflow_id))
@@ -369,6 +371,7 @@ def submit_workflow(input_directory, subject_name, multicore=False):
     if subject_name is None:
         sys.stdout.write("Subject name is missing, exiting...\n")
         return 1
+    sys.stdout.write("Creating and submitting workflow\n")
     subject_file = os.path.join(input_directory,
                                 "{0}_defaced.mgz".format(subject_name))
     subject_file = os.path.abspath(subject_file)
