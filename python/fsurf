@@ -288,9 +288,6 @@ def main():
                         help='Subject id to process ')
     parser.add_argument('--input-directory', dest='input_directory',
                         default='.', help='directory containing input file')
-    parser.add_argument('--rest-endpoint', dest='rest_endpoint',
-                        default=REST_ENDPOINT,
-                        help='url to rest endpoint (usually not needed')
     parser.add_argument('--multicore', dest='multicore',
                         action='store_true',
                         help='Use 8 cores to')
@@ -303,14 +300,15 @@ def main():
     args = parser.parse_args(sys.argv[1:])
 
     if args.action == 'list':
-        status = list_workflows(args.rest_endpoint)
+        status = list_workflows()
     elif args.action == 'remove':
-        status = remove_workflow(args.workflow_id, args.rest_endpoint)
+        status = remove_workflow(args.workflow_id)
     elif args.action == 'submit':
-        status = submit_workflow(args.input_directory, args.subject,
-                                 args.multicore, args.rest_endpoint)
+        status = submit_workflow(args.input_directory,
+                                 args.subject,
+                                 args.multicore)
     elif args.action == 'output':
-        status = get_output(args.workflow_id, args.rest_endpoint)
+        status = get_output(args.workflow_id)
     else:
         sys.stdout.write("Must specify an action, exiting...\n")
         parser.print_help()
