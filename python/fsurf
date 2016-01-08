@@ -136,7 +136,7 @@ def list_workflows():
     try:
         username, password = get_user_info()
         query_params = {}
-        token, datestamp = get_token(password)
+        token, datestamp = get_token(username, password)
         if token is None:
             return 1
         query_params['userid'] = username
@@ -182,7 +182,7 @@ def remove_workflow(workflow_id):
     """
     username, password = get_user_info()
     query_params = {}
-    token, datestamp = get_token(password)
+    token, datestamp = get_token(username, password)
     if token is None:
         return 1
     query_params['userid'] = username
@@ -219,7 +219,7 @@ def submit_workflow(input_directory, subject_name, multicore=False):
         body = f.read()
     username, password = get_user_info()
     query_params = {}
-    token, timestamp = get_token(password)
+    token, timestamp = get_token(username, password)
     if token is None:
         return 1
     query_params['userid'] = username
@@ -242,7 +242,7 @@ def get_output(workflow_id):
     """
     username, password = get_user_info()
     query_params = {}
-    token, datestamp = get_token(password)
+    token, datestamp = get_token(username, password)
     if token is None:
         return 1
     query_params['userid'] = username
