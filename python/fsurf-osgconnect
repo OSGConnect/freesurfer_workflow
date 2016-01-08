@@ -78,7 +78,7 @@ def run_pegasus(action, **kwargs):
         workflow_location = os.path.join(WORKFLOW_DIRECTORY,
                                          kwargs['workflow_id'])
         if not os.path.isdir(workflow_location):
-            return 1, "Invalid workflow id, {0} is not a directory".format(workflow_location)
+            return 1, "Invalid workflow id, {0} is not a directory\n".format(workflow_location)
     try:
         if action == 'status':
             output = subprocess.check_output(['/usr/bin/pegasus-status',
@@ -91,11 +91,11 @@ def run_pegasus(action, **kwargs):
                                              stderr=subprocess.STDOUT)
         elif action == 'submit':
             if 'dax' not in kwargs:
-                return 1, "DAX missing"
+                return 1, "DAX missing\n"
             elif 'conf' not in kwargs:
-                return 1, "config file location missing"
+                return 1, "config file location missing\n"
             elif 'workflow_directory' not in kwargs:
-                return 1, "workflow directory missing"
+                return 1, "workflow directory missing\n"
 
             output = subprocess.check_output(['/usr/bin/pegasus-plan',
                                               '--sites',
@@ -111,7 +111,7 @@ def run_pegasus(action, **kwargs):
                                               '--submit'],
                                              stderr=subprocess.STDOUT)
         else:
-            return 1, "Invalid pegasus action"
+            return 1, "Invalid pegasus action\n"
     except subprocess.CalledProcessError, err:
         return err.returncode, err.output
 
@@ -231,6 +231,8 @@ def list_workflows():
             sys.stdout.write("Resetting saved workflow"
                              " information\n")
             workflows = regenerate_workflow_info()
+        if workflows == {}:
+            workflows = regenerate_workflow_info()
         for workflow in workflows:
             if len(workflows[workflow]) == 2:
                 subject = workflows[workflow][0]
@@ -311,7 +313,7 @@ def remove_workflow(workflow_id):
                     break
                 count += 1
                 if count > 30:
-                    sys.stdout.write("Can't remove job, exiting...")
+                    sys.stdout.write("Can't remove job, exiting...\n")
                     return 1
             sys.stdout.write("Jobs removed, removing workflow directory\n")
             try:
