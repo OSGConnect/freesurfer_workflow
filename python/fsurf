@@ -44,6 +44,10 @@ def get_response(query_parameters, noun, method, endpoint=REST_ENDPOINT):
         conn.request(method, "{0}?{1}".format(parsed.path, parsed.query))
         resp = conn.getresponse()
         return resp.status, resp.read()
+    except IOError, e:  # mainly dns errors
+        response = {'status': 500,
+                    'result': str(e)}
+        return 500, json.dumps(response)
     except httplib.HTTPException, e:
         response = {'status': 400,
                     'result': str(e)}
