@@ -10,7 +10,7 @@ import time
 import urllib
 import urlparse
 
-REST_ENDPOINT = "http://freesurfer.mwt2.org/freesurfer/"
+REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer"
 
 
 def get_user_info():
@@ -114,7 +114,7 @@ def get_token(userid, password):
     :param password: password for user account
     :return: timestamp, token
     """
-    parameters = {'userid': userid, 'id ': 'salt'}
+    parameters = {'userid': userid}
     code, response = get_response(parameters, 'userid/salt', 'GET')
     if code != 200:
         sys.stdout.write("Can't get authentication token\n")
@@ -208,6 +208,10 @@ def submit_workflow(input_directory, subject_name, multicore=False):
     """
     if subject_name is None:
         sys.stdout.write("Subject name is missing, exiting...\n")
+        return 1
+    response = sys.stdin.readline()
+    if response.strip().lower() != 'y':
+        sys.stdout.write("MRI data must be anonymized and defaced before being submitted\n")
         return 1
     subject_file = os.path.join(input_directory,
                                 "{0}_defaced.mgz".format(subject_name))

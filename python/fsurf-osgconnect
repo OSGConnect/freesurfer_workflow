@@ -371,6 +371,11 @@ def submit_workflow(input_directory, subject_name, multicore=False):
     if subject_name is None:
         sys.stdout.write("Subject name is missing, exiting...\n")
         return 1
+    sys.stdout.write("Has the MRI data been anonymized and defaced [y/n]? ")
+    response = sys.stdin.readline()
+    if response.strip().lower() != 'y':
+        sys.stdout.write("MRI data must be anonymized and defaced before being submitted\n")
+        return 1
     sys.stdout.write("Creating and submitting workflow\n")
     subject_file = os.path.join(input_directory,
                                 "{0}_defaced.mgz".format(subject_name))
