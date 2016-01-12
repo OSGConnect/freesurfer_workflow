@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 module load freesurfer/5.3.0
+module load xz/5.2.2
 date
 start=`date +%s`
 WD=$PWD
@@ -26,4 +27,6 @@ recon-all                                                               \
         -autorecon2-volonly                                             \
         -openmp $3
 
-tar cvzf $WD/$1_recon1_output.tar.gz $SUBJECTS_DIR/*
+
+tar cJf $WD/$1_recon1_output.tar.xz $SUBJECTS_DIR/*
+
