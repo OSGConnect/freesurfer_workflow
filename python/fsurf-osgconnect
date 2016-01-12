@@ -235,7 +235,7 @@ def list_workflows():
             workflows = regenerate_workflow_info()
         if workflows == {}:
             workflows = regenerate_workflow_info()
-        for workflow in workflows:
+        for workflow in sorted(workflows):
             if len(workflows[workflow]) == 2:
                 subject = workflows[workflow][0]
                 cores = workflows[workflow][1]
