@@ -560,7 +560,7 @@ def main():
     elif args.action == 'remove':
         status = remove_workflow(args.workflow_id)
     elif args.action == 'submit':
-        if 'workflow_type' in args:
+        if 'workflow_type' in args and args.workflow_type is not None:
             workflow = args.workflow_type
         else:
             workflow = 'serial'
