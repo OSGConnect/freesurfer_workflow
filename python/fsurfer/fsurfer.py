@@ -41,7 +41,7 @@ def create_single_job(dax, cores, subject_file, subject):
 
 def create_recon2_job(dax, cores, subject):
     """
-    Set up jobs for the autorecon1 process for freesurfer
+    Set up jobs for the autorecon2 process for freesurfer
 
     :param dax: Pegasus ADAG
     :param cores: number of cores to use
@@ -129,7 +129,7 @@ def create_hemi_job(dax, cores, hemisphere, subject):
 
 def create_final_job(dax, cores, subject, serial_job):
     """
-    Set up jobs for the autorecon1 process for freesurfer
+    Set up jobs for the autorecon3 process for freesurfer
 
     :param dax: Pegasus ADAG
     :param cores: number of cores to use
@@ -157,3 +157,60 @@ def create_final_job(dax, cores, subject, serial_job):
     dax.addJob(autorecon3_job)
     return errors
 
+
+def create_serial_workflow(dax, cores, subject_file, subject,
+                           skip_recon=False):
+    """
+    Create a workflow that processes MRI images using a serial workflow
+    E.g. autorecon1 -> autorecon2 -> autorecon3
+
+    :param dax: Pegasus ADAG
+    :param cores: number of cores to use
+    :param subject_file: pegasus File object pointing to the subject mri file
+    :param subject: name of subject being processed
+    :param skip_recon: True to skip initial recon1 step
+    :return: True if errors occurred, False otherwise
+    """
+    errors = False
+    # setup autorecon1 run
+    if not skip_recon:
+        errors &= create_initial_job(dax, cores, subject_file, subject)
+    errors &= create_recon2_job(dax, cores, subject)
+    errors &= create_final_job(dax, cores, subject, serial_job=True)
+    return errors
+
+
+def create_single_workflow(dax, cores, subject_file, subject):
+    """
+    Create a workflow that processes MRI images using a single job
+
+    :param dax: Pegasus ADAG
+    :param cores: number of cores to use
+    :param subject_file: pegasus File object pointing to the subject mri file
+    :param subject: name of subject being processed
+    :return: True if errors occurred, False otherwise
+    """
+    return create_single_job(dax, args, subject_file, subject)
+
+
+def create_diamond_workflow(dax, cores, subject_file, subject,
+                            skip_recon=False):
+    """
+    Create a workflow that processes MRI images using a diamond workflow
+    E.g. autorecon1 -->   autorecon2-lh --> autorecon3
+                     \->  autorecon2-rh /
+    :param dax: Pegasus ADAG
+    :param cores: number of cores to use
+    :param subject_file: pegasus File object pointing to the subject mri file
+    :param subject: name of subject being processed
+    :param skip_recon: True to skip initial recon1 step
+    :return: True if errors occurred, False otherwise
+    """
+    errors = False
+    # setup autorecon1 run
+    if not skip_recon:
+        errors &= create_initial_job(dax, cores, subject_file, subject)
+    errors &= create_hemi_job(dax, cores, 'rh', subject)
+    errors &= create_hemi_job(dax, cores, 'lh', subject)
+    errors &= create_final_job(dax, cores, subject)
+    return errors

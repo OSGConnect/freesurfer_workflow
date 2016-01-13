@@ -356,13 +356,17 @@ def save_workflow_info(workflow_id, subject_name, multicore):
     return exit_code
 
 
-def submit_workflow(input_directory, subject_name, multicore=False):
+def submit_workflow(input_directory, subject_name, multicore=False,
+                    workflow='serial'):
     """
     Submit a workflow to OSG for processing
 
     :param input_directory:    path to file with MRI data in mgz format
     :param subject_name:  name of subject in the file
-    :param multicore:     boolean indicating whether to use a multicore workflow or not
+    :param multicore:     boolean indicating whether to use a multicore
+                          workflow or not
+    :param workflow:      string indicating type of workflow to run (serial,
+                          diamond, single)
     :return:              0 on success, 1 on error
     """
     if multicore:
@@ -382,16 +386,35 @@ def submit_workflow(input_directory, subject_name, multicore=False):
                                 "{0}_defaced.mgz".format(subject_name))
     subject_file = os.path.abspath(subject_file)
     if not os.path.isfile(subject_file):
-        sys.stderr.write("{0} is not present and is needed, exiting".format(subject_file))
+        sys.stderr.write("{0} is not ".format(subject_file) +
+                         "present and is needed, exiting\n")
         return 1
     dax = Pegasus.DAX3.ADAG('freesurfer')
     dax_subject_file = Pegasus.DAX3.File("{0}_defaced.mgz".format(subject_name))
-    dax_subject_file.addPFN(Pegasus.DAX3.PFN("file://{0}".format(subject_file), "local"))
+    dax_subject_file.addPFN(Pegasus.DAX3.PFN("file://{0}".format(subject_file),
+                                             "local"))
     dax.addFile(dax_subject_file)
-    errors = False
-    errors &= fsurfer.create_initial_job(dax, cores, dax_subject_file, subject_name)
-    errors &= fsurfer.create_recon2_job(dax, cores, subject_name)
-    errors &= fsurfer.create_final_job(dax, cores, subject_name, serial_job=True)
+    if workflow == 'serial':
+        errors = fsurfer.create_serial_workflow(dax,
+                                                cores,
+                                                dax_subject_file,
+                                                subject_name)
+    elif workflow == 'diamond':
+        errors = fsurfer.create_diamond_workflow(dax,
+                                                 cores,
+                                                 dax_subject_file,
+                                                 subject_name)
+    elif workflow == 'single':
+        errors = fsurfer.create_single_workflow(dax,
+                                                cores,
+                                                dax_subject_file,
+                                                subject_name)
+    else:
+        sys.stdout.write("Unknown workflow specified, using serial instead\n")
+        errors = fsurfer.create_serial_workflow(dax,
+                                                cores,
+                                                dax_subject_file,
+                                                subject_name)
     if not errors:
         curr_date = time.strftime("%Y%m%d_%H%M%S", time.gmtime(time.time()))
         dax_name = "serial_dax_{0}.xml".format(curr_date)
@@ -492,6 +515,15 @@ def main():
     parser.add_argument('--submit', dest='action',
                         action='store_const', const='submit',
                         help='Submit job for processing')
+    parser.add_argument('--diamond', dest="workflow_type",
+                        action="store_const", const="diamond",
+                        help=argparse.SUPPRESS)
+    parser.add_argument('--serial', dest="workflow_type",
+                        action="store_const", const="serial",
+                        help=argparse.SUPPRESS)
+    parser.add_argument('--single', dest="workflow_type",
+                        action="store_const", const="single",
+                        help=argparse.SUPPRESS)
     parser.add_argument('--list', dest='action',
                         action='store_const', const='list',
                         help='List current jobs')
@@ -528,7 +560,14 @@ def main():
     elif args.action == 'remove':
         status = remove_workflow(args.workflow_id)
     elif args.action == 'submit':
-        status = submit_workflow(args.input_directory, args.subject, args.multicore)
+        if 'workflow_type' in args:
+            workflow = args.workflow_type
+        else:
+            workflow = 'serial'
+        status = submit_workflow(args.input_directory,
+                                 args.subject,
+                                 args.multicore,
+                                 workflow)
     elif args.action == 'output':
         status = get_output(args.workflow_id)
     else:
@@ -541,9 +580,11 @@ if __name__ == '__main__':
     # workaround missing subprocess.check_ouput
     if "check_output" not in dir(subprocess):  # duck punch it in!
         def check_output(*popenargs, **kwargs):
-            r"""Run command with arguments and return its output as a byte string.
+            """
+            Run command with arguments and return its output as a byte string.
 
-            Backported from Python 2.7 as it's implemented as pure python on stdlib.
+            Backported from Python 2.7 as it's implemented as pure python
+            on stdlib.
 
             """
             process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)

@@ -62,20 +62,23 @@ def generate_dax():
         dax.addFile(dax_subject_file)
 
         if args.single_job:
-            errors &= fsurfer.create_single_job(dax, args, dax_subject_file, subject)
+            errors &= fsurfer.create_single_workflow(dax,
+                                                     args.num_cores,
+                                                     dax_subject_file,
+                                                     subject,
+                                                     args.skip_recon)
         elif args.serial_job:
-            # setup autorecon1 run
-            if not args.skip_recon:
-                errors &= fsurfer.create_initial_job(dax, args, dax_subject_file, subject)
-            errors &= fsurfer.create_recon2_job(dax, args, subject)
-            errors &= fsurfer.create_final_job(dax, args, subject, serial_job=True)
+            errors &= fsurfer.create_serial_workflow(dax,
+                                                     args.num_cores,
+                                                     dax_subject_file,
+                                                     subject,
+                                                     args.skip_recon)
         else:
-            # setup autorecon1 run
-            if not args.skip_recon:
-                errors &= fsurfer.create_initial_job(dax, args, dax_subject_file, subject)
-            errors &= fsurfer.create_hemi_job(dax, args, 'rh', subject)
-            errors &= fsurfer.create_hemi_job(dax, args, 'lh', subject)
-            errors &= fsurfer.create_final_job(dax, args, subject)
+            errors &= fsurfer.create_diamond_workflow_workflow(dax,
+                                                               args.num_cores,
+                                                               dax_subject_file,
+                                                               subject,
+                                                               args.skip_recon)
     if not errors:  # no problems while generating DAX
         curr_date = time.strftime("%Y%m%d_%H%M%S", time.gmtime(time.time()))
         if args.single_job:
