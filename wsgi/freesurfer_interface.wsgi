@@ -106,18 +106,19 @@ def delete_job(environ):
         response = {'status': 401,
                     'result': "invalid user"}
         return json.dumps(response), '401 Not Authorized'
-    job_id = environ['jobid']
+    job_id = query_dict['jobid']
     conn = get_db_client()
     cursor = conn.cursor()
-    job_query = "UPDATE jobs  " \
+    job_query = "UPDATE freesurfer_interface.jobs  " \
                 "SET state = 'DELETE PENDING'" \
-                "WHERE job_id = %s;"
+                "WHERE id = %s;"
     try:
         cursor.execute(job_query, job_id)
         if cursor.rowcount != 1:
             response = {'status': 400,
                         'result': 'Job not found'}
             status = '400 Bad Request'
+        conn.commit()
     except Exception, e:
         response = {'status': 500,
                     'result': str(e)}
@@ -292,13 +293,13 @@ def submit_job(environ):
     save_file(environ, input_file)
     conn = get_db_client()
     cursor = conn.cursor()
-    job_insert = "INSERT INTO jobs(name," \
-                 "                 image_filename," \
-                 "                 state," \
-                 "                 multicore," \
-                 "                 log_filename," \
-                 "                 userid," \
-                 "                 subject)" \
+    job_insert = "INSERT INTO freesurfer_interface.jobs(name," \
+                 "                                      image_filename," \
+                 "                                      state," \
+                 "                                      multicore," \
+                 "                                      log_filename," \
+                 "                                      userid," \
+                 "                                      subject)" \
                  "VALUES(%s, %s, 'UPLOADED', %s, %s, %s, %s)"
     try:
         cursor.execute(job_insert,
@@ -345,8 +346,8 @@ def get_job_output(environ):
     conn = get_db_client()
     cursor = conn.cursor()
     job_query = "SELECT id, subject, state" \
-                "FROM jobs " \
-                "WHERE job_id = %s AND username = %s;"
+                "FROM freesurfer_interface.jobs " \
+                "WHERE id = %s AND username = %s;"
     try:
         cursor.execute(job_query, environ['jobname'], userid)
         row = cursor.fetchone()
