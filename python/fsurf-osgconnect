@@ -267,9 +267,7 @@ def regenerate_workflow_info():
     workflows = {}
     for entry in os.listdir(WORKFLOW_DIRECTORY):
         if os.path.isdir(os.path.join(WORKFLOW_DIRECTORY, entry)):
-            info_filename = os.path.isdir(os.path.join(WORKFLOW_DIRECTORY,
-                                                       entry,
-                                                       'fsurf_info'))
+            info_filename = os.path.join(WORKFLOW_DIRECTORY, entry, 'fsurf_info')
             with open(info_filename, 'r') as f:
                 info = f.read(-1)
                 try:
