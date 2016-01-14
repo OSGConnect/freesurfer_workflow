@@ -411,5 +411,7 @@ if __name__ == '__main__':
     parser.add_argument('--dbparams', dest='db_param_file', default=PARAM_FILE_LOCATION,
                         help='location of file with database information')
     args = parser.parse_args(sys.argv[1:])
-    srv = make_server(args.hostname, args.db_param_file, 8080, application)
+    if args.db_param_file != PARAM_FILE_LOCATION:
+        PARAM_FILE_LOCATION = args.db_param_file
+    srv = make_server(args.hostname, 8080, application)
     srv.serve_forever()
