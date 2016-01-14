@@ -258,6 +258,21 @@ def list_workflows():
         return 1
 
 
+def reset_workflows():
+    """
+    Reset the workflows currently stored
+
+    :return: 0 on success, 1 on error
+    """
+    try:
+        check_and_create_workflow_dir()
+        workflows = regenerate_workflow_info()
+        save_workflow_summary(workflows)
+        return 0
+    except IOError:
+        return 1
+
+
 def regenerate_workflow_info():
     """
     Scan workflow directories and regenerate the pickled info
@@ -514,15 +529,6 @@ def main():
     parser.add_argument('--submit', dest='action',
                         action='store_const', const='submit',
                         help='Submit job for processing')
-    parser.add_argument('--diamond', dest="workflow_type",
-                        action="store_const", const="diamond",
-                        help=argparse.SUPPRESS)
-    parser.add_argument('--serial', dest="workflow_type",
-                        action="store_const", const="serial",
-                        help=argparse.SUPPRESS)
-    parser.add_argument('--single', dest="workflow_type",
-                        action="store_const", const="single",
-                        help=argparse.SUPPRESS)
     parser.add_argument('--list', dest='action',
                         action='store_const', const='list',
                         help='List current jobs')
@@ -535,8 +541,20 @@ def main():
     parser.add_argument('--output', dest='action',
                         action='store_const', const='output',
                         help='Get output from specified job')
+    parser.add_argument('--reset', dest='action',
+                        action='store_const', const='reset',
+                        help=argparse.SUPPRESS)
     parser.add_argument('--id', dest='workflow_id',
                         action='store', help='id that specifies job')
+    parser.add_argument('--diamond', dest="workflow_type",
+                        action="store_const", const="diamond",
+                        help=argparse.SUPPRESS)
+    parser.add_argument('--serial', dest="workflow_type",
+                        action="store_const", const="serial",
+                        help=argparse.SUPPRESS)
+    parser.add_argument('--single', dest="workflow_type",
+                        action="store_const", const="single",
+                        help=argparse.SUPPRESS)
     parser.add_argument('--subject', dest='subject', default=None,
                         help='Subject id to process ')
     parser.add_argument('--dir', dest='input_directory',
@@ -556,6 +574,8 @@ def main():
         status = print_status(args.workflow_id, args.verbose)
     elif args.action == 'list':
         status = list_workflows()
+    elif args.action == 'reset':
+        status = reset_workflows()
     elif args.action == 'remove':
         status = remove_workflow(args.workflow_id)
     elif args.action == 'submit':
