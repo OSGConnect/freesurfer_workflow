@@ -364,7 +364,7 @@ def application(environ, start_response):
     :return: a list with the response_body to return to client
     """
 
-    if environ['PATH_INFO'] == '/job':
+    if environ['PATH_INFO'] == '/freesurfer/job':
         if environ['REQUEST_METHOD'] == 'GET':
             response_body, status = get_current_jobs(environ)
         elif environ['REQUEST_METHOD'] == 'POST':
@@ -374,7 +374,7 @@ def application(environ, start_response):
         else:
             response_body = "Invalid request"
             status = "400 Bad Request"
-    elif environ['PATH_INFO'] == '/job/output':
+    elif environ['PATH_INFO'] == '/freesurfer/job/output':
         # need to do something a bit special because
         # we're returning a file
         response_body, status = get_job_output(environ)
@@ -392,11 +392,15 @@ def application(environ, start_response):
                 else:
                     return iter(lambda: fh.read(4096), '')
             except IOError:
-                response = {'status': 500,
-                            'result': 'Could not read output file'}
+                response_body = json.dumps({'status': 500,
+                                            'result': 'Could not read output file'})
                 status = '500 Server Error'
-    elif environ['PATH_INFO'] == '/userid/salt':
+    elif environ['PATH_INFO'] == '/freesurfer/userid/salt':
         response_body, status = get_user_salt(environ)
+    else:
+        status = '400 Bad Request'
+        response_body = json.dumps({'status': 400,
+                                    'result': 'Bad action'})
     response_headers = [('Content-Type', 'text/html'),
                         ('Content-Length', str(len(response_body)))]
     start_response(status, response_headers)
