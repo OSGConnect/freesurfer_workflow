@@ -10,8 +10,7 @@ import time
 import urllib
 import urlparse
 
-#REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer"
-REST_ENDPOINT = "http://128.135.250.201:8080/freesurfer"
+REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer"
 
 
 def get_user_info():
