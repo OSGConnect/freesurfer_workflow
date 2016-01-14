@@ -266,16 +266,17 @@ def regenerate_workflow_info():
     """
     workflows = {}
     for entry in os.listdir(WORKFLOW_DIRECTORY):
-        if os.path.isdir(os.path.join(WORKFLOW_DIRECTORY, entry)):
-            info_filename = os.path.join(WORKFLOW_DIRECTORY, entry, 'fsurf_info')
-            with open(info_filename, 'r') as f:
-                info = f.read(-1)
-                try:
-                    subject_name, cores = info.split(' ')
-                    cores = int(cores.strip())
-                    workflows[entry] = [subject_name.strip(), cores]
-                except ValueError:
-                    continue
+        info_filename = os.path.join(WORKFLOW_DIRECTORY, entry, 'fsurf_info')
+        if not os.path.isfile(info_filename):
+            continue
+        with open(info_filename, 'r') as f:
+            info = f.read(-1)
+            try:
+                subject_name, cores = info.split(' ')
+                cores = int(cores.strip())
+                workflows[entry] = [subject_name.strip(), cores]
+            except ValueError:
+                continue
     save_workflow_summary(workflows)
     return workflows
 
