@@ -10,7 +10,8 @@ import time
 import urllib
 import urlparse
 
-REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer"
+#REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer"
+REST_ENDPOINT = "http://128.135.250.201:8080/freesurfer"
 
 
 def get_user_info():
@@ -40,7 +41,7 @@ def get_response(query_parameters, noun, method, endpoint=REST_ENDPOINT):
                                noun)
     parsed = urlparse.urlparse(url)
     try:
-        conn = httplib.HTTPConnection(parsed.hostname)
+        conn = httplib.HTTPConnection(parsed.netloc)
         conn.request(method, "{0}?{1}".format(parsed.path, parsed.query))
         resp = conn.getresponse()
         return resp.status, resp.read()
@@ -119,14 +120,16 @@ def get_token(userid, password):
     :return: timestamp, token
     """
     parameters = {'userid': userid}
-    code, response = get_response(parameters, 'userid/salt', 'GET')
+    code, response = get_response(parameters, 'user/salt', 'GET', REST_ENDPOINT)
     if code != 200:
         sys.stdout.write("Can't get authentication token\n")
         return None, None
     timestamp = time.time()
     response_obj = json.loads(response)
-    salt = response_obj['response']
+    salt = response_obj['result']
     token = hashlib.sha256(salt + password).hexdigest()
+    foo = token
+    bar = str(timestamp)
     token = hashlib.sha256(token + str(timestamp)).hexdigest()
     return str(timestamp), token
 
@@ -140,11 +143,11 @@ def list_workflows():
     try:
         username, password = get_user_info()
         query_params = {}
-        token, datestamp = get_token(username, password)
+        timestamp, token = get_token(username, password)
         if token is None:
             return 1
         query_params['userid'] = username
-        query_params['datestamp'] = datestamp
+        query_params['timestamp'] = timestamp
         query_params['token'] = token
         status, response = get_response(query_params, 'job', 'GET')
         if status != 200:
@@ -152,22 +155,24 @@ def list_workflows():
             return 1
         sys.stdout.write("Current workflows\n")
         response_object = json.loads(response)
-        sys.stdout.write("{0:10} {1:20} {2:20} {3:15} {4:10}\n".format('Subject',
+        sys.stdout.write("{0:10} {1:20} {2:27} {3:10} {4:10}\n".format('Subject',
                                                                        'Workflow',
                                                                        'Submit time',
-                                                                       'Muticore',
+                                                                       'Cores',
                                                                        'Status'))
+        if len(response_object['jobs']) == 0:
+            sys.stdout.write("No workflows in system\n")
         for workflow in response_object['jobs']:
-            subject = workflow['subject']
-            job_id = workflow['name']
-            job_time = workflow['time']
-            status = workflow['status']
-            if not workflow['multicore']:
+            job_id = workflow[0]
+            subject = workflow[1]
+            status = workflow[2]
+            job_time = workflow[3]
+            if not workflow[4]:
                 cores = 2
             else:
                 cores = 8
 
-            sys.stdout.write("{0:10} {1:20} {2:20} {3:15} {4:10}\n".format(subject,
+            sys.stdout.write("{0:10} {1:<20} {2:<27} {3:<10} {4:10}\n".format(subject,
                                                                            job_id,
                                                                            job_time,
                                                                            cores,
@@ -186,11 +191,11 @@ def remove_workflow(workflow_id):
     """
     username, password = get_user_info()
     query_params = {}
-    token, datestamp = get_token(username, password)
+    timestamp, token = get_token(username, password)
     if token is None:
         return 1
     query_params['userid'] = username
-    query_params['datestamp'] = datestamp
+    query_params['timestamp'] = timestamp
     query_params['token'] = token
     query_params['jobid'] = workflow_id
     status, response = get_response(query_params, 'job', 'DELETE')
@@ -213,6 +218,7 @@ def submit_workflow(input_directory, subject_name, multicore=False):
     if subject_name is None:
         sys.stdout.write("Subject name is missing, exiting...\n")
         return 1
+    sys.stdout.write("Has the MRI data been anonymized and defaced [y/n]? ")
     response = sys.stdin.readline()
     if response.strip().lower() != 'y':
         sys.stdout.write("MRI data must be anonymized and defaced before being submitted\n")
@@ -250,11 +256,11 @@ def get_output(workflow_id):
     """
     username, password = get_user_info()
     query_params = {}
-    token, datestamp = get_token(username, password)
+    token, timestamp = get_token(username, password)
     if token is None:
         return 1
     query_params['userid'] = username
-    query_params['datestamp'] = datestamp
+    query_params['timestamp'] = timestamp
     query_params['token'] = token
     query_params['jobid'] = workflow_id
     status, response = download_output(query_params, 'job/output')
@@ -298,7 +304,7 @@ def main():
                         default='.', help='directory containing input file')
     parser.add_argument('--multicore', dest='multicore',
                         action='store_true',
-                        help='Use 8 cores to')
+                        help='Use more cores to process image')
     parser.add_argument('--verbose', dest='verbose', default=False,
                         action='store_true',
                         help='Enable verbose output')

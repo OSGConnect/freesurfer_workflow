@@ -25,8 +25,7 @@ def validate_parameters(query_dict, parameters):
                        specifying the type of parameters in the query_dict
     :return: true or false depending on whether the parameters are valid
     """
-
-    for key, val in parameters:
+    for key, val in parameters.iteritems():
         if key not in query_dict:
             return False
         if val == int:
@@ -63,9 +62,9 @@ def get_db_parameters():
     """
     parameters = {}
     with open(PARAM_FILE_LOCATION) as param_file:
-        line = param_file.readline()
-        key, val = line.strip().split('=')
-        parameters[key.strip()] = val.strip()
+        for line in param_file:
+            key, val = line.strip().split('=')
+            parameters[key.strip()] = val.strip()
     return (parameters['database'],
             parameters['user'],
             parameters['password'],
@@ -79,7 +78,7 @@ def get_db_client():
     :return: a redis client instance or None if failure occurs
     """
     db, user, password, host = get_db_parameters()
-    return psycopg2.connect(database=db, user=user, host=host)
+    return psycopg2.connect(database=db, user=user, host=host, password=password)
 
 
 def delete_job(environ):
@@ -102,8 +101,8 @@ def delete_job(environ):
                     'result': "invalid or missing parameter"}
         return json.dumps(response), '400 Bad Request'
 
-    userid, token = get_user_params(environ)
-    if not validate_user(userid, token):
+    userid, token, timestamp = get_user_params(environ)
+    if not validate_user(userid, token, timestamp):
         response = {'status': 401,
                     'result': "invalid user"}
         return json.dumps(response), '401 Not Authorized'
@@ -132,12 +131,22 @@ def get_user_params(environ):
     Get user id and security token from CGI query string
 
     :param environ: dictionary with environment variables (See PEP 333)
-    :return: tuple with userid, security_token
+    :return: tuple with userid, security_token, timestamp
     """
     query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
-    user_id = query_dict['userid']
-    token = query_dict['token']
-    return user_id, token
+    if 'userid' in query_dict:
+        user_id = query_dict['userid']
+    else:
+        user_id = None
+    if 'token' in query_dict:
+        token = query_dict['token']
+    else:
+        token = None
+    if 'timestamp' in query_dict:
+        timestamp = query_dict['timestamp']
+    else:
+        timestamp = None
+    return user_id, token, timestamp
 
 
 def get_user_salt(environ):
@@ -148,12 +157,12 @@ def get_user_salt(environ):
     :return: tuple with userid, security_token
     """
     status = '200 OK'
-    userid, _ = get_user_params(environ)
+    userid, _, _ = get_user_params(environ)
     conn = get_db_client()
     cursor = conn.cursor()
     salt_query = "SELECT salt " \
-                 "FROM users " \
-                 "WHERE userid = %s;"
+                 "FROM freesurfer_interface.users " \
+                 "WHERE username = %s;"
 
     try:
         cursor.execute(salt_query, userid)
@@ -184,15 +193,15 @@ def validate_user(userid, token, timestamp):
     conn = get_db_client()
     cursor = conn.cursor()
     salt_query = "SELECT salt, password " \
-                 "FROM users " \
-                 "WHERE userid = %s;"
+                 "FROM freesurfer_interface.users " \
+                 "WHERE username = %s;"
     try:
         cursor.execute(salt_query, userid)
         row = cursor.fetchone()
         if row:
-            db_hash = hashlib.sha256(row[1] + str(timestamp)).hexdigest()
+            db_hash = hashlib.sha256(row[1] + str(timestamp[0])).hexdigest()
             conn.close()
-            return token == db_hash
+            return token[0] == db_hash
         conn.close()
         return False
     except Exception, e:
@@ -216,8 +225,8 @@ def get_current_jobs(environ):
                     'result': "invalid or missing parameter"}
         return json.dumps(response), '400 Bad Request'
 
-    userid, secret = get_user_params(environ)
-    if not validate_user(userid, secret):
+    userid, secret, timestamp = get_user_params(environ)
+    if not validate_user(userid, secret, timestamp):
         response = {'status': 401,
                     'result': "invalid user"}
         return json.dumps(response), '401 Not Authorized'
@@ -227,13 +236,16 @@ def get_current_jobs(environ):
     status = '200 OK'
     conn = get_db_client()
     cursor = conn.cursor()
-    job_query = "SELECT id, name, image_filename, state, job_date " \
-                "FROM jobs " \
-                "WHERE purged IS NOT TRUE AND age(job_date) < '7 days' AND userid = %s;"
+    job_query = "SELECT id, subject, state, job_date, multicore " \
+                "FROM freesurfer_interface.jobs " \
+                "WHERE purged IS NOT TRUE AND " \
+                "      age(job_date) < '7 days' AND username = %s;"
     try:
         cursor.execute(job_query, userid)
         for row in cursor.fetchall():
-            response['jobs'].append((row[0], row[1], row[2], row[3], row[4]))
+            response['jobs'].append((row[0], row[1], row[2],
+                                     row[3].isoformat(),
+                                     row[4]))
     except Exception, e:
         response = {'status': 500,
                     'result': str(e)}
@@ -264,8 +276,8 @@ def submit_job(environ):
         response = {'status': 400,
                     'result': "invalid or missing parameter"}
         return json.dumps(response), '400 Bad Request'
-    userid, token = get_user_params(environ)
-    if not validate_user(userid, token):
+    userid, token, timestamp = get_user_params(environ)
+    if not validate_user(userid, token, timestamp):
         response = {'status': 401,
                     'result': "invalid user"}
         return json.dumps(response), '401 Not Authorized'
@@ -322,8 +334,8 @@ def get_job_output(environ):
         response = {'status': 400,
                     'result': "invalid or missing parameter"}
         return json.dumps(response), '400 Bad Request'
-    userid, token = get_user_params(environ)
-    if not validate_user(userid, token):
+    userid, token, timestamp = get_user_params(environ)
+    if not validate_user(userid, token, timestamp):
         response = {'status': 401,
                     'result': "invalid user"}
         return json.dumps(response), '401 Not Authorized'
@@ -334,7 +346,7 @@ def get_job_output(environ):
     cursor = conn.cursor()
     job_query = "SELECT id, subject, state" \
                 "FROM jobs " \
-                "WHERE job_id = %s AND userid = %s;"
+                "WHERE job_id = %s AND username = %s;"
     try:
         cursor.execute(job_query, environ['jobname'], userid)
         row = cursor.fetchone()
@@ -395,7 +407,7 @@ def application(environ, start_response):
                 response_body = json.dumps({'status': 500,
                                             'result': 'Could not read output file'})
                 status = '500 Server Error'
-    elif environ['PATH_INFO'] == '/freesurfer/userid/salt':
+    elif environ['PATH_INFO'] == '/freesurfer/user/salt':
         response_body, status = get_user_salt(environ)
     else:
         status = '400 Bad Request'
