@@ -118,7 +118,6 @@ def main(args):
             if cursor.rowcount != 1:
                 sys.stderr.wrote("{0}\n".format(cursor.statusmessage))
                 return 1
-            print cursor.query
         conn.commit()
         conn.close()
         return 0
