@@ -71,7 +71,7 @@ def config_user_settings():
     sitecatalog = os.path.join(conf_dir, 'sites.xml')
     with open(sitecatalog, 'w') as f:
         f.write(SITE_TEMPLATE.replace('USERNAME', user))
-    sys.stdout.write("Configuration created for fsurf")
+    sys.stdout.write("Configuration created for fsurf\n")
     return 0
 
 
