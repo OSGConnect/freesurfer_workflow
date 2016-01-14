@@ -24,5 +24,6 @@ recon-all                                                               \
         -openmp $3
 
 # if xz is available use it
-
+cd $SUBJECTS_DIR
 tar cJf $WD/$1_recon2_$2_output.tar.xz $SUBJECTS_DIR/*
+cd $WD

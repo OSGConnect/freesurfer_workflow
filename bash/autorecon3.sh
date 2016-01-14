@@ -31,4 +31,6 @@ recon-all                                                               \
         -autorecon3                                                     \
         -openmp $2
 
-tar cvJf $WD/$1_output.tar.xz $SUBJECTS_DIR/*
+cd $SUBJECTS_DIR
+tar cvJf $WD/$1_output.tar.xz *
+cd $WD

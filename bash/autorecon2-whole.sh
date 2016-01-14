@@ -21,6 +21,7 @@ recon-all                                                               \
         -autorecon2                                                     \
         -openmp $2
 
+cd $SUBJECTS_DIR
+tar cJf $WD/$1_recon2_output.tar.xz *
+cd $WD
 
-
-tar cJf $WD/$1_recon2_output.tar.xz $SUBJECTS_DIR/*

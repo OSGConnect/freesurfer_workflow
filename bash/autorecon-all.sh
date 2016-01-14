@@ -18,6 +18,8 @@ recon-all                                                               \
         -i $2                                                           \
         -openmp $3
 
-tar cJf $WD/$1_output.tar.xz $SUBJECTS_DIR/*
+cd  $SUBJECTS_DIR
+tar cJf $WD/$1_output.tar.xz *
+cd $WD
 
 
