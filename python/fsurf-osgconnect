@@ -14,7 +14,7 @@ import cPickle
 import fsurfer
 import Pegasus.DAX3
 
-VERSION = '0.6.2'
+VERSION = '0.6.3'
 
 WORKFLOW_BASE_DIRECTORY = os.path.join('/stash/user',
                                        getpass.getuser(),
@@ -569,7 +569,7 @@ def main():
     parser.add_argument('--deidentified', dest="deidentified",
                         action="store_true", default=False,
                         help=argparse.SUPPRESS)
-    parser.add_argument('--defaced', dest="deidentified",
+    parser.add_argument('--defaced', dest="defaced",
                         action="store_true", default=False,
                         help=argparse.SUPPRESS)
     # submit options for workflow type
