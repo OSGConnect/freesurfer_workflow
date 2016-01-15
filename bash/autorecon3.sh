@@ -23,8 +23,8 @@ then
 fi
 if [ -e "$1_recon2_output.tar.xz" ];
 then
-    tar xvaf $1_recon2_ouput.tar.xz
-    rm $1_recon2_ouput.tar.xz
+    tar xvaf $1_recon2_output.tar.xz
+    rm $1_recon2_output.tar.xz
 fi
 recon-all                                                               \
         -s $1                                                           \
