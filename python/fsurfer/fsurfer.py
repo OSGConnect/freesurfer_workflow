@@ -127,7 +127,7 @@ def create_hemi_job(dax, cores, hemisphere, subject):
     return errors
 
 
-def create_final_job(dax, cores, subject, serial_job):
+def create_final_job(dax, cores, subject, serial_job=False):
     """
     Set up jobs for the autorecon3 process for freesurfer
 
