@@ -382,6 +382,9 @@ def submit_workflow(input_directory, subject_name, multicore=False,
                           workflow or not
     :param workflow:      string indicating type of workflow to run (serial,
                           diamond, single)
+    :param deidentified:  boolean indicating whether MRI image has been
+                          deidentified
+    :param defaced:       boolean indicating whether MRI image has been defaced
     :return:              0 on success, 1 on error
     """
     if multicore:
@@ -622,7 +625,7 @@ def main():
     sys.exit(status)
 
 if __name__ == '__main__':
-    # workaround missing subprocess.check_ouput
+    # workaround missing subprocess.check_output
     if "check_output" not in dir(subprocess):  # duck punch it in!
         def check_output(*popenargs, **kwargs):
             """
