@@ -280,6 +280,9 @@ def main():
     :return: True if any errors occurred during DAX generaton
     """
     parser = argparse.ArgumentParser(description="Process freesurfer information")
+    # version info
+    parser.add_argument('--version', action='version', version='%(prog)s ' + VERSION)
+    # Arguments for action
     parser.add_argument('--submit', dest='action',
                         action='store_const', const='submit',
                         help='Submit job for processing')
@@ -295,8 +298,10 @@ def main():
     parser.add_argument('--output', dest='action',
                         action='store_const', const='output',
                         help='Submit job for processing')
+    # Arguments identifying workflow
     parser.add_argument('--id', dest='workflow_id',
                         action='store', help='Pegasus workflow id to use')
+    # Arguments for submit action
     parser.add_argument('--subject', dest='subject', default=None,
                         help='Subject id to process ')
     parser.add_argument('--input-directory', dest='input_directory',
@@ -304,12 +309,6 @@ def main():
     parser.add_argument('--multicore', dest='multicore',
                         action='store_true',
                         help='Use more cores to process image')
-    parser.add_argument('--verbose', dest='verbose', default=False,
-                        action='store_true',
-                        help='Enable verbose output')
-    parser.add_argument('--debug', dest='debug', default=False,
-                        action='store_true',
-                        help='Enable debugging output')
     args = parser.parse_args(sys.argv[1:])
 
     if args.action == 'list':

@@ -592,9 +592,6 @@ def main():
     parser.add_argument('--verbose', dest='verbose', default=False,
                         action='store_true',
                         help='Enable verbose output for status action')
-    parser.add_argument('--debug', dest='debug', default=False,
-                        action='store_true',
-                        help='Enable debugging output')
     args = parser.parse_args(sys.argv[1:])
 
     if args.action == 'status':
