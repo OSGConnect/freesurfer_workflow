@@ -371,7 +371,7 @@ def save_workflow_info(workflow_id, subject_name, multicore):
 
 
 def submit_workflow(input_directory, subject_name, multicore=False,
-                    workflow='serial'):
+                    workflow='serial', deidentified=False, defaced=False):
     """
     Submit a workflow to OSG for processing
 
@@ -390,11 +390,21 @@ def submit_workflow(input_directory, subject_name, multicore=False,
     if subject_name is None:
         sys.stdout.write("Subject name is missing, exiting...\n")
         return 1
-    sys.stdout.write("Has the MRI data been anonymized and defaced [y/n]? ")
-    response = sys.stdin.readline()
-    if response.strip().lower() != 'y':
-        sys.stdout.write("MRI data must be anonymized and defaced before being submitted\n")
-        return 1
+    if not deidentified:
+        sys.stdout.write("Has the MRI data been deidentified?\n"
+                         "This is required [y/n]: ")
+        response = sys.stdin.readline()
+        if response.strip().lower() != 'y':
+            sys.stdout.write("MRI data must be deidentified, please remove "
+                             "your MRI file immediately\n")
+            return 1
+    if not defaced:
+        sys.stdout.write("Has the MRI data been defaced?"
+                         "This is recommended[y/n]: ")
+        response = sys.stdin.readline()
+        if response.strip().lower() != 'y':
+            sys.stdout.write("We recommend defacing MRI data\n")
+            return 1
     sys.stdout.write("Creating and submitting workflow\n")
     subject_file = os.path.join(input_directory,
                                 "{0}_defaced.mgz".format(subject_name))
@@ -526,6 +536,7 @@ def main():
     :return: True if any errors occurred during DAX generaton
     """
     parser = argparse.ArgumentParser(description="Process freesurfer information")
+    # Arguments for action
     parser.add_argument('--submit', dest='action',
                         action='store_const', const='submit',
                         help='Submit job for processing')
@@ -544,8 +555,18 @@ def main():
     parser.add_argument('--reset', dest='action',
                         action='store_const', const='reset',
                         help=argparse.SUPPRESS)
+    # Arguments identifying workflow
     parser.add_argument('--id', dest='workflow_id',
                         action='store', help='id that specifies job')
+
+    # Arguments for submit action
+    parser.add_argument('--deidentified', dest="deidentified",
+                        action="store_true", default=False,
+                        help=argparse.SUPPRESS)
+    parser.add_argument('--defaced', dest="deidentified",
+                        action="store_true", default=False,
+                        help=argparse.SUPPRESS)
+    # submit options for workflow type
     parser.add_argument('--diamond', dest="workflow_type",
                         action="store_const", const="diamond",
                         help=argparse.SUPPRESS)
@@ -555,16 +576,19 @@ def main():
     parser.add_argument('--single', dest="workflow_type",
                         action="store_const", const="single",
                         help=argparse.SUPPRESS)
+    # submit options to identify subject and input
     parser.add_argument('--subject', dest='subject', default=None,
                         help='Subject id to process ')
     parser.add_argument('--dir', dest='input_directory',
                         default='.', help='directory containing input file')
+    # multicore
     parser.add_argument('--multicore', dest='multicore',
                         action='store_true',
                         help='Use 8 cores to')
+    # output verbose status messages
     parser.add_argument('--verbose', dest='verbose', default=False,
                         action='store_true',
-                        help='Enable verbose output')
+                        help='Enable verbose output for status action')
     parser.add_argument('--debug', dest='debug', default=False,
                         action='store_true',
                         help='Enable debugging output')
@@ -586,7 +610,9 @@ def main():
         status = submit_workflow(args.input_directory,
                                  args.subject,
                                  args.multicore,
-                                 workflow)
+                                 workflow,
+                                 args.deidentified,
+                                 args.defaced)
     elif args.action == 'output':
         status = get_output(args.workflow_id)
     else:
