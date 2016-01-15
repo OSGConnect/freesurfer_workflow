@@ -11,7 +11,7 @@ import urllib
 import urlparse
 
 REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer"
-
+VERSION = 0.4
 
 def get_user_info():
     """

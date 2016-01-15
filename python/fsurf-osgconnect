@@ -14,6 +14,7 @@ import cPickle
 import fsurfer
 import Pegasus.DAX3
 
+VERSION = '0.6.2'
 
 WORKFLOW_BASE_DIRECTORY = os.path.join('/stash/user',
                                        getpass.getuser(),
@@ -536,6 +537,8 @@ def main():
     :return: True if any errors occurred during DAX generaton
     """
     parser = argparse.ArgumentParser(description="Process freesurfer information")
+    # version info
+    parser.add_argument('--version', action='version', version='%(prog)s ' + VERSION)
     # Arguments for action
     parser.add_argument('--submit', dest='action',
                         action='store_const', const='submit',
