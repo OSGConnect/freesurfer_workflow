@@ -106,7 +106,7 @@ def delete_job(environ):
         response = {'status': 401,
                     'result': "invalid user"}
         return json.dumps(response), '401 Not Authorized'
-    job_id = query_dict['jobid']
+    job_id = query_dict['jobid'][0]
     conn = get_db_client()
     cursor = conn.cursor()
     job_query = "SELECT state FROM  freesurfer_interface.jobs  " \
@@ -156,15 +156,15 @@ def get_user_params(environ):
     """
     query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
     if 'userid' in query_dict:
-        user_id = query_dict['userid']
+        user_id = query_dict['userid'][0]
     else:
         user_id = None
     if 'token' in query_dict:
-        token = query_dict['token']
+        token = query_dict['token'][0]
     else:
         token = None
     if 'timestamp' in query_dict:
-        timestamp = query_dict['timestamp']
+        timestamp = query_dict['timestamp'][0]
     else:
         timestamp = None
     return user_id, token, timestamp
@@ -309,7 +309,7 @@ def submit_job(environ):
         os.mkdir(output_dir)
     temp_dir = tempfile.mkdtemp(dir=output_dir)
     input_file = os.path.join(temp_dir,
-                              "{0}_defaced.mgz".format(query_dict['subject']))
+                              "{0}_defaced.mgz".format(query_dict['subject'][0]))
     save_file(environ, input_file)
     conn = get_db_client()
     cursor = conn.cursor()
@@ -323,12 +323,12 @@ def submit_job(environ):
                  "VALUES(%s, %s, 'UPLOADED', %s, %s, %s, %s)"
     try:
         cursor.execute(job_insert,
-                       query_dict['jobname'],
+                       query_dict['jobname'][0],
                        input_file,
-                       query_dict['multicore'],
+                       query_dict['multicore'][0],
                        "",
                        userid,
-                       query_dict['subject'])
+                       query_dict['subject'][0])
     except Exception, e:
         response = {'status': 500,
                     'result': str(e)}
@@ -369,7 +369,7 @@ def get_job_output(environ):
                 "FROM freesurfer_interface.jobs " \
                 "WHERE id = %s AND username = %s;"
     try:
-        cursor.execute(job_query, query_dict['jobname'], userid)
+        cursor.execute(job_query, query_dict['jobid'][0], userid)
         row = cursor.fetchone()
         if row[2] != 'COMPLETED':
             response["result"] = "Workflow does not have any output to download"
