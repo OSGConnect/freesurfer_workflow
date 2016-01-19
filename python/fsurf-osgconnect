@@ -493,9 +493,13 @@ def get_output(workflow_id):
         sys.stdout.write("Output for workflow {0} does not exist\n".format(workflow_id))
         return 1
     sys.stdout.write("Getting output, this may take a little time.\n")
-    output_file = glob.glob(os.path.join(WORKFLOW_OUTPUT_DIRECTORY,
-                                         workflow_id,
-                                         "*_output.tar.bz2"))
+    output_files = glob.glob(os.path.join(WORKFLOW_OUTPUT_DIRECTORY,
+                                          workflow_id,
+                                          "*_output.tar.*"))[0]
+    if len(output_files) != 1:
+        sys.stdout.write("Error getting output\n")
+        return 1
+    output_file = output_files[0]
     dest_file = os.path.basename(output_file)
     if os.path.exists(dest_file):
         sys.stdout.write("{0} exists, won't overwrite\n".format(dest_file))
