@@ -499,6 +499,7 @@ def get_output(workflow_id):
     dest_file = os.path.basename(output_file)
     if os.path.exists(dest_file):
         sys.stdout.write("{0} exists, won't overwrite\n".format(dest_file))
+        return 1
     shutil.copy(output_file, dest_file)
     sys.stdout.write("Output saved to {0}\n".format(dest_file))
     return 0
