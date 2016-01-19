@@ -15,7 +15,7 @@ import cPickle
 import fsurfer
 import Pegasus.DAX3
 
-VERSION = '0.6.5'
+VERSION = '0.6.6'
 
 WORKFLOW_BASE_DIRECTORY = os.path.join('/stash/user',
                                        getpass.getuser(),
