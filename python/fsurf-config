@@ -106,8 +106,7 @@ def setup_fsurf_dirs(workflow_dir=WORKFLOW_DIRECTORY):
             os.makedirs(workflow_dir, 0o700)
             pickle_filename = os.path.join(workflow_dir, 'fsurf_workflows.pkl')
             with open(pickle_filename, 'wb') as f:
-                pickle_file = cPickle.Pickler(f, cPickle.HIGHEST_PROTOCOL)
-                pickle_file.dump({}, cPickle.HIGHEST_PROTOCOL)
+                cPickle.dump({}, f, cPickle.HIGHEST_PROTOCOL)
             return True
     except OSError:
         sys.stdout.write("Can't create {0} for workflows, "
