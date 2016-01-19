@@ -309,7 +309,8 @@ def remove_workflow(workflow_id):
                                      workflow_id)
     sys.stdout.write("Removing workflow\n")
     exit_code, output = run_pegasus('remove', workflow_id=workflow_id)
-    if exit_code == 0:
+    # job removed (code = 0) just now  or it's been removed earlier
+    if exit_code == 0 or 'not found' in output :
         sys.stdout.write("Workflow {0} removed successfully\n".format(workflow_id))
         workflows = load_workflow_summary()
         if workflow_id in workflows:
@@ -334,13 +335,13 @@ def remove_workflow(workflow_id):
                 if count > 30:
                     sys.stdout.write("Can't remove job, exiting...\n")
                     return 1
-            sys.stdout.write("Jobs removed, removing workflow directory\n")
-            try:
-                shutil.rmtree(workflow_location)
-            except shutil.Error:
-                sys.stdout.write("Can't remove directory at "
-                                 "{0}, exiting...\n".format(workflow_location))
-                exit_code = 1
+        sys.stdout.write("Jobs removed, removing workflow directory\n")
+        try:
+            shutil.rmtree(workflow_location)
+        except shutil.Error:
+            sys.stdout.write("Can't remove directory at "
+                             "{0}, exiting...\n".format(workflow_location))
+            exit_code = 1
     else:
         sys.stdout.write("Workflow {0} was not removed\n".format(workflow_id))
         sys.stdout.write("Following error occurred:\n")
