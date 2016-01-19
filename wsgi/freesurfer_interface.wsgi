@@ -309,7 +309,7 @@ def submit_job(environ):
         os.mkdir(output_dir)
     temp_dir = tempfile.mkdtemp(dir=output_dir)
     input_file = os.path.join(temp_dir,
-                              "{0}_defaced.mgz".format(environ['subject']))
+                              "{0}_defaced.mgz".format(query_dict['subject']))
     save_file(environ, input_file)
     conn = get_db_client()
     cursor = conn.cursor()
@@ -323,12 +323,12 @@ def submit_job(environ):
                  "VALUES(%s, %s, 'UPLOADED', %s, %s, %s, %s)"
     try:
         cursor.execute(job_insert,
-                       environ['jobname'],
+                       query_dict['jobname'],
                        input_file,
-                       environ['multicore'],
+                       query_dict['multicore'],
                        "",
                        userid,
-                       environ['subject'])
+                       query_dict['subject'])
     except Exception, e:
         response = {'status': 500,
                     'result': str(e)}
@@ -369,7 +369,7 @@ def get_job_output(environ):
                 "FROM freesurfer_interface.jobs " \
                 "WHERE id = %s AND username = %s;"
     try:
-        cursor.execute(job_query, environ['jobname'], userid)
+        cursor.execute(job_query, query_dict['jobname'], userid)
         row = cursor.fetchone()
         if row[2] != 'COMPLETED':
             response["result"] = "Workflow does not have any output to download"
