@@ -491,6 +491,7 @@ def get_output(workflow_id):
     if not os.path.isdir(output_dir):
         sys.stdout.write("Output for workflow {0} does not exist\n".format(workflow_id))
         return 1
+    sys.stdout.write("Getting and packaging output, this may take a little time.\n")
     os.chdir(WORKFLOW_OUTPUT_DIRECTORY)
     output_file = os.path.join(current_dir,
                                "{0}.tar.bz2".format(workflow_id))
