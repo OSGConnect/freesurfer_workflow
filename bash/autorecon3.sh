@@ -32,5 +32,5 @@ recon-all                                                               \
         -openmp $2
 
 cd $SUBJECTS_DIR
-tar cvJf $WD/$1_output.tar.xz *
+tar cvjf $WD/$1_output.tar.bz2 *
 cd $WD
