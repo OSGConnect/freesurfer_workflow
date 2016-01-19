@@ -495,7 +495,7 @@ def get_output(workflow_id):
     sys.stdout.write("Getting output, this may take a little time.\n")
     output_files = glob.glob(os.path.join(WORKFLOW_OUTPUT_DIRECTORY,
                                           workflow_id,
-                                          "*_output.tar.*"))[0]
+                                          "*_output.tar.bz2"))
     if len(output_files) != 1:
         sys.stdout.write("Error getting output\n")
         return 1
