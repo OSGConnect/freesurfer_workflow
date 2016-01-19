@@ -109,8 +109,7 @@ def delete_job(environ):
     job_id = query_dict['jobid']
     conn = get_db_client()
     cursor = conn.cursor()
-    job_query = "UPDATE freesurfer_interface.jobs  " \
-                "SET state = 'DELETE PENDING'" \
+    job_query = "SELECT state FROM  freesurfer_interface.jobs  " \
                 "WHERE id = %s;"
     try:
         cursor.execute(job_query, job_id)
@@ -118,11 +117,32 @@ def delete_job(environ):
             response = {'status': 400,
                         'result': 'Job not found'}
             status = '400 Bad Request'
-        conn.commit()
+        row = cursor.fetchone()
+        if row:
+            state = row[0]
+        else:
+            state = 'None'
+        if state not in ['PROCESSING', 'UPLOADED', 'FAILED', 'COMPLETED']:
+            response = {'status': 400,
+                        'result': 'Job has already been marked for deletion '
+                                  'or has been deleted'}
+            status = '400 Bad Request'
+        else:
+            job_update = "UPDATE freesurfer_interface.jobs  " \
+                         "SET state = 'DELETE PENDING'" \
+                         "WHERE id = %s;"
+            cursor.execute(job_update, job_id)
+            if cursor.rowcount != 1:
+                response = {'status': 400,
+                            'result': 'Job not found'}
+                status = '400 Bad Request'
+            conn.commit()
+
     except Exception, e:
         response = {'status': 500,
                     'result': str(e)}
         status = '500 Server Error'
+
     conn.close()
     return json.dumps(response), status
 
