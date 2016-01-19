@@ -487,7 +487,6 @@ def get_output(workflow_id):
     if workflow_id is None:
         sys.stdout.write("No id given, exiting\n")
         return 1
-    current_dir = os.getcwd()
     output_dir = os.path.join(WORKFLOW_OUTPUT_DIRECTORY, workflow_id)
     if not os.path.isdir(output_dir):
         sys.stdout.write("Output for workflow {0} does not exist\n".format(workflow_id))
