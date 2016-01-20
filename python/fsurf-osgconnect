@@ -45,7 +45,7 @@ def check_and_create_workflow_dir(workflow_dir=WORKFLOW_BASE_DIRECTORY):
         if os.path.isdir(workflow_dir):
             return True
         elif os.path.exists(workflow_dir) and not os.path.isdir(workflow_dir):
-            sys.stdout.write("Can't create {0} because it ".format(workflow_dir) +
+            sys.stdout.write("AreCan't create {0} because it ".format(workflow_dir) +
                              "is already present and not a directory\n")
             return False
         else:

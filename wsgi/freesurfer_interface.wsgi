@@ -351,7 +351,7 @@ def get_job_output(environ):
     query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
     parameters = {'userid': str,
                   'token': str,
-                  'jobname': str}
+                  'jobid': str}
     if not validate_parameters(query_dict, parameters):
         response = {'status': 400,
                     'result': "invalid or missing parameter"}
@@ -366,14 +366,16 @@ def get_job_output(environ):
                               'results')
     conn = get_db_client()
     cursor = conn.cursor()
-    job_query = "SELECT id, subject, state" \
+    job_query = "SELECT id, subject, state " \
                 "FROM freesurfer_interface.jobs " \
                 "WHERE id = %s AND username = %s;"
     try:
         cursor.execute(job_query, [query_dict['jobid'][0], userid])
         row = cursor.fetchone()
         if row[2] != 'COMPLETED':
+            response['status'] = 404
             response["result"] = "Workflow does not have any output to download"
+            status = "404 Not Found"
         else:
             output_filename = os.path.join(output_dir,
                                            "{0}_{1}_output.tar.bz2".format(row[0],
@@ -412,12 +414,13 @@ def application(environ, start_response):
         # need to do something a bit special because
         # we're returning a file
         response_body, status = get_job_output(environ)
-        if response_body['result'] == 'Output found':
-            filename = response_body['filename']
+        response_obj = json.loads(response_body)
+        if response_obj['result'] == 'Output found':
+            filename = response_obj['filename']
             response_headers = [('Content-Type', 'application/x-bzip2'),
-                                ('Content-length', os.path.getsize(filename)),
+                                ('Content-length', str(os.path.getsize(filename))),
                                 ('Content-Disposition',
-                                 'attachment; filename='+os.path.basename(filename))]
+                                 'attachment; filename=' + str(os.path.basename(filename)))]
             try:
                 fh = open(filename, 'rb')
                 start_response(status, response_headers)
