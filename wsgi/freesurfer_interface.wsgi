@@ -220,9 +220,9 @@ def validate_user(userid, token, timestamp):
         cursor.execute(salt_query, [userid])
         row = cursor.fetchone()
         if row:
-            db_hash = hashlib.sha256(row[1] + str(timestamp[0])).hexdigest()
+            db_hash = hashlib.sha256(row[1] + str(timestamp)).hexdigest()
             conn.close()
-            return token[0] == db_hash
+            return token == db_hash
         conn.close()
         return False
     except Exception, e:
