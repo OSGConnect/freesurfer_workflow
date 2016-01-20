@@ -17,7 +17,7 @@ import Pegasus.DAX3
 
 VERSION = '0.6.6'
 
-WORKFLOW_BASE_DIRECTORY = os.path.join('/stash/user',
+WORKFLOW_BASE_DIRECTORY = os.path.join('/stash2/user',
                                        getpass.getuser(),
                                        'freesurfer_scratch',
                                        'freesurfer')
