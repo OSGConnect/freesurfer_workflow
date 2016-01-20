@@ -302,11 +302,11 @@ def submit_job(environ):
         response = {'status': 401,
                     'result': "invalid user"}
         return json.dumps(response), '401 Not Authorized'
-    output_dir = os.path.join('/stash/user/freesurfer/',
+    output_dir = os.path.join('/stash2/user/freesurfer/',
                               userid,
                               'input')
     if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
+        os.makedirs(output_dir)
     temp_dir = tempfile.mkdtemp(dir=output_dir)
     input_file = os.path.join(temp_dir,
                               "{0}_defaced.mgz".format(query_dict['subject'][0]))
