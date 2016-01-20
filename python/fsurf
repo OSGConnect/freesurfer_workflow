@@ -9,9 +9,11 @@ import sys
 import time
 import urllib
 import urlparse
+import re
 
 REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer"
-VERSION = 0.4
+VERSION = '0.4'
+
 
 def get_user_info():
     """
@@ -71,14 +73,22 @@ def download_output(query_parameters, noun, endpoint=REST_ENDPOINT):
         conn = httplib.HTTPConnection(parsed.hostname)
         conn.request('GET', "{0}?{1}".format(parsed.path, parsed.query))
         resp = conn.getresponse()
-        if resp.status != 200:
+        content_type = resp.getheader('content-type')
+        if content_type != 'application/x-bzip2':
             return resp.status, resp.read()
-        with open('fsurf_output.tar.bz2', 'wb') as f:
+        content_disposition = resp.getheader('content-disposition')
+        filename = 'fsurf_output.tar.bz2'
+        match_obj = re.search(r'filename=(.*)', content_disposition)
+        if match_obj:
+            filename = match_obj.group(1)
+        with open(filename, 'wb') as f:
             temp = resp.read(4096)
             while temp:
                 f.write(temp)
                 temp = resp.read(4096)
-        return resp.status, {'status': 200, 'result': "output downloaded"}
+        return resp.status, json.dumps({'status': 200,
+                                        'result': "output downloaded",
+                                        'filename': filename})
     except httplib.HTTPException, e:
         response = {'status': 400,
                     'result': str(e)}
@@ -87,7 +97,7 @@ def download_output(query_parameters, noun, endpoint=REST_ENDPOINT):
 
 def upload_item(query_parameters, noun, body, method, endpoint=REST_ENDPOINT):
     """
-    Issue a PUT request to given endpoint
+    Issue a POST request to given endpoint
 
     :param endpoint: url to REST endpoint
     :param query_parameters: a dictionary with key, values parameters
@@ -127,8 +137,6 @@ def get_token(userid, password):
     response_obj = json.loads(response)
     salt = response_obj['result']
     token = hashlib.sha256(salt + password).hexdigest()
-    foo = token
-    bar = str(timestamp)
     token = hashlib.sha256(token + str(timestamp)).hexdigest()
     return str(timestamp), token
 
@@ -154,11 +162,10 @@ def list_workflows():
             return 1
         sys.stdout.write("Current workflows\n")
         response_object = json.loads(response)
-        sys.stdout.write("{0:10} {1:20} {2:27} {3:10} {4:10}\n".format('Subject',
-                                                                       'Workflow',
-                                                                       'Submit time',
-                                                                       'Cores',
-                                                                       'Status'))
+        sys.stdout.write("{0:10} {1:20} {2:27} ".format('Subject',
+                                                        'Workflow',
+                                                        'Submit time'))
+        sys.stdout.write("{0:10} {1:10}\n".format('Cores', 'Status'))
         if len(response_object['jobs']) == 0:
             sys.stdout.write("No workflows in system\n")
         for workflow in response_object['jobs']:
@@ -171,11 +178,11 @@ def list_workflows():
             else:
                 cores = 8
 
-            sys.stdout.write("{0:10} {1:<20} {2:<27} {3:<10} {4:10}\n".format(subject,
-                                                                           job_id,
-                                                                           job_time,
-                                                                           cores,
-                                                                           status))
+            sys.stdout.write("{0:10} {1:<20} {2:<27} ".format(subject,
+                                                              job_id,
+                                                              job_time))
+            sys.stdout.write("{0:<10} {1:10}\n".format(cores,
+                                                       status))
         return 0
     except IOError:
         return 1
@@ -198,30 +205,43 @@ def remove_workflow(workflow_id):
     query_params['token'] = token
     query_params['jobid'] = workflow_id
     status, response = get_response(query_params, 'job', 'DELETE')
+    resp_dict = json.loads(response)
     if status != 200:
-        sys.stdout.write("Error deleting workflow\n")
+        sys.stdout.write("Error deleting "
+                         "workflow:\n{0}\n".format(resp_dict['result']))
         return 1
     sys.stdout.write("Workflow removed\n")
     return 0
 
 
-def submit_workflow(input_directory, subject_name, multicore=False):
+def submit_workflow(input_directory, subject_name, multicore=False,
+                    deidentified=False, defaced=False):
     """
     Submit a workflow to OSG for processing
 
     :param input_directory:    path to file with MRI data in mgz format
     :param subject_name:  name of subject in the file
     :param multicore:     boolean indicating whether to use a multicore workflow or not
+    :param deidentified:  boolean indicating whether MRI image has been
+                          deidentified
+    :param defaced:       boolean indicating whether MRI image has been defaced
     :return:              0 on success, 1 on error
     """
     if subject_name is None:
         sys.stdout.write("Subject name is missing, exiting...\n")
         return 1
-    sys.stdout.write("Has the MRI data been anonymized and defaced [y/n]? ")
-    response = sys.stdin.readline()
-    if response.strip().lower() != 'y':
-        sys.stdout.write("MRI data must be anonymized and defaced before being submitted\n")
-        return 1
+    if not deidentified:
+        response = raw_input("Has the MRI data been deidentified "
+                             "(This is required) [y/n]?\n")
+        if response.strip().lower() != 'y':
+            sys.stdout.write("MRI data must be deidentified, please remove "
+                             "your MRI file immediately\n")
+            return 1
+    if not defaced:
+        response = raw_input("Has the MRI data been defaced "
+                             "(This is recommended) [y/n]? \n")
+        if response.strip().lower() != 'y':
+            sys.stdout.write("We recommend defacing MRI data\n")
     subject_file = os.path.join(input_directory,
                                 "{0}_defaced.mgz".format(subject_name))
     subject_file = os.path.abspath(subject_file)
@@ -232,14 +252,17 @@ def submit_workflow(input_directory, subject_name, multicore=False):
         body = f.read()
     username, password = get_user_info()
     query_params = {}
-    token, timestamp = get_token(username, password)
+    timestamp, token = get_token(username, password)
     if token is None:
         return 1
     query_params['userid'] = username
     query_params['timestamp'] = timestamp
     query_params['token'] = token
-    query_params['singlecore'] = not multicore
+    query_params['multicore'] = multicore
     query_params['subject'] = subject_name
+    query_params['jobname'] = "{0}_{1}".format(subject_name, timestamp)
+    query_params['filename'] = "{0}_defaced.mgz".format(subject_name)
+    sys.stdout.write("Creating and submitting workflow\n")
     status, response = upload_item(query_params, 'job', body, 'POST')
     if status != 200:
         sys.stdout.write("Error while submitting workflow\n")
@@ -255,20 +278,21 @@ def get_output(workflow_id):
     """
     username, password = get_user_info()
     query_params = {}
-    token, timestamp = get_token(username, password)
+    timestamp, token = get_token(username, password)
     if token is None:
         return 1
     query_params['userid'] = username
     query_params['timestamp'] = timestamp
     query_params['token'] = token
     query_params['jobid'] = workflow_id
+    sys.stdout.write("Downloading results, this may take a while\n")
     status, response = download_output(query_params, 'job/output')
     response_obj = json.loads(response)
     if status != 200:
         sys.stdout.write("Error while downloading results:\n")
         sys.stdout.write("{0}\n".format(response_obj['result']))
         return 1
-    sys.stdout.write("Downloaded results to output.tar.bz2")
+    sys.stdout.write("Downloaded to {0}\n".format(response_obj['filename']))
     return 0
 
 
@@ -304,11 +328,18 @@ def main():
     # Arguments for submit action
     parser.add_argument('--subject', dest='subject', default=None,
                         help='Subject id to process ')
-    parser.add_argument('--input-directory', dest='input_directory',
+    parser.add_argument('--dir', dest='input_directory',
                         default='.', help='directory containing input file')
     parser.add_argument('--multicore', dest='multicore',
                         action='store_true',
                         help='Use more cores to process image')
+    parser.add_argument('--deidentified', dest="deidentified",
+                        action="store_true", default=False,
+                        help=argparse.SUPPRESS)
+    parser.add_argument('--defaced', dest="defaced",
+                        action="store_true", default=False,
+                        help=argparse.SUPPRESS)
+
     args = parser.parse_args(sys.argv[1:])
 
     if args.action == 'list':
@@ -318,7 +349,9 @@ def main():
     elif args.action == 'submit':
         status = submit_workflow(args.input_directory,
                                  args.subject,
-                                 args.multicore)
+                                 args.multicore,
+                                 args.deidentified,
+                                 args.defaced)
     elif args.action == 'output':
         status = get_output(args.workflow_id)
     else:
