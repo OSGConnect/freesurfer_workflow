@@ -318,7 +318,7 @@ def submit_job(environ):
                  "                                      state," \
                  "                                      multicore," \
                  "                                      log_filename," \
-                 "                                      userid," \
+                 "                                      username," \
                  "                                      subject)" \
                  "VALUES(%s, %s, 'UPLOADED', %s, %s, %s, %s)"
     try:
