@@ -329,6 +329,7 @@ def submit_job(environ):
                         "",
                         userid,
                         query_dict['subject'][0]])
+        conn.commit()
     except Exception, e:
         response = {'status': 500,
                     'result': str(e)}
