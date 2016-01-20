@@ -112,7 +112,7 @@ def delete_job(environ):
     job_query = "SELECT state FROM  freesurfer_interface.jobs  " \
                 "WHERE id = %s;"
     try:
-        cursor.execute(job_query, job_id)
+        cursor.execute(job_query, [job_id])
         if cursor.rowcount != 1:
             response = {'status': 400,
                         'result': 'Job not found'}
@@ -131,7 +131,7 @@ def delete_job(environ):
             job_update = "UPDATE freesurfer_interface.jobs  " \
                          "SET state = 'DELETE PENDING'" \
                          "WHERE id = %s;"
-            cursor.execute(job_update, job_id)
+            cursor.execute(job_update, [job_id])
             if cursor.rowcount != 1:
                 response = {'status': 400,
                             'result': 'Job not found'}
@@ -186,7 +186,7 @@ def get_user_salt(environ):
                  "WHERE username = %s;"
 
     try:
-        cursor.execute(salt_query, userid)
+        cursor.execute(salt_query, [userid])
         row = cursor.fetchone()
         if row:
             response = {'status': 200, 'result': row[0]}
@@ -217,7 +217,7 @@ def validate_user(userid, token, timestamp):
                  "FROM freesurfer_interface.users " \
                  "WHERE username = %s;"
     try:
-        cursor.execute(salt_query, userid)
+        cursor.execute(salt_query, [userid])
         row = cursor.fetchone()
         if row:
             db_hash = hashlib.sha256(row[1] + str(timestamp[0])).hexdigest()
@@ -262,7 +262,7 @@ def get_current_jobs(environ):
                 "WHERE purged IS NOT TRUE AND " \
                 "      age(job_date) < '7 days' AND username = %s;"
     try:
-        cursor.execute(job_query, userid)
+        cursor.execute(job_query, [userid])
         for row in cursor.fetchall():
             response['jobs'].append((row[0], row[1], row[2],
                                      row[3].isoformat(),
@@ -323,12 +323,12 @@ def submit_job(environ):
                  "VALUES(%s, %s, 'UPLOADED', %s, %s, %s, %s)"
     try:
         cursor.execute(job_insert,
-                       query_dict['jobname'][0],
-                       input_file,
-                       query_dict['multicore'][0],
-                       "",
-                       userid,
-                       query_dict['subject'][0])
+                       [query_dict['jobname'][0],
+                        input_file,
+                        query_dict['multicore'][0],
+                        "",
+                        userid,
+                        query_dict['subject'][0]])
     except Exception, e:
         response = {'status': 500,
                     'result': str(e)}
@@ -369,7 +369,7 @@ def get_job_output(environ):
                 "FROM freesurfer_interface.jobs " \
                 "WHERE id = %s AND username = %s;"
     try:
-        cursor.execute(job_query, query_dict['jobid'][0], userid)
+        cursor.execute(job_query, [query_dict['jobid'][0], userid])
         row = cursor.fetchone()
         if row[2] != 'COMPLETED':
             response["result"] = "Workflow does not have any output to download"
