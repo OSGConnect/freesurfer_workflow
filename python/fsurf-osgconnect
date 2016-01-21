@@ -374,7 +374,7 @@ def save_workflow_info(workflow_id, subject_name, multicore):
 
 
 def submit_workflow(input_directory, subject_name, multicore=False,
-                    workflow='serial', deidentified=False, defaced=False):
+                    workflow='diamond', deidentified=False, defaced=False):
     """
     Submit a workflow to OSG for processing
 
