@@ -13,7 +13,7 @@ from wsgiref.simple_server import make_server
 import psycopg2
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
-
+FREESURFER_BASE = '/stash2/user/freesurfer/'
 TIMEZONE = "US/Central"
 
 
@@ -302,9 +302,7 @@ def submit_job(environ):
         response = {'status': 401,
                     'result': "invalid user"}
         return json.dumps(response), '401 Not Authorized'
-    output_dir = os.path.join('/stash2/user/freesurfer/',
-                              userid,
-                              'input')
+    output_dir = os.path.join(FREESURFER_BASE, userid, 'input')
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     temp_dir = tempfile.mkdtemp(dir=output_dir)
@@ -361,9 +359,7 @@ def get_job_output(environ):
         response = {'status': 401,
                     'result': "invalid user"}
         return json.dumps(response), '401 Not Authorized'
-    output_dir = os.path.join('/stash/user/freesurfer/',
-                              userid,
-                              'results')
+    output_dir = os.path.join(FREESURFER_BASE, userid, 'results')
     conn = get_db_client()
     cursor = conn.cursor()
     job_query = "SELECT id, subject, state " \
