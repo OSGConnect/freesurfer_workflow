@@ -617,7 +617,7 @@ def main():
         if 'workflow_type' in args and args.workflow_type is not None:
             workflow = args.workflow_type
         else:
-            workflow = 'serial'
+            workflow = 'diamond'
         status = submit_workflow(args.input_directory,
                                  args.subject,
                                  args.multicore,
