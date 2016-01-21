@@ -19,7 +19,6 @@ def create_single_job(dax, cores, subject_file, subject):
     :return: True if errors occurred, False otherwise
     """
     errors = False
-
     full_recon = Pegasus.DAX3.Executable(name="autorecon-all.sh",
                                          arch="x86_64",
                                          installed=False)
@@ -46,10 +45,8 @@ def create_recon2_job(dax, cores, subject):
     :param dax: Pegasus ADAG
     :param cores: number of cores to use
     :param subject: name of subject being processed
-    :return: True if errors occurred, False otherwise
+    :return: True if errors occurred, the pegasus job otherwise
     """
-    errors = False
-
     recon2 = Pegasus.DAX3.Executable(name="autorecon2-whole.sh",
                                      arch="x86_64",
                                      installed=False)
@@ -67,7 +64,7 @@ def create_recon2_job(dax, cores, subject):
     recon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
     recon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cpus", cores))
     dax.addJob(recon2_job)
-    return errors
+    return recon2_job
 
 
 def create_initial_job(dax, cores, subject_file, subject):
@@ -80,21 +77,16 @@ def create_initial_job(dax, cores, subject_file, subject):
     :param subject: name of subject being processed
     :return: True if errors occurred, False otherwise
     """
-    errors = False
-
     autorecon_one = Pegasus.DAX3.Executable(name="autorecon1.sh", arch="x86_64", installed=False)
     autorecon_one.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR, "autorecon1.sh")), "local"))
     if not dax.hasExecutable(autorecon_one):
         dax.addExecutable(autorecon_one)
-
     autorecon1_job = Pegasus.DAX3.Job(name="autorecon1.sh")
     autorecon1_job.addArguments(subject, subject_file, '1')
     autorecon1_job.uses(subject_file, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_recon1_output.tar.xz".format(subject))
     autorecon1_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=False)
-    dax.addJob(autorecon1_job)
-
-    return errors
+    return autorecon1_job
 
 
 def create_hemi_job(dax, cores, hemisphere, subject):
@@ -107,7 +99,6 @@ def create_hemi_job(dax, cores, hemisphere, subject):
     :param subject: name of subject being processed
     :return: True if errors occurred, False otherwise
     """
-    errors = False
     autorecon_two = Pegasus.DAX3.Executable(name="autorecon2.sh", arch="x86_64", installed=False)
     autorecon_two.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR, "autorecon2.sh")), "local"))
     if not dax.hasExecutable(autorecon_two):
@@ -122,9 +113,7 @@ def create_hemi_job(dax, cores, hemisphere, subject):
     autorecon2_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=False)
     autorecon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
     autorecon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cpus", cores))
-    dax.addJob(autorecon2_job)
-
-    return errors
+    return autorecon2_job
 
 
 def create_final_job(dax, cores, subject, serial_job=False):
@@ -137,7 +126,6 @@ def create_final_job(dax, cores, subject, serial_job=False):
     :param serial_job: boolean indicating whether this is a serial workflow or not
     :return: True if errors occurred, False otherwise
     """
-    errors = False
     autorecon_three = Pegasus.DAX3.Executable(name="autorecon3.sh", arch="x86_64", installed=False)
     autorecon_three.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR, "autorecon3.sh")), "local"))
     if not dax.hasExecutable(autorecon_three):
@@ -154,8 +142,7 @@ def create_final_job(dax, cores, subject, serial_job=False):
         autorecon3_job.uses(rh_output, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_output.tar.gz".format(subject))
     autorecon3_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=True)
-    dax.addJob(autorecon3_job)
-    return errors
+    return autorecon3_job
 
 
 def create_serial_workflow(dax, cores, subject_file, subject,
@@ -171,13 +158,23 @@ def create_serial_workflow(dax, cores, subject_file, subject,
     :param skip_recon: True to skip initial recon1 step
     :return: True if errors occurred, False otherwise
     """
-    errors = False
     # setup autorecon1 run
     if not skip_recon:
-        errors &= create_initial_job(dax, cores, subject_file, subject)
-    errors &= create_recon2_job(dax, cores, subject)
-    errors &= create_final_job(dax, cores, subject, serial_job=True)
-    return errors
+        initial_job = create_initial_job(dax, cores, subject_file, subject)
+        if initial_job is True:
+            return True
+        dax.addJob(initial_job)
+    recon2_job = create_recon2_job(dax, cores, subject)
+    if recon2_job is True:
+        return True
+    dax.addJob(recon2_job)
+    dax.addDependency(Pegasus.DAX3.Dependency(parent=initial_job, child=recon2_job))
+    final_job = create_final_job(dax, cores, subject, serial_job=True)
+    if final_job is True:
+        return True
+    dax.addJob(final_job)
+    dax.addDependency(Pegasus.DAX3.Dependency(parent=recon2_job, child=final_job))
+    return False
 
 
 def create_single_workflow(dax, cores, subject_file, subject):
@@ -206,11 +203,26 @@ def create_diamond_workflow(dax, cores, subject_file, subject,
     :param skip_recon: True to skip initial recon1 step
     :return: True if errors occurred, False otherwise
     """
-    errors = False
     # setup autorecon1 run
     if not skip_recon:
-        errors &= create_initial_job(dax, cores, subject_file, subject)
-    errors &= create_hemi_job(dax, cores, 'rh', subject)
-    errors &= create_hemi_job(dax, cores, 'lh', subject)
-    errors &= create_final_job(dax, cores, subject)
-    return errors
+        initial_job = create_initial_job(dax, cores, subject_file, subject)
+        if initial_job is True:
+            return True
+        dax.addJob(initial_job)
+    recon2_rh_job = create_hemi_job(dax, cores, 'rh', subject)
+    if recon2_rh_job is True:
+        return True
+    dax.addJob(recon2_rh_job)
+    dax.addDependency(Pegasus.DAX3.Dependency(parent=initial_job, child=recon2_rh_job))
+    recon2_lh_job = create_hemi_job(dax, cores, 'lh', subject)
+    if recon2_lh_job is True:
+        return True
+    dax.addJob(recon2_lh_job)
+    dax.addDependency(Pegasus.DAX3.Dependency(parent=initial_job, child=recon2_lh_job))
+    final_job = create_final_job(dax, cores, subject)
+    if final_job is True:
+        return True
+    dax.addJob(final_job)
+    dax.addDependency(Pegasus.DAX3.Dependency(parent=recon2_rh_job, child=final_job))
+    dax.addDependency(Pegasus.DAX3.Dependency(parent=recon2_lh_job, child=final_job))
+    return False
