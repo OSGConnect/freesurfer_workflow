@@ -63,16 +63,14 @@ def create_recon2_job(dax, cores, subject):
     recon2_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=True)
     recon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
     recon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cpus", cores))
-    dax.addJob(recon2_job)
     return recon2_job
 
 
-def create_initial_job(dax, cores, subject_file, subject):
+def create_initial_job(dax, subject_file, subject):
     """
     Set up jobs for the autorecon1 process for freesurfer
 
     :param dax: Pegasus ADAG
-    :param cores: number of cores to use
     :param subject_file: pegasus File object pointing to the subject mri file
     :param subject: name of subject being processed
     :return: True if errors occurred, False otherwise
@@ -116,12 +114,11 @@ def create_hemi_job(dax, cores, hemisphere, subject):
     return autorecon2_job
 
 
-def create_final_job(dax, cores, subject, serial_job=False):
+def create_final_job(dax, subject, serial_job=False):
     """
     Set up jobs for the autorecon3 process for freesurfer
 
     :param dax: Pegasus ADAG
-    :param cores: number of cores to use
     :param subject: name of subject being processed
     :param serial_job: boolean indicating whether this is a serial workflow or not
     :return: True if errors occurred, False otherwise
@@ -160,7 +157,7 @@ def create_serial_workflow(dax, cores, subject_file, subject,
     """
     # setup autorecon1 run
     if not skip_recon:
-        initial_job = create_initial_job(dax, cores, subject_file, subject)
+        initial_job = create_initial_job(dax, subject_file, subject)
         if initial_job is True:
             return True
         dax.addJob(initial_job)
@@ -169,7 +166,7 @@ def create_serial_workflow(dax, cores, subject_file, subject,
         return True
     dax.addJob(recon2_job)
     dax.addDependency(Pegasus.DAX3.Dependency(parent=initial_job, child=recon2_job))
-    final_job = create_final_job(dax, cores, subject, serial_job=True)
+    final_job = create_final_job(dax, subject, serial_job=True)
     if final_job is True:
         return True
     dax.addJob(final_job)
@@ -205,7 +202,7 @@ def create_diamond_workflow(dax, cores, subject_file, subject,
     """
     # setup autorecon1 run
     if not skip_recon:
-        initial_job = create_initial_job(dax, cores, subject_file, subject)
+        initial_job = create_initial_job(dax, subject_file, subject)
         if initial_job is True:
             return True
         dax.addJob(initial_job)
@@ -219,7 +216,7 @@ def create_diamond_workflow(dax, cores, subject_file, subject,
         return True
     dax.addJob(recon2_lh_job)
     dax.addDependency(Pegasus.DAX3.Dependency(parent=initial_job, child=recon2_lh_job))
-    final_job = create_final_job(dax, cores, subject)
+    final_job = create_final_job(dax, subject)
     if final_job is True:
         return True
     dax.addJob(final_job)
