@@ -310,7 +310,7 @@ def remove_workflow(workflow_id):
     sys.stdout.write("Removing workflow\n")
     exit_code, output = run_pegasus('remove', workflow_id=workflow_id)
     # job removed (code = 0) just now  or it's been removed earlier
-    if exit_code == 0 or 'not found' in output :
+    if exit_code == 0 or 'not found' in output:
         sys.stdout.write("Workflow {0} removed successfully\n".format(workflow_id))
         workflows = load_workflow_summary()
         if workflow_id in workflows:
@@ -444,7 +444,7 @@ def submit_workflow(input_directory, subject_name, multicore=False,
                                                 subject_name)
     if not errors:
         curr_date = time.strftime("%Y%m%d_%H%M%S", time.gmtime(time.time()))
-        dax_name = "serial_dax_{0}.xml".format(curr_date)
+        dax_name = "freesurfer_{0}.xml".format(curr_date)
         with open(dax_name, 'w') as f:
             dax.writeXML(f)
         exit_code, output = run_pegasus('submit',
@@ -453,7 +453,8 @@ def submit_workflow(input_directory, subject_name, multicore=False,
                                         sites="condorpool",
                                         workflow_directory=WORKFLOW_BASE_DIRECTORY)
         if exit_code != 0:
-            sys.stdout("An error occurred when generating and submitting workflow, exiting...\n")
+            sys.stdout.write("An error occurred when generating and "
+                             "submitting workflow, exiting...\n")
             sys.stdout.write("Error: \n")
             sys.stdout.write(output)
             os.unlink(dax_name)
