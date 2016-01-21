@@ -3,17 +3,84 @@
 # Copyright 2015 University of Chicago
 # Licensed under the APL 2.0 license
 import sys
-import argparse
 import os
+import time
+import subprocess
+
 import psycopg2
 
-def submit_workflow(input_directory, subject_name, multicore=False,
-                    workflow='serial'):
+import Pegasus.DAX3
+import fsurfer
+
+PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
+FREESURFER_BASE = '/stash2/user/freesurfer/'
+PEGASUSRC_PATH = '/stash2/user/fressurfer/pegasusconf/pegasusrc'
+
+
+def pegasus_submit(dax, workflow_directory):
+    """
+    Submit a workflow to pegasus
+
+    :param dax:  path to xml file with DAX, used for submit
+    :param workflow_directory:  directory for pegasus to keep it's workflow
+                              information
+    :return:            the output from pegasus
+    """
+    try:
+        output_directory = os.path.join(workflow_directory, 'output')
+        output = subprocess.check_output(['/usr/bin/pegasus-plan',
+                                          '--sites',
+                                          'condorpool',
+                                          '--dir',
+                                          workflow_directory,
+                                          '--conf',
+                                          PEGASUSRC_PATH,
+                                          '--output-dir',
+                                          output_directory,
+                                          '--dax',
+                                          dax,
+                                          '--submit'],
+                                         stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError, err:
+        return err.returncode, err.output
+
+    return 0, output
+
+
+def get_db_parameters():
+    """
+    Read database parameters from a file and return it
+
+    :return: a tuple of (database_name, user, password, hostname)
+    """
+    parameters = {}
+    with open(PARAM_FILE_LOCATION) as param_file:
+        for line in param_file:
+            key, val = line.strip().split('=')
+            parameters[key.strip()] = val.strip()
+    return (parameters['database'],
+            parameters['user'],
+            parameters['password'],
+            parameters['hostname'])
+
+
+def get_db_client():
+    """
+    Get a postgresql client instance and return it
+
+    :return: a redis client instance or None if failure occurs
+    """
+    db, user, password, host = get_db_parameters()
+    return psycopg2.connect(database=db, user=user, host=host, password=password)
+
+
+def submit_workflow(subject_file, user, jobid, multicore=False, workflow='diamond'):
     """
     Submit a workflow to OSG for processing
 
-    :param input_directory:    path to file with MRI data in mgz format
-    :param subject_name:  name of subject in the file
+    :param subject_file:  path to file with MRI data in mgz format
+    :param user:          freesurfer user that workflow is being run for
+    :param jobid:         job id for the workflow
     :param multicore:     boolean indicating whether to use a multicore
                           workflow or not
     :param workflow:      string indicating type of workflow to run (serial,
@@ -24,27 +91,13 @@ def submit_workflow(input_directory, subject_name, multicore=False,
         cores = 8
     else:
         cores = 2
-    if subject_name is None:
-        sys.stdout.write("Subject name is missing, exiting...\n")
-        return 1
-    sys.stdout.write("Has the MRI data been anonymized and defaced [y/n]? ")
-    response = sys.stdin.readline()
-    if response.strip().lower() != 'y':
-        sys.stdout.write("MRI data must be anonymized and defaced before being submitted\n")
-        return 1
-    sys.stdout.write("Creating and submitting workflow\n")
-    subject_file = os.path.join(input_directory,
-                                "{0}_defaced.mgz".format(subject_name))
-    subject_file = os.path.abspath(subject_file)
-    if not os.path.isfile(subject_file):
-        sys.stderr.write("{0} is not ".format(subject_file) +
-                         "present and is needed, exiting\n")
-        return 1
+    subject_name = subject_file.replace("_defaced.mgz", "")
     dax = Pegasus.DAX3.ADAG('freesurfer')
     dax_subject_file = Pegasus.DAX3.File("{0}_defaced.mgz".format(subject_name))
     dax_subject_file.addPFN(Pegasus.DAX3.PFN("file://{0}".format(subject_file),
                                              "local"))
     dax.addFile(dax_subject_file)
+    workflow_directory = os.path.join(FREESURFER_BASE, user, 'workflows')
     if workflow == 'serial':
         errors = fsurfer.create_serial_workflow(dax,
                                                 cores,
@@ -61,75 +114,55 @@ def submit_workflow(input_directory, subject_name, multicore=False,
                                                 dax_subject_file,
                                                 subject_name)
     else:
-        sys.stdout.write("Unknown workflow specified, using serial instead\n")
         errors = fsurfer.create_serial_workflow(dax,
                                                 cores,
                                                 dax_subject_file,
                                                 subject_name)
     if not errors:
         curr_date = time.strftime("%Y%m%d_%H%M%S", time.gmtime(time.time()))
-        dax_name = "serial_dax_{0}.xml".format(curr_date)
+        dax.invoke('on_success', "/usr/bin/email_fsurf_notification 1 {0}".format(jobid))
+        dax.invoke('on_error', "/usr/bin/email_fsurf_notification 0 {0}".format(jobid))
+        dax_name = "freesurfer_{0}.xml".format(curr_date)
         with open(dax_name, 'w') as f:
             dax.writeXML(f)
-        exit_code, output = run_pegasus('submit',
-                                        dax="{0}".format(dax_name),
-                                        conf=PEGASUSRC_PATH,
-                                        sites="condorpool",
-                                        workflow_directory=WORKFLOW_BASE_DIRECTORY)
+        exit_code, _ = pegasus_submit(dax="{0}".format(dax_name),
+                                      workflow_directory=workflow_directory)
         if exit_code != 0:
-            sys.stdout("An error occurred when generating and submitting workflow, exiting...\n")
-            sys.stdout.write("Error: \n")
-            sys.stdout.write(output)
-            os.unlink(dax_name)
             return 1
-        capture_id = False
-        for line in cStringIO.StringIO(output).readlines():
-            if 'Your workflow has been started' in line:
-                capture_id = True
-            if capture_id and WORKFLOW_DIRECTORY in line:
-                id_match = re.search(r'([T\d]+-\d+)'.format(WORKFLOW_DIRECTORY),
-                                     line)
-                if id_match is not None:
-                    sys.stdout.write("Workflow submitted with an "
-                                     "id of {0}\n".format(id_match.group(1)))
-                    save_workflow_info(id_match.group(1),
-                                       subject_name,
-                                       multicore)
-                else:
-                    sys.stdout.write("Workflow submitted but could not get workflow id\n")
-                break
-
         os.unlink(dax_name)
     return errors
 
 
-
-def process_image():
+def process_images():
     """
-    Process image specified from command line and
+    Process uploaded images
 
     :return: exit code (0 for success, non-zero for failure)
     """
-    parser = argparse.ArgumentParser(description="Process uploaded MRI images")
-    parser.add_argument('--image', dest='image', default=None, required=True,
-                        help='Name of image file with MRI data (needs to be in mgz format)')
-    parser.add_argument('--username', dest='username', default=None, required=True,
-                        help='Username of submitter')
-    parser.add_argument('--processing_directory', dest='processing_dir',
-                        help='Directory files should go into for processing', required=True)
-    parser.add_argument('--debug', dest='debug', default=False,
-                        action='store_true',
-                        help='Enable debugging output')
-    args = parser.parse_args(sys.argv[1:])
 
-    if not os.path.isfile(args.image):
-        return 1
-
-    psycopg2.
-
-
-
+    conn = get_db_client()
+    cursor = conn.cursor()
+    job_query = "SELECT id, username, image_filename FROM freesurfer_interface.jobs  " \
+                "WHERE state = 'UPLOADED'"
+    job_update = "UPDATE freesurfer_interface.jobs  " \
+                 "SET state = 'PROCESSING'" \
+                 "WHERE id = %s;"
+    try:
+        cursor.execute(job_query)
+        for row in cursor.fetchall():
+            input_file = os.path.join(FREESURFER_BASE, row[1], 'input', row[2])
+            workflow_directory = os.path.join(FREESURFER_BASE, row[1])
+            if not os.path.exists(workflow_directory):
+                os.makedirs(workflow_directory)
+            if not os.path.isfile(input_file):
+                continue
+            errors = submit_workflow(input_file, workflow_directory, row[0])
+            if not errors:
+                cursor.execute(job_update, row[0])
+                conn.commit()
+    except Exception:
+        pass
 
 
 if __name__ == '__main__':
-    sys.exit(process_image())
+    sys.exit(process_images())
