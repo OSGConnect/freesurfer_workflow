@@ -9,13 +9,12 @@ import re
 import cStringIO
 import time
 import shutil
-import tarfile
 import cPickle
 
 import fsurfer
 import Pegasus.DAX3
 
-VERSION = '0.6.8'
+VERSION = '0.6.9'
 
 WORKFLOW_BASE_DIRECTORY = os.path.join('/stash2/user',
                                        getpass.getuser(),
@@ -443,6 +442,8 @@ def submit_workflow(input_directory, subject_name, multicore=False,
                                                 dax_subject_file,
                                                 subject_name)
     if not errors:
+        # dax.invoke('on_success', '/usr/bin/email_fsurf_notification 1')
+        # dax.invoke('on_error', '/usr/bin/email_fsurf_notification 0')
         curr_date = time.strftime("%Y%m%d_%H%M%S", time.gmtime(time.time()))
         dax_name = "freesurfer_{0}.xml".format(curr_date)
         with open(dax_name, 'w') as f:
