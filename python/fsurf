@@ -21,8 +21,7 @@ def get_user_info():
 
     :return: username, password
     """
-    sys.stdout.write("Enter username: ")
-    username = sys.stdin.readline().strip()
+    username = raw_input("Enter username: ").strip()
     password = getpass.getpass("Enter password: ")
     return username, password
 
