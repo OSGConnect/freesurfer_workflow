@@ -88,7 +88,7 @@ def create_initial_job(dax, cores, subject_file, subject):
         dax.addExecutable(autorecon_one)
 
     autorecon1_job = Pegasus.DAX3.Job(name="autorecon1.sh")
-    autorecon1_job.addArguments(subject, subject_file, str(cores))
+    autorecon1_job.addArguments(subject, subject_file, '1')
     autorecon1_job.uses(subject_file, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_recon1_output.tar.xz".format(subject))
     autorecon1_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=False)
@@ -143,7 +143,7 @@ def create_final_job(dax, cores, subject, serial_job=False):
     if not dax.hasExecutable(autorecon_three):
         dax.addExecutable(autorecon_three)
     autorecon3_job = Pegasus.DAX3.Job(name="autorecon3.sh")
-    autorecon3_job.addArguments(subject, str(cores))
+    autorecon3_job.addArguments(subject, '1')
     if serial_job:
         recon2_output = Pegasus.DAX3.File("{0}_recon2_output.tar.xz".format(subject))
         autorecon3_job.uses(recon2_output, link=Pegasus.DAX3.Link.INPUT)
@@ -190,7 +190,7 @@ def create_single_workflow(dax, cores, subject_file, subject):
     :param subject: name of subject being processed
     :return: True if errors occurred, False otherwise
     """
-    return create_single_job(dax, args, subject_file, subject)
+    return create_single_job(dax, cores, subject_file, subject)
 
 
 def create_diamond_workflow(dax, cores, subject_file, subject,
