@@ -26,8 +26,8 @@ def email_user(success=True):
     msg['From'] = sender
     msg['To'] = dest
     try:
-        sendmail = subprocess.check_call(['/usr/bin/sendmail -t'], stdin=subprocess.PIPE)
-        sendmail.stdin(msg.as_string())
+        sendmail = subprocess.Popen(['/usr/sbin/sendmail', '-t'], stdin=subprocess.PIPE)
+        sendmail.communicate(msg.as_string())
     except subprocess.CalledProcessError:
         pass
 
