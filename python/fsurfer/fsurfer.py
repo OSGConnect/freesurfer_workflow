@@ -137,7 +137,7 @@ def create_final_job(dax, subject, serial_job=False):
         autorecon3_job.uses(lh_output, link=Pegasus.DAX3.Link.INPUT)
         rh_output = Pegasus.DAX3.File("{0}_recon2_rh_output.tar.xz".format(subject))
         autorecon3_job.uses(rh_output, link=Pegasus.DAX3.Link.INPUT)
-    output = Pegasus.DAX3.File("{0}_output.tar.gz".format(subject))
+    output = Pegasus.DAX3.File("{0}_output.tar.bz2".format(subject))
     autorecon3_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=True)
     return autorecon3_job
 
