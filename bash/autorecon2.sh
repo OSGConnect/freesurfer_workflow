@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 
 module load freesurfer/5.3.0
+if [ $? != 0 ];
+then
+    source /cvmfs/oasis.opensciencegrid.org/osg/modules/lmod/current/init/bash
+    module load freesurfer/5.3.0
+fi
 module load xz/5.2.2
 date
 start=`date +%s`
