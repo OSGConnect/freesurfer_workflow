@@ -120,8 +120,8 @@ def submit_workflow(subject_file, user, jobid, multicore=False, workflow='diamon
                                                 subject_name)
     if not errors:
         curr_date = time.strftime("%Y%m%d_%H%M%S", time.gmtime(time.time()))
-        dax.invoke('on_success', "/usr/bin/email_fsurf_notification 1 {0}".format(jobid))
-        dax.invoke('on_error', "/usr/bin/email_fsurf_notification 0 {0}".format(jobid))
+        dax.invoke('on_success', "/usr/bin/update_fsurf_job 1 {0}".format(jobid))
+        dax.invoke('on_error', "/usr/bin/update_fsurf_job 0 {0}".format(jobid))
         dax_name = "freesurfer_{0}.xml".format(curr_date)
         with open(dax_name, 'w') as f:
             dax.writeXML(f)
