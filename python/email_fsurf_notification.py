@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import argparse
 import getpass
+import os
 import subprocess
 import sys
 from email.mime.text import MIMEText
@@ -16,11 +17,18 @@ def email_user(success=True):
     :param success: True if workflow completed successfully
     :return: None
     """
-    if success:
-        msg = MIMEText('Your freesurfer workflow has completed succesfully')
+    if 'PEGASUS_SUBMIT_DIR' in os.environ:
+        workflow = os.path.basename(os.environ['PEGASUS_SUBMIT_DIR'])
     else:
-        msg = MIMEText('Your freesurfer workflow has completed with errors')
-    msg['Subject'] = 'Freesurfer workflow completed'
+        workflow = ''
+    if success:
+        msg = MIMEText('Your freesurfer workflow {0}'.format(workflow) +
+                       ' has completed succesfully')
+    else:
+        msg = MIMEText('Your freesurfer workflow {0}'.format(workflow) +
+                       ' has completed with errors')
+
+    msg['Subject'] = 'Freesurfer workflow {0} completed'.format(workflow)
     sender = 'fsurf@login.osgconnect.net'
     dest = getpass.getuser()
     msg['From'] = sender
