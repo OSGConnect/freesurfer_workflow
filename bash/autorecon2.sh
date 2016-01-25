@@ -30,5 +30,5 @@ recon-all                                                               \
 
 
 cd $SUBJECTS_DIR
-tar cJf $WD/$1_recon2_$2_output.tar.xz $SUBJECTS_DIR/*
+tar cJf $WD/$1_recon2_$2_output.tar.xz *
 cd $WD
