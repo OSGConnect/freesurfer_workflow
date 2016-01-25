@@ -36,4 +36,5 @@ recon-all                                                               \
 
 cd $SUBJECTS_DIR
 tar cvjf $WD/$1_output.tar.bz2 *
+cp $1/scripts/recon-all.log $WD
 cd $WD
