@@ -12,10 +12,9 @@ start=`date +%s`
 WD=$PWD
 if [ "$OSG_WN_TMP" != "" ];
 then
-
-    SUBJECTS_DIR=`mktemp -d --tmpdir=$OSG_WN_TMP`
-else
     SUBJECTS_DIR=`mktemp -d --tmpdir=$PWD`
+else
+    SUBJECTS_DIR=`mktemp -d --tmpdir=$OSG_WN_TMP`
 fi
 cp $1_recon2_*.tar.xz $SUBJECTS_DIR
 cd $SUBJECTS_DIR
