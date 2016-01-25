@@ -12,9 +12,9 @@ start=`date +%s`
 WD=$PWD
 if [ "$OSG_WN_TMP" != "" ];
 then
-    SUBJECTS_DIR=`mktemp -d --tmpdir=$PWD`
-else
     SUBJECTS_DIR=`mktemp -d --tmpdir=$OSG_WN_TMP`
+else
+    SUBJECTS_DIR=`mktemp -d --tmpdir=$PWD`
 fi
 cp $1_recon2_*.tar.xz $SUBJECTS_DIR
 cd $SUBJECTS_DIR
@@ -24,8 +24,7 @@ then
     tar xvaf $1_recon2_rh_output.tar.xz
     rm $1_recon2_lh_output.tar.xz
     rm $1_recon2_rh_output.tar.xz
-fi
-if [ -e "$1_recon2_output.tar.xz" ];
+elif [ -e "$1_recon2_output.tar.xz" ];
 then
     tar xvaf $1_recon2_output.tar.xz
     rm $1_recon2_output.tar.xz
