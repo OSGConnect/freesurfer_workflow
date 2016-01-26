@@ -32,6 +32,7 @@ CREATE TABLE freesurfer_interface.jobs (
     multicore       BOOLEAN NOT NULL DEFAULT FALSE,
     image_filename  varchar(128) NOT NULL,
     log_filename    varchar(128) NOT NULL,
+    pegasus_ts      varchar(128),
     state           freesurfer_interface.job_state NOT NULL,
     job_date        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     purged          boolean NOT NULL DEFAULT FALSE
