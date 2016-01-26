@@ -50,7 +50,7 @@ def main():
     parser = argparse.ArgumentParser(description="Process freesurfer information")
     # version info
     parser.add_argument('--version', action='version', version='%(prog)s ' + VERSION)
-    # Arguments for action
+    # Arguments for workflow outcome
     parser.add_argument('--success', dest='success',
                         action='store_true',
                         help='Workflow completed successfully')
