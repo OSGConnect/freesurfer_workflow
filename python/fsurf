@@ -231,16 +231,21 @@ def submit_workflow(input_directory, subject_name, multicore=False,
         return 1
     if not deidentified:
         response = raw_input("Has the MRI data been deidentified "
-                             "(This is required) [y/n]?\n")
+                             "(This is required) [y/n]? ")
         if response.strip().lower() != 'y':
-            sys.stdout.write("MRI data must be deidentified, please remove "
-                             "your MRI file immediately\n")
+            sys.stdout.write("MRI data must be deidentified, please "
+                             "deidentify the data before submitting\n")
             return 1
     if not defaced:
         response = raw_input("Has the MRI data been defaced "
-                             "(This is recommended) [y/n]? \n")
+                             "(This is recommended) [y/n]? ")
         if response.strip().lower() != 'y':
             sys.stdout.write("We recommend defacing MRI data\n")
+            response = raw_input("Are you sure you want to submit this "
+                                 "file [y/n]?")
+            if response.strip.lower() == 'n':
+                sys.stdout.write("Aborting submission on user request\n")
+                return 1
     subject_file = os.path.join(input_directory,
                                 "{0}_defaced.mgz".format(subject_name))
     subject_file = os.path.abspath(subject_file)
