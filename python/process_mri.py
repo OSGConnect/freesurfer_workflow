@@ -2,11 +2,13 @@
 
 # Copyright 2015 University of Chicago
 # Licensed under the APL 2.0 license
+import re
 import sys
 import os
 import time
 import subprocess
 
+import cStringIO
 import psycopg2
 
 import Pegasus.DAX3
@@ -120,16 +122,38 @@ def submit_workflow(subject_file, user, jobid, multicore=False, workflow='diamon
                                                 subject_name)
     if not errors:
         curr_date = time.strftime("%Y%m%d_%H%M%S", time.gmtime(time.time()))
-        dax.invoke('on_success', "/usr/bin/update_fsurf_job 1 {0}".format(jobid))
-        dax.invoke('on_error', "/usr/bin/update_fsurf_job 0 {0}".format(jobid))
+        dax.invoke('on_success', "/usr/bin/update_fsurf_job --success --jobid {0}".format(jobid))
+        dax.invoke('on_error', "/usr/bin/update_fsurf_job --failure --jobid {0}".format(jobid))
         dax_name = "freesurfer_{0}.xml".format(curr_date)
         with open(dax_name, 'w') as f:
             dax.writeXML(f)
-        exit_code, _ = pegasus_submit(dax="{0}".format(dax_name),
-                                      workflow_directory=workflow_directory)
+        exit_code, output = pegasus_submit(dax="{0}".format(dax_name),
+                                           workflow_directory=workflow_directory)
         if exit_code != 0:
             return 1
         os.unlink(dax_name)
+        capture_id = False
+        for line in cStringIO.StringIO(output).readlines():
+            if 'Your workflow has been started' in line:
+                capture_id = True
+            if capture_id and workflow_directory in line:
+                id_match = re.search(r'([T\d]+-\d+)'.format(workflow_directory),
+                                     line)
+                if id_match is not None:
+                    workflow_id = id_match.group(1)
+                    job_update = "UPDATE freesurfer_interface.jobs  " \
+                                 "SET pegasus_ts = %s" \
+                                 "WHERE id = %s;"
+                    try:
+                        conn = get_db_client()
+                        cursor = conn.cursor()
+                        cursor.execute(job_update, workflow_id, jobid)
+                        conn.commit()
+                    except psycopg2.Error:
+                        pass
+
+                break
+
     return errors
 
 
@@ -160,7 +184,7 @@ def process_images():
             if not errors:
                 cursor.execute(job_update, row[0])
                 conn.commit()
-    except Exception:
+    except psycopg2.Error:
         pass
 
 
