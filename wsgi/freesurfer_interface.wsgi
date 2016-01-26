@@ -109,7 +109,7 @@ def delete_job(environ):
     job_id = query_dict['jobid'][0]
     conn = get_db_client()
     cursor = conn.cursor()
-    job_query = "SELECT state FROM  freesurfer_interface.jobs  " \
+    job_query = "SELECT state FROM freesurfer_interface.jobs  " \
                 "WHERE id = %s;"
     try:
         cursor.execute(job_query, [job_id])
@@ -225,7 +225,7 @@ def validate_user(userid, token, timestamp):
             return token == db_hash
         conn.close()
         return False
-    except Exception, e:
+    except psycopg2.Error:
         conn.close()
         return False
 
@@ -302,9 +302,20 @@ def submit_job(environ):
         response = {'status': 401,
                     'result': "invalid user"}
         return json.dumps(response), '401 Not Authorized'
-    output_dir = os.path.join(FREESURFER_BASE, userid, 'input')
+    # setup user directories if not present
+    user_dir = os.path.join(FREESURFER_BASE, userid)
+    if not os.path.exists(user_dir):
+        os.mkdir(user_dir, 0o770)
+    output_dir = os.path.join(user_dir, 'input')
     if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+        os.mkdir(output_dir, 0o770)
+    if not os.path.exists(os.path.join(user_dir, 'results')):
+        os.mkdir(os.path.join(user_dir, 'results'), 0o770)
+    if not os.path.exists(os.path.join(user_dir, 'output')):
+        os.mkdir(os.path.join(user_dir, 'output'), 0o770)
+    if not os.path.exists(os.path.join(user_dir, 'workflows')):
+        os.mkdir(os.path.join(user_dir, 'workflows'), 0o770)
+    # upload
     temp_dir = tempfile.mkdtemp(dir=output_dir)
     input_file = os.path.join(temp_dir,
                               "{0}_defaced.mgz".format(query_dict['subject'][0]))
