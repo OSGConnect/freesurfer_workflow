@@ -326,16 +326,14 @@ def submit_job(environ):
                  "                                      image_filename," \
                  "                                      state," \
                  "                                      multicore," \
-                 "                                      log_filename," \
                  "                                      username," \
                  "                                      subject)" \
-                 "VALUES(%s, %s, 'UPLOADED', %s, %s, %s, %s)"
+                 "VALUES(%s, %s, 'UPLOADED', %s, %s, %s)"
     try:
         cursor.execute(job_insert,
                        [query_dict['jobname'][0],
                         input_file,
                         query_dict['multicore'][0],
-                        "",
                         userid,
                         query_dict['subject'][0]])
         conn.commit()

@@ -40,12 +40,8 @@ setup(name='fsurf',
       url='https://github.com/OSGConnect/freesurfer_workflow',
       packages=['fsurfer'],
       scripts=['fsurf', 'fsurf-config', 'email_fsurf_notification.py'],
-      data_files=[('/usr/share/fsurfer/scripts', ["bash/autorecon1.sh",
-                                                  "bash/autorecon2.sh",
-                                                  "bash/autorecon2-whole.sh",
-                                                  "bash/autorecon3.sh",
-                                                  "bash/autorecon-all.sh"])],
       license='Apache 2.0')
+
 
 def check_output(*popenargs, **kwargs):
     """
