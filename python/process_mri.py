@@ -15,8 +15,8 @@ import Pegasus.DAX3
 import fsurfer
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
-FREESURFER_BASE = '/stash2/user/freesurfer/'
-PEGASUSRC_PATH = '/stash2/user/fressurfer/pegasusconf/pegasusrc'
+FREESURFER_BASE = '/stash2/user/fsurf/'
+PEGASUSRC_PATH = '/stash2/user/fsurf/pegasusconf/pegasusrc'
 
 
 def pegasus_submit(dax, workflow_directory):
@@ -189,4 +189,27 @@ def process_images():
 
 
 if __name__ == '__main__':
+   # workaround missing subprocess.check_output
+    if "check_output" not in dir(subprocess):  # duck punch it in!
+        def check_output(*popenargs, **kwargs):
+            """
+            Run command with arguments and return its output as a byte string.
+
+            Backported from Python 2.7 as it's implemented as pure python
+            on stdlib.
+
+            """
+            process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+            output, unused_err = process.communicate()
+            retcode = process.poll()
+            if retcode:
+                cmd = kwargs.get("args")
+                if cmd is None:
+                    cmd = popenargs[0]
+                error = subprocess.CalledProcessError(retcode, cmd)
+                error.output = output
+                raise error
+            return output
+
+        subprocess.check_output = check_output
     sys.exit(process_images())
