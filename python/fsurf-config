@@ -23,6 +23,7 @@ SITE_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
     <site  handle="condorpool" arch="x86_64" os="LINUX">
         <profile namespace="pegasus" key="style">condor</profile>
         <profile namespace="condor" key="universe">vanilla</profile>
+        <profile namespace="condor" key="+ProjectName">freesurfer</profile>
         <profile namespace="condor" key="requirements">(HAS_MODULES == TRUE ||
                                                         regexp("uc3-c00[56].*", Machine)) &amp;&amp;
                                                        (IS_RCC_syracuse =!= TRUE) &amp;&amp;
