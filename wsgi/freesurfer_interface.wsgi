@@ -13,7 +13,7 @@ from wsgiref.simple_server import make_server
 import psycopg2
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
-FREESURFER_BASE = '/stash2/user/freesurfer/'
+FREESURFER_BASE = '/stash2/user/fsurf/'
 TIMEZONE = "US/Central"
 
 
