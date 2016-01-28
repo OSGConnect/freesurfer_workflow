@@ -14,7 +14,7 @@ import cPickle
 import fsurfer
 import Pegasus.DAX3
 
-VERSION = '0.7.7'
+VERSION = '0.7.8'
 
 WORKFLOW_BASE_DIRECTORY = os.path.join('/stash2/user',
                                        getpass.getuser(),
@@ -409,7 +409,7 @@ def submit_workflow(input_directory, subject_name, multicore=False,
             sys.stdout.write("We recommend defacing MRI data\n")
             response = raw_input("Are you sure you want to submit this "
                                  "file [y/n]?")
-            if response.strip.lower() == 'n':
+            if response.strip().lower() == 'n':
                 sys.stdout.write("Aborting submission on user request\n")
                 return 1
     sys.stdout.write("Creating and submitting workflow\n")
