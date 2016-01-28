@@ -93,7 +93,7 @@ def submit_workflow(subject_file, user, jobid, multicore=False, workflow='diamon
         cores = 8
     else:
         cores = 2
-    subject_name = subject_file.replace("_defaced.mgz", "")
+    subject_name = os.path.basename(subject_file).replace("_defaced.mgz", "")
     dax = Pegasus.DAX3.ADAG('freesurfer')
     dax_subject_file = Pegasus.DAX3.File("{0}_defaced.mgz".format(subject_name))
     dax_subject_file.addPFN(Pegasus.DAX3.PFN("file://{0}".format(subject_file),
@@ -147,7 +147,7 @@ def submit_workflow(subject_file, user, jobid, multicore=False, workflow='diamon
                     try:
                         conn = get_db_client()
                         cursor = conn.cursor()
-                        cursor.execute(job_update, workflow_id, jobid)
+                        cursor.execute(job_update, [workflow_id, jobid])
                         conn.commit()
                     except psycopg2.Error:
                         pass
@@ -182,7 +182,7 @@ def process_images():
                 continue
             errors = submit_workflow(input_file, workflow_directory, row[0])
             if not errors:
-                cursor.execute(job_update, row[0])
+                cursor.execute(job_update, [row[0]])
                 conn.commit()
     except psycopg2.Error:
         pass
