@@ -166,10 +166,10 @@ def process_images():
 
     conn = get_db_client()
     cursor = conn.cursor()
-    job_query = "SELECT id, username, image_filename FROM freesurfer_interface.jobs  " \
+    job_query = "SELECT id, username, image_filename FROM freesurfer_interface.jobs " \
                 "WHERE state = 'UPLOADED'"
-    job_update = "UPDATE freesurfer_interface.jobs  " \
-                 "SET state = 'PROCESSING'" \
+    job_update = "UPDATE freesurfer_interface.jobs " \
+                 "SET state = 'PROCESSING' " \
                  "WHERE id = %s;"
     try:
         cursor.execute(job_query)
