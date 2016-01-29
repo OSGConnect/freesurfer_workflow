@@ -38,7 +38,6 @@ setup(name='fsurf',
       author='Suchandra Thapa',
       author_email='sthapa@ci.uchicago.edu',
       url='https://github.com/OSGConnect/freesurfer_workflow',
-      packages=['fsurfer'],
       scripts=['fsurf', 'fsurf-config', 'email_fsurf_notification.py'],
       license='Apache 2.0')
 
