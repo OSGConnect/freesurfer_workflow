@@ -9,7 +9,7 @@ from email.mime.text import MIMEText
 import psycopg2
 import shutil
 
-VERSION = '0.1'
+VERSION = '0.3'
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
 FREESURFER_BASE = '/stash2/user/fsurf/'
@@ -138,7 +138,6 @@ def process_results(jobid, success=True):
         conn.close()
     except psycopg2.Error:
         return
-
 
 
 def main():
