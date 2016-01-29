@@ -113,6 +113,8 @@ def process_results(jobid, success=True):
     result_logfile = os.path.join(FREESURFER_BASE,
                                   username,
                                   'workflows',
+                                  'output',
+                                  'fsurf',
                                   'pegasus',
                                   'freesurfer',
                                   pegasus_ts,
