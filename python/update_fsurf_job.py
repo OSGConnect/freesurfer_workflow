@@ -12,7 +12,7 @@ import shutil
 VERSION = '0.1'
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
-FREESURFER_BASE = '/stash2/user/freesurfer/'
+FREESURFER_BASE = '/stash2/user/fsurf/'
 
 
 def get_db_parameters():
