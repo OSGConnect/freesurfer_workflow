@@ -404,11 +404,11 @@ def submit_workflow(input_directory, subject_name, multicore=False,
             return 1
     if not defaced:
         response = raw_input("Has the MRI data been defaced "
-                             "(This is recommended) [y/n]? \n")
+                             "(This is recommended) [y/n]? ")
         if response.strip().lower() != 'y':
             sys.stdout.write("We recommend defacing MRI data\n")
             response = raw_input("Are you sure you want to submit this "
-                                 "file [y/n]?")
+                                 "file [y/n]? ")
             if response.strip().lower() == 'n':
                 sys.stdout.write("Aborting submission on user request\n")
                 return 1
