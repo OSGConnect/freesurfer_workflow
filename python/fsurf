@@ -12,7 +12,7 @@ import urlparse
 import re
 
 REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer"
-VERSION = '0.5'
+VERSION = '0.5.1'
 
 
 def get_user_info():
@@ -243,7 +243,7 @@ def submit_workflow(input_directory, subject_name, multicore=False,
             sys.stdout.write("We recommend defacing MRI data\n")
             response = raw_input("Are you sure you want to submit this "
                                  "file [y/n]?")
-            if response.strip.lower() == 'n':
+            if response.strip().lower() == 'n':
                 sys.stdout.write("Aborting submission on user request\n")
                 return 1
     subject_file = os.path.join(input_directory,
