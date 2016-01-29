@@ -15,8 +15,8 @@ import Pegasus.DAX3
 import fsurfer
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
-FREESURFER_BASE = '/stash2/user/freesurfer/'
-PEGASUSRC_PATH = '/stash2/user/fressurfer/pegasusconf/pegasusrc'
+FREESURFER_BASE = '/stash2/user/fsurf/'
+PEGASUSRC_PATH = '/stash2/user/fsurf/pegasusconf/pegasusrc'
 
 
 def pegasus_submit(dax, workflow_directory):
@@ -93,7 +93,7 @@ def submit_workflow(subject_file, user, jobid, multicore=False, workflow='diamon
         cores = 8
     else:
         cores = 2
-    subject_name = subject_file.replace("_defaced.mgz", "")
+    subject_name = os.path.basename(subject_file).replace("_defaced.mgz", "")
     dax = Pegasus.DAX3.ADAG('freesurfer')
     dax_subject_file = Pegasus.DAX3.File("{0}_defaced.mgz".format(subject_name))
     dax_subject_file.addPFN(Pegasus.DAX3.PFN("file://{0}".format(subject_file),
@@ -147,7 +147,7 @@ def submit_workflow(subject_file, user, jobid, multicore=False, workflow='diamon
                     try:
                         conn = get_db_client()
                         cursor = conn.cursor()
-                        cursor.execute(job_update, workflow_id, jobid)
+                        cursor.execute(job_update, [workflow_id, jobid])
                         conn.commit()
                     except psycopg2.Error:
                         pass
@@ -182,11 +182,34 @@ def process_images():
                 continue
             errors = submit_workflow(input_file, workflow_directory, row[0])
             if not errors:
-                cursor.execute(job_update, row[0])
+                cursor.execute(job_update, [row[0]])
                 conn.commit()
     except psycopg2.Error:
         pass
 
 
 if __name__ == '__main__':
+   # workaround missing subprocess.check_output
+    if "check_output" not in dir(subprocess):  # duck punch it in!
+        def check_output(*popenargs, **kwargs):
+            """
+            Run command with arguments and return its output as a byte string.
+
+            Backported from Python 2.7 as it's implemented as pure python
+            on stdlib.
+
+            """
+            process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+            output, unused_err = process.communicate()
+            retcode = process.poll()
+            if retcode:
+                cmd = kwargs.get("args")
+                if cmd is None:
+                    cmd = popenargs[0]
+                error = subprocess.CalledProcessError(retcode, cmd)
+                error.output = output
+                raise error
+            return output
+
+        subprocess.check_output = check_output
     sys.exit(process_images())
