@@ -54,13 +54,14 @@ def process_results(jobid, success=True):
                  "       jobs.job_date, " \
                  "       jobs.pegasus_ts, " \
                  "       users.email, " \
-                 "       users.username" \
-                 "FROM freesurfer_interface.jobs AS jobs, freesurfer_interface.users AS users" \
+                 "       users.username " \
+                 "FROM freesurfer_interface.jobs AS jobs, " \
+                 "     freesurfer_interface.users AS users " \
                  "WHERE jobs.id  = %s"
     conn = get_db_client()
     cursor = conn.cursor()
     try:
-        cursor.execute(info_query)
+        cursor.execute(info_query, [jobid])
         row = cursor.fetchone()
         if row:
             subject_name = row[0]
@@ -102,6 +103,8 @@ def process_results(jobid, success=True):
     result_filename = os.path.join(FREESURFER_BASE,
                                    username,
                                    'workflows',
+                                   'output',
+                                   'fsurf',
                                    'pegasus',
                                    'freesurfer',
                                    pegasus_ts,
