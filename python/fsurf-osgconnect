@@ -602,7 +602,7 @@ def main():
                         default='.', help='directory containing input file')
     # multicore
     parser.add_argument('--dualcore', dest='multicore',
-                        action='store_false', default=True
+                        action='store_false', default=True,
                         help='Use 2 cores to process certain steps')
     # output verbose status messages
     parser.add_argument('--verbose', dest='verbose', default=False,

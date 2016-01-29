@@ -335,7 +335,7 @@ def main():
     parser.add_argument('--dir', dest='input_directory',
                         default='.', help='directory containing input file')
     parser.add_argument('--dualcore', dest='multicore',
-                        action='store_false', default=True
+                        action='store_false', default=True,
                         help='Use 2 cores to process certain steps')
     parser.add_argument('--deidentified', dest="deidentified",
                         action="store_true", default=False,
