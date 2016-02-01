@@ -57,7 +57,7 @@ def process_results(jobid, success=True):
                  "       users.username " \
                  "FROM freesurfer_interface.jobs AS jobs, " \
                  "     freesurfer_interface.users AS users " \
-                 "WHERE jobs.id  = %s"
+                 "WHERE jobs.id  = %s AND jobs.username = users.username"
     conn = get_db_client()
     cursor = conn.cursor()
     try:
