@@ -260,7 +260,8 @@ def get_current_jobs(environ):
     job_query = "SELECT id, subject, state, job_date, multicore " \
                 "FROM freesurfer_interface.jobs " \
                 "WHERE purged IS NOT TRUE AND " \
-                "      age(job_date) < '7 days' AND username = %s;"
+                "      age(job_date) < '7 days' AND username = %s " \
+                "ORDER BY job_date DESC;"
     try:
         cursor.execute(job_query, [userid])
         for row in cursor.fetchall():
