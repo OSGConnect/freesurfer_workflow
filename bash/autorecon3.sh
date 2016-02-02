@@ -35,6 +35,8 @@ recon-all                                                               \
         -openmp $2
 
 cd $SUBJECTS_DIR
+mv $1/scripts/recon-all.log $1/scripts/recon-all-step3.log
+cat $1/scripts/recon-all-step1.log $1/scripts/recon-all-step2*.log $1/scripts/recon-all-step3.log $1/scripts/recon-all.log
 tar cvjf $WD/$1_output.tar.bz2 *
 cp $1/scripts/recon-all.log $WD
 cd $WD

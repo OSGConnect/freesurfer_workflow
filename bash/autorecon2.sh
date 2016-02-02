@@ -30,5 +30,6 @@ recon-all                                                               \
 
 
 cd $SUBJECTS_DIR
+mv $1/scripts/recon-all.log $1/scripts/recon-all-step2-$2.log
 tar cJf $WD/$1_recon2_$2_output.tar.xz *
 cd $WD
