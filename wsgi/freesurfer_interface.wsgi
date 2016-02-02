@@ -435,7 +435,7 @@ def get_job_log(environ):
             status = "404 Not Found"
         else:
             output_filename = os.path.join(output_dir,
-                                           "recon-all-{0}.log".format(row[0]))
+                                           "recon_all-{0}.log".format(row[0]))
             if os.path.isfile(output_filename):
                 response['result'] = "Output found"
                 response['filename'] = output_filename
