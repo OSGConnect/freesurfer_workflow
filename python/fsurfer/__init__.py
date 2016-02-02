@@ -7,7 +7,7 @@ from fsurfer import create_serial_workflow
 from fsurfer import create_diamond_workflow
 from fsurfer import create_single_workflow
 
-__version__ = '1.1'
+__version__ = '1.2'
 
 __all__ = ['create_single_job',
            'create_recon2_job',
