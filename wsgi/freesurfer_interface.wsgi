@@ -397,6 +397,56 @@ def get_job_output(environ):
     return json.dumps(response), status
 
 
+def get_job_log(environ):
+    """
+    Return the logs from a job
+
+    :param environ: dictionary with environment variables (See PEP 333)
+    :return: a tuple with response_body, status
+    """
+    response = {"status": 200,
+                "result": "success"}
+    status = '200 OK'
+    query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
+    parameters = {'userid': str,
+                  'token': str,
+                  'jobid': str}
+    if not validate_parameters(query_dict, parameters):
+        response = {'status': 400,
+                    'result': "invalid or missing parameter"}
+        return json.dumps(response), '400 Bad Request'
+    userid, token, timestamp = get_user_params(environ)
+    if not validate_user(userid, token, timestamp):
+        response = {'status': 401,
+                    'result': "invalid user"}
+        return json.dumps(response), '401 Not Authorized'
+    output_dir = os.path.join(FREESURFER_BASE, userid, 'results')
+    conn = get_db_client()
+    cursor = conn.cursor()
+    job_query = "SELECT id, subject, state " \
+                "FROM freesurfer_interface.jobs " \
+                "WHERE id = %s AND username = %s;"
+    try:
+        cursor.execute(job_query, [query_dict['jobid'][0], userid])
+        row = cursor.fetchone()
+        if row[2] != 'COMPLETED':
+            response['status'] = 404
+            response["result"] = "Workflow does not have any output to download"
+            status = "404 Not Found"
+        else:
+            output_filename = os.path.join(output_dir,
+                                           "recon-all-{0}.log".format(row[0]))
+            if os.path.isfile(output_filename):
+                response['result'] = "Output found"
+                response['filename'] = output_filename
+    except Exception, e:
+        response = {'status': 500,
+                    'result': str(e)}
+        status = '500 Server Error'
+    conn.close()
+    return json.dumps(response), status
+
+
 def application(environ, start_response):
     """
     Get parameters from GET request and publish to redis channel
@@ -424,6 +474,28 @@ def application(environ, start_response):
         if response_obj['result'] == 'Output found':
             filename = response_obj['filename']
             response_headers = [('Content-Type', 'application/x-bzip2'),
+                                ('Content-length', str(os.path.getsize(filename))),
+                                ('Content-Disposition',
+                                 'attachment; filename=' + str(os.path.basename(filename)))]
+            try:
+                fh = open(filename, 'rb')
+                start_response(status, response_headers)
+                if 'wsgi.file_wrapper' in environ:
+                    return environ['wsgi.file_wrapper'](fh, 4096)
+                else:
+                    return iter(lambda: fh.read(4096), '')
+            except IOError:
+                response_body = json.dumps({'status': 500,
+                                            'result': 'Could not read output file'})
+                status = '500 Server Error'
+    elif environ['PATH_INFO'] == '/freesurfer/job/log':
+        # need to do something a bit special because
+        # we're returning a file
+        response_body, status = get_job_log(environ)
+        response_obj = json.loads(response_body)
+        if response_obj['result'] == 'Output found':
+            filename = response_obj['filename']
+            response_headers = [('Content-Type', 'text/plain'),
                                 ('Content-length', str(os.path.getsize(filename))),
                                 ('Content-Disposition',
                                  'attachment; filename=' + str(os.path.basename(filename)))]
