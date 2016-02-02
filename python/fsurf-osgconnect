@@ -532,6 +532,7 @@ def get_output(workflow_id):
         return 1
     shutil.copy(output_file, dest_file)
     sys.stdout.write("Output saved to {0}\n".format(dest_file))
+    sys.stdout.write("To extract the results: tar xvjf {0}\n".format(dest_file))
     return 0
 
 
@@ -550,17 +551,15 @@ def get_log(workflow_id):
         sys.stdout.write("Output for workflow {0} does not exist\n".format(workflow_id))
         return 1
     sys.stdout.write("Getting output, this may take a little time.\n")
-    output_files = os.path.join(WORKFLOW_OUTPUT_DIRECTORY,
+    output_file = os.path.join(WORKFLOW_OUTPUT_DIRECTORY,
                                 workflow_id,
                                 "recon-all.log")
-    output_file = output_files[0]
     dest_file = os.path.basename(output_file)
     if os.path.exists(dest_file):
         sys.stdout.write("{0} exists, won't overwrite\n".format(dest_file))
         return 1
     shutil.copy(output_file, dest_file)
     sys.stdout.write("Output saved to {0}\n".format(dest_file))
-    sys.stdout.write("To extract the results: tar xvjf {0}\n".format(dest_file))
     return 0
 
 
