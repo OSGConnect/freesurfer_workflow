@@ -12,17 +12,24 @@ import urlparse
 import re
 
 REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer"
-VERSION = '0.5.3'
+VERSION = '0.5.4'
 
 
-def get_user_info():
+def get_user_info(args):
     """
     Query user for username and password and return
 
+    :param args: argparse object
     :return: username, password
     """
-    username = raw_input("Enter username: ").strip()
-    password = getpass.getpass("Enter password: ")
+    if args.user:
+        username = args.user
+    else:
+        username = raw_input("Enter username: ").strip()
+    if args.password:
+        password = args.password
+    else:
+        password = getpass.getpass("Enter password: ")
     return username, password
 
 
@@ -91,7 +98,7 @@ def download_output(query_parameters, noun, endpoint=REST_ENDPOINT):
         conn.request('GET', "{0}?{1}".format(parsed.path, parsed.query))
         resp = conn.getresponse()
         content_type = resp.getheader('content-type')
-        if content_type != 'application/x-bzip2' or \
+        if content_type != 'application/x-bzip2' and \
            content_type != 'text/plain':
             return resp.status, resp.read()
         content_disposition = resp.getheader('content-disposition')
@@ -162,14 +169,15 @@ def get_token(userid, password):
     return str(timestamp), token
 
 
-def list_workflows():
+def list_workflows(username, password):
     """
     List the workflows currently in the system
 
+    :param username: username to use when authenticating
+    :param password: password to user when authenticating
     :return: 0 on success, 1 on error
     """
     try:
-        username, password = get_user_info()
         query_params = {}
         timestamp, token = get_token(username, password)
         if token is None:
@@ -209,14 +217,15 @@ def list_workflows():
         return 1
 
 
-def remove_workflow(workflow_id):
+def remove_workflow(workflow_id, username, password):
     """
     Stop and remove a specified pegasus workflow
 
     :param workflow_id: pegasus id for workflow
+    :param username: username to use when authenticating
+    :param password: password to user when authenticating
     :return: 0 on success, 1 on error
     """
-    username, password = get_user_info()
     query_params = {}
     timestamp, token = get_token(username, password)
     if token is None:
@@ -235,11 +244,13 @@ def remove_workflow(workflow_id):
     return 0
 
 
-def submit_workflow(input_directory, subject_name, multicore=False,
-                    deidentified=False, defaced=False):
+def submit_workflow(username, password, input_directory, subject_name,
+                    multicore=False, deidentified=False, defaced=False):
     """
     Submit a workflow to OSG for processing
 
+    :param username: username to use when authenticating
+    :param password: password to user when authenticating
     :param input_directory:    path to file with MRI data in mgz format
     :param subject_name:  name of subject in the file
     :param multicore:     boolean indicating whether to use a multicore workflow or not
@@ -276,7 +287,6 @@ def submit_workflow(input_directory, subject_name, multicore=False,
         return 1
     with open(subject_file, 'rb') as f:
         body = f.read()
-    username, password = get_user_info()
     query_params = {}
     timestamp, token = get_token(username, password)
     if token is None:
@@ -296,14 +306,15 @@ def submit_workflow(input_directory, subject_name, multicore=False,
     return 0
 
 
-def get_output(workflow_id):
+def get_output(workflow_id, username, password):
     """
     Get MRI data for a completed workflow
 
     :param workflow_id: pegasus id for workflow
+    :param username: username to use when authenticating
+    :param password: password to user when authenticating
     :return: 0 on success, 1 on error
     """
-    username, password = get_user_info()
     query_params = {}
     timestamp, token = get_token(username, password)
     if token is None:
@@ -321,18 +332,19 @@ def get_output(workflow_id):
         return 1
     sys.stdout.write("Downloaded to {0}\n".format(response_obj['filename']))
     sys.stdout.write("To extract the results: tar "
-                     "xvaf {0}\n".format(response_obj['filename']))
+                     "xvjf {0}\n".format(response_obj['filename']))
     return 0
 
 
-def get_log(workflow_id):
+def get_log(workflow_id, username, password):
     """
     Get logs for a completed workflow
 
     :param workflow_id: pegasus id for workflow
+    :param username: username to use when authenticating
+    :param password: password to user when authenticating
     :return: 0 on success, 1 on error
     """
-    username, password = get_user_info()
     query_params = {}
     timestamp, token = get_token(username, password)
     if token is None:
@@ -348,6 +360,7 @@ def get_log(workflow_id):
         sys.stdout.write("Error while downloading results:\n")
         sys.stdout.write("{0}\n".format(response_obj['result']))
         return 1
+
     sys.stdout.write("Downloaded to {0}\n".format(response_obj['filename']))
     return 0
 
@@ -408,17 +421,26 @@ def main():
     args = parser.parse_args(sys.argv[1:])
 
     if args.action == 'list':
-        status = list_workflows()
+        username, password = get_user_info(args)
+        status = list_workflows(username, password)
     elif args.action == 'remove':
-        status = remove_workflow(args.workflow_id)
+        username, password = get_user_info(args)
+        status = remove_workflow(args.workflow_id, username, password)
     elif args.action == 'submit':
-        status = submit_workflow(args.input_directory,
+        username, password = get_user_info(args)
+        status = submit_workflow(username,
+                                 password,
+                                 args.input_directory,
                                  args.subject,
                                  args.multicore,
                                  args.deidentified,
                                  args.defaced)
     elif args.action == 'output':
-        status = get_output(args.workflow_id)
+        username, password = get_user_info(args)
+        status = get_output(args.workflow_id, username, password)
+    elif args.action == 'log':
+        username, password = get_user_info(args)
+        status = get_log(args.workflow_id, username, password)
     else:
         sys.stdout.write("Must specify an action, exiting...\n")
         parser.print_help()

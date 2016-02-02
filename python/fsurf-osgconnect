@@ -14,7 +14,7 @@ import cPickle
 import fsurfer
 import Pegasus.DAX3
 
-VERSION = '0.8.0'
+VERSION = '0.8.1'
 
 WORKFLOW_BASE_DIRECTORY = os.path.join('/stash2/user',
                                        getpass.getuser(),
@@ -506,6 +506,7 @@ def submit_workflow(input_directory, subject_name, multicore=False,
 
 def get_output(workflow_id):
     """
+    Get output from a completed workflow and copy it to local directory
 
     :param workflow_id: pegasus id for workflow
     :return: 0 on success, 1 on error
@@ -531,6 +532,35 @@ def get_output(workflow_id):
         return 1
     shutil.copy(output_file, dest_file)
     sys.stdout.write("Output saved to {0}\n".format(dest_file))
+    return 0
+
+
+def get_log(workflow_id):
+    """
+    Get logs from a completed workflow and copy it to local directory
+
+    :param workflow_id: pegasus id for workflow
+    :return: 0 on success, 1 on error
+    """
+    if workflow_id is None:
+        sys.stdout.write("No id given, exiting\n")
+        return 1
+    output_dir = os.path.join(WORKFLOW_OUTPUT_DIRECTORY, workflow_id)
+    if not os.path.isdir(output_dir):
+        sys.stdout.write("Output for workflow {0} does not exist\n".format(workflow_id))
+        return 1
+    sys.stdout.write("Getting output, this may take a little time.\n")
+    output_files = os.path.join(WORKFLOW_OUTPUT_DIRECTORY,
+                                workflow_id,
+                                "recon-all.log")
+    output_file = output_files[0]
+    dest_file = os.path.basename(output_file)
+    if os.path.exists(dest_file):
+        sys.stdout.write("{0} exists, won't overwrite\n".format(dest_file))
+        return 1
+    shutil.copy(output_file, dest_file)
+    sys.stdout.write("Output saved to {0}\n".format(dest_file))
+    sys.stdout.write("To extract the results: tar xvjf {0}\n".format(dest_file))
     return 0
 
 
@@ -592,6 +622,9 @@ def main():
     parser.add_argument('--reset', dest='action',
                         action='store_const', const='reset',
                         help=argparse.SUPPRESS)
+    parser.add_argument('--log', dest='action',
+                        action='store_const', const='log',
+                        help="Get log file for specified job")
     # Arguments identifying workflow
     parser.add_argument('--id', dest='workflow_id',
                         action='store', help='id that specifies job')
@@ -649,6 +682,8 @@ def main():
                                  args.defaced)
     elif args.action == 'output':
         status = get_output(args.workflow_id)
+    elif args.action == 'log':
+        status = get_log(args.workflow_id)
     else:
         sys.stdout.write("Must specify an action, exiting...\n")
         parser.print_help()
