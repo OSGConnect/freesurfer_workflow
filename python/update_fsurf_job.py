@@ -133,7 +133,7 @@ def process_results(jobid, success=True):
             job_update = "UPDATE freesurfer_interface.jobs  " \
                          "SET state = 'FAILED'" \
                          "WHERE id = %s;"
-        cursor.execute(job_update, jobid)
+        cursor.execute(job_update, [jobid])
         conn.commit()
         conn.close()
     except psycopg2.Error:
