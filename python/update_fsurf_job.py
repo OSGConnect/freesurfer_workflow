@@ -74,12 +74,12 @@ def process_results(jobid, success=True):
     except psycopg2.Error:
         return
     if success:
-        msg = MIMEText('Your freesurfer workflow {0}'.format(jobid) +
+        msg = MIMEText('Your freesurfer workflow {0} '.format(jobid) +
                        'submitted on {0} and processing '.format(submit_date) +
                        'subject {0} '.format(subject_name) +
                        'has completed succesfully')
     else:
-        msg = MIMEText('Your freesurfer workflow {0}'.format(jobid) +
+        msg = MIMEText('Your freesurfer workflow {0} '.format(jobid) +
                        'submitted on {0} and processing '.format(submit_date) +
                        'subject {0} '.format(subject_name) +
                        'has completed with errors')

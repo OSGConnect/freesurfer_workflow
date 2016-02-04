@@ -22,11 +22,11 @@ def email_user(success=True):
     else:
         workflow = ''
     if success:
-        msg = MIMEText('Your freesurfer workflow {0}'.format(workflow) +
-                       ' has completed succesfully')
+        msg = MIMEText('Your freesurfer workflow {0} '.format(workflow) +
+                       'has completed succesfully')
     else:
-        msg = MIMEText('Your freesurfer workflow {0}'.format(workflow) +
-                       ' has completed with errors')
+        msg = MIMEText('Your freesurfer workflow {0} '.format(workflow) +
+                       'has completed with errors')
 
     msg['Subject'] = 'Freesurfer workflow {0} completed'.format(workflow)
     sender = 'fsurf@login.osgconnect.net'
