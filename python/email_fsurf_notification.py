@@ -7,7 +7,7 @@ import sys
 from email.mime.text import MIMEText
 
 REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer"
-VERSION = '0.1'
+VERSION = '0.2'
 
 
 def email_user(success=True):
