@@ -2,6 +2,10 @@
 
 # Copyright 2015 University of Chicago
 # Licensed under the APL 2.0 license
+
+# Process jobs that have been uploaded and create
+# a pegasus workflow and submit
+
 import re
 import sys
 import os
@@ -189,7 +193,7 @@ def process_images():
 
 
 if __name__ == '__main__':
-   # workaround missing subprocess.check_output
+    # workaround missing subprocess.check_output
     if "check_output" not in dir(subprocess):  # duck punch it in!
         def check_output(*popenargs, **kwargs):
             """
