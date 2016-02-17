@@ -27,10 +27,14 @@ def main():
                                                                      input_2))
     input_1_tarball = tarfile.open(input_1, 'r:*')
     input_2_tarball = tarfile.open(input_2, 'r:*')
-    input_1_tarball.extractall(work_dir)
-    input_2_tarball.extractall(work_dir)
-    input_1_dir = input_1_tarball.getmembers()[0].path
-    input_2_dir = input_2_tarball.getmembers()[0].path
+    input_1_tarball.extractall(os.path.join(work_dir, 'input1'))
+    input_2_tarball.extractall(os.path.join(work_dir, 'input2'))
+    input_1_dir = os.path.join(work_dir,
+                               'input1',
+                               input_1_tarball.getmembers()[0].path)
+    input_2_dir = os.path.join(work_dir,
+                               'input2',
+                               input_2_tarball.getmembers()[0].path)
     sys.stdout.write("Comparing volumes\n")
     for directory in VOL_DIRS:
         dir_entry_1 = os.path.join(input_1_dir, directory)
