@@ -125,7 +125,7 @@ def main(work_dir):
             if input_1_md5.digest() != input_2_md5.digest():
                 sys.stdout.write("Two files differ\n")
             else:
-                sys.stdout.write("OK")
+                sys.stdout.write("OK\n")
     sys.stdout.write("Comparing annotations\n")
     for directory in LABEL_DIRS:
         dir_entry_1 = os.path.join(input_1_dir, directory)
@@ -148,7 +148,7 @@ def main(work_dir):
             if input_1_md5.digest() != input_2_md5.digest():
                 sys.stdout.write("Two files differ\n")
             else:
-                sys.stdout.write("OK")
+                sys.stdout.write("OK\n")
     return 0
 
 if __name__ == '__main__':
