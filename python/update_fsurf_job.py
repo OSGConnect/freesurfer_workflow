@@ -3,13 +3,13 @@ import argparse
 import os
 import subprocess
 import sys
-import tempfile
 from email.mime.text import MIMEText
 
 import psycopg2
 import shutil
+import fsurfer
 
-VERSION = '0.4'
+VERSION = fsurfer.__version__
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
 FREESURFER_BASE = '/stash2/user/fsurf/'
