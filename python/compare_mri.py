@@ -14,12 +14,13 @@ LABEL_DIRS = ['label']
 ANNOTATION_DIRS = ['label']
 
 
-def main():
+def main(work_dir):
     """
-    Process
+    Compare two MRI results and list any differences
+
+    :param work_dir:  directory to use as a working directory
     :return: exit code (0 on success, 1 on failure)
     """
-    work_dir = tempfile.mkdtemp()
     sys.stdout.write("Using {0} as scratch dir\n".format(work_dir))
     input_1 = sys.argv[1]
     input_2 = sys.argv[2]
@@ -148,8 +149,12 @@ def main():
                 sys.stdout.write("Two files differ\n")
             else:
                 sys.stdout.write("OK")
-    shutil.rmtree(work_dir)
     return 0
 
 if __name__ == '__main__':
-    sys.exit(main())
+    try:
+        work_dir = tempfile.mkdtemp()
+        sys.exit(main(work_dir))
+    finally:
+        shutil.rmtree(work_dir)
+
