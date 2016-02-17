@@ -87,6 +87,8 @@ def main(work_dir):
                              "{0} ".format(dir_entry_1) +
                              "and {1} differ\n".format(dir_entry_2))
         for filename in input_1_files:
+            if filename.split('.')[-1] is in ['crv', 'K', 'H']:
+                continue
             input_1_file = os.path.join(dir_entry_1, filename)
             input_2_file = os.path.join(dir_entry_2, filename)
             sys.stdout.write("Comparing {0} to {1}... ".format(input_1_file,
