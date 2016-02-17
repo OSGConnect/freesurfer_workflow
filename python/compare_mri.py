@@ -6,6 +6,8 @@ import sys
 import tempfile
 import tarfile
 
+import shutil
+
 VOL_DIRS = ['mri', 'mri/orig', 'mri/tranforms']
 SURFACE_DIRS = ['surf']
 LABEL_DIRS = ['label']
@@ -27,8 +29,8 @@ def main():
     input_2_tarball = tarfile.open(input_2, 'r:*')
     input_1_tarball.extractall(work_dir)
     input_2_tarball.extractall(work_dir)
-    input_1_dir = input_1_tarball.members()[0].path
-    input_2_dir = input_2_tarball.members()[0].path
+    input_1_dir = input_1_tarball.getmembers()[0].path
+    input_2_dir = input_2_tarball.getmembers()[0].path
     sys.stdout.write("Comparing volumes\n")
     for directory in VOL_DIRS:
         dir_entry_1 = os.path.join(input_1_dir, directory)
@@ -142,6 +144,7 @@ def main():
                 sys.stdout.write("Two files differ\n")
             else:
                 sys.stdout.write("OK")
+    shutil.rmtree(work_dir)
     return 0
 
 if __name__ == '__main__':
