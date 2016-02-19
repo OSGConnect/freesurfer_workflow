@@ -36,6 +36,7 @@ def main(work_dir):
     input_2_dir = os.path.join(work_dir,
                                'input2',
                                input_2_tarball.getmembers()[0].path)
+    differences = False
     sys.stdout.write("Comparing volumes\n")
     for directory in VOL_DIRS:
         dir_entry_1 = os.path.join(input_1_dir, directory)
@@ -58,6 +59,8 @@ def main(work_dir):
                 sys.stdout.write("Signal {0} occurred\n".format(signal))
             else:
                 exit_code = (return_code & 0xFF00) >> 8
+                if exit_code != 0:
+                    differences = True
                 if exit_code == 0:
                     sys.stdout.write("OK\n")
                 elif exit_code == 1:
@@ -83,11 +86,12 @@ def main(work_dir):
         input_1_files = os.listdir(dir_entry_1)
         input_2_files = os.listdir(dir_entry_2)
         if len(input_1_files) != len(input_2_files):
+            differences = True
             sys.stdout.write("Number of files in " +
                              "{0} ".format(dir_entry_1) +
                              "and {1} differ\n".format(dir_entry_2))
         for filename in input_1_files:
-            if filename.split('.')[-1] is in ['crv', 'K', 'H']:
+            if filename.split('.')[-1] in ['crv', 'K', 'H', 'curv', 'thickness', 'sulc', 'mgh', 'pial', 'jacobian_white', 'defect_labels', 'defect_chull', 'mid', 'avg_curv', 'area', 'defect_borders', 'volume']:
                 continue
             input_1_file = os.path.join(dir_entry_1, filename)
             input_2_file = os.path.join(dir_entry_2, filename)
@@ -97,12 +101,14 @@ def main(work_dir):
                                                                input_2_file))
             signal = return_code & 0x00FF
             if signal != 0:
+                differences = True
                 sys.stdout.write("Signal {0} occurred\n".format(signal))
             else:
                 exit_code = (return_code & 0xFF00) >> 8
                 if exit_code == 0:
                     sys.stdout.write("OK\n")
                 else:
+                    differences = True
                     sys.stdout.write("Files differ, "
                                      "exit code: {0}\n".format(exit_code))
     sys.stdout.write("Comparing labels\n")
@@ -112,6 +118,7 @@ def main(work_dir):
         input_1_files = glob.glob(os.path.join(dir_entry_1,  "*.label"))
         input_2_files = glob.glob(os.path.join(dir_entry_2,  "*.label"))
         if len(input_1_files) != len(input_2_files):
+            differences = True
             sys.stdout.write("Number of files in " +
                              "{0} ".format(dir_entry_1) +
                              "and {1} differ\n".format(dir_entry_2))
@@ -125,6 +132,7 @@ def main(work_dir):
             input_2_md5 = hashlib.md5()
             input_2_md5.update(open(input_2_file).read())
             if input_1_md5.digest() != input_2_md5.digest():
+                differences = True
                 sys.stdout.write("Two files differ\n")
             else:
                 sys.stdout.write("OK\n")
@@ -135,6 +143,7 @@ def main(work_dir):
         input_1_files = glob.glob(os.path.join(dir_entry_1,  "*.annot"))
         input_2_files = glob.glob(os.path.join(dir_entry_2,  "*.annot"))
         if len(input_1_files) != len(input_2_files):
+            differences = True
             sys.stdout.write("Number of files in " +
                              "{0} ".format(dir_entry_1) +
                              "and {1} differ\n".format(dir_entry_2))
@@ -148,9 +157,14 @@ def main(work_dir):
             input_2_md5 = hashlib.md5()
             input_2_md5.update(open(input_2_file).read())
             if input_1_md5.digest() != input_2_md5.digest():
+                differences = True
                 sys.stdout.write("Two files differ\n")
             else:
                 sys.stdout.write("OK\n")
+    if differences:
+        sys.stdout.write("Differences between the two files!")
+    else:
+        sys.stdout.write("Files check out!")
     return 0
 
 if __name__ == '__main__':
