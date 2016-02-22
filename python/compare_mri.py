@@ -12,6 +12,19 @@ VOL_DIRS = ['mri', 'mri/orig', 'mri/tranforms']
 SURFACE_DIRS = ['surf']
 LABEL_DIRS = ['label']
 ANNOTATION_DIRS = ['label']
+SURFACE_FILES = ['orig.nofix', 'smoothwm.nofix', 'inflated.nofix',
+                 'qsphere.nofix', 'orig', 'smoothwm', 'inflated',
+                 'white', 'pial', 'sphere', 'sphere.reg']
+CURVE_FILES = ['curv',
+               'curv.pial',
+               'sulc',
+               'thickness',
+               'area',
+               'area.pial',
+               'volume']
+APARC_FILES = ['aparc.a2009s', 'aparc)']
+STATS_FILES = ['aseg.stats', 'lh.aparc.a2009s.stats', 'lh.aparc.stats',
+               'rh.aparc.a2009s.stats', 'rh.aparc.stats', 'wmparc.stats']
 
 
 def main(work_dir):
