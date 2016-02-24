@@ -35,7 +35,7 @@ CURVES = ['curv',
           'area',
           'area.pial',
           'volume']
-APARCS = ['aparc.a2009s', 'aparc)']
+APARCS = ['aparc.a2009s', 'aparc']
 STATS_FILES = ['aseg.stats', 'lh.aparc.a2009s.stats', 'lh.aparc.stats',
                'rh.aparc.a2009s.stats', 'rh.aparc.stats', 'wmparc.stats']
 
@@ -169,17 +169,18 @@ def compare_aparcs(subject1, subject2, subject1_dir, subject2_dir,
                     sys.stdout.write("Files differ, "
                                      "exit code: {0}\n".format(exit_code))
                 sys.stdout.write("Comparing overlaps... ".format(aparc))
-                cmd = "mri_surf2surf --srcsubject input1 "
-                cmd += "--trgsubject input2 ".format(subject2)
+                cmd = "mri_surf2surf --srcsubject subject1 "
+                cmd += "--trgsubject subject2 ".format(subject2)
                 cmd += "--hemi {0} ".format(hemi)
-                cmd += "--sval-annot {0}/label/{1}.{2}_ref.{3}.annot ".format(subject1_dir,
-                                                                              hemi,
-                                                                              subject1,
-                                                                              aparc)
-                cmd += "--tval {0}/label/{1}.{2}_ref.{3}.annot ".format(subject2_dir,
-                                                                        hemi,
-                                                                        subject2,
-                                                                        aparc)
+                cmd += "--sval-annot {0}/{2}/label/{1}.{3}.annot ".format(subject1_dir,
+                                                                          hemi,
+                                                                          subject1,
+                                                                          aparc)
+                cmd += "--tval {0}/{2}/label/{1}.{2}_ref.{3}.annot ".format(subject1_dir,
+                                                                            hemi,
+                                                                            subject1,
+                                                                            aparc)
+                print cmd
                 return_code = os.system(cmd)
                 signal, exit_code = get_exitcode(return_code)
                 if signal != 0:
@@ -190,10 +191,11 @@ def compare_aparcs(subject1, subject2, subject1_dir, subject2_dir,
                     sys.stdout.write("Error comparing parcellations, "
                                      "exit code: {0}\n".format(exit_code))
                 cmd = "mris_compute_parc_overlap --sd {0} ".format(subject1_dir)
-                cmd += "-s {0} --hemi {1}  ".format(subject1, hemi)
+                cmd += "--s {0} --hemi {1}  ".format(subject1, hemi)
                 cmd += "--annot1 {0} ".format(aparc)
-                cmd += "--annot2 {0}_ref.{1}".format(subject1, aparc)
+                cmd += "--annot2 {0}_ref.{1} ".format(subject1, aparc)
                 cmd += "--debug-overlap"
+                print cmd
                 return_code = os.system(cmd)
                 signal, exit_code = get_exitcode(return_code)
                 if signal != 0:
@@ -308,17 +310,18 @@ def main(work_dir):
     # setup symlinks for parcellation comparisons
     subjects_dir = os.path.join(work_dir, "subjects")
     os.mkdir(subjects_dir)
-    os.link(os.path.join(subjects_dir, 'subject1'), subject1_dir)
-    os.link(os.path.join(subjects_dir, 'subject2'), subject2_dir)
+    os.symlink(input_1_dir, os.path.join(subjects_dir, 'subject1'))
+    os.symlink(input_2_dir, os.path.join(subjects_dir, 'subject2'))
 
     # Do comparisons
     inputs_different = False
-    inputs_different &= compare_volumes(input_1_dir, input_2_dir)
-    inputs_different &= compare_surfaces(input_1_dir, input_2_dir)
-    inputs_different &= compare_curves(subject1, subject2,
+    inputs_different |= compare_volumes(input_1_dir, input_2_dir)
+    inputs_different |= compare_surfaces(input_1_dir, input_2_dir)
+    inputs_different |= compare_curves(subject1, subject2,
                                        subject1_dir, subject2_dir)
-    inputs_different &= compare_aparcs(subject1, subject2,
-                                       subject1_dir, subject2_dir)
+    inputs_different |= compare_aparcs(subject1, subject2,
+                                       subject1_dir, subject2_dir, 
+                                       subjects_dir)
     sys.stdout.write("Comparing labels\n")
     for directory in LABEL_DIRS:
         dir_entry_1 = os.path.join(input_1_dir, directory)
@@ -354,7 +357,7 @@ def main(work_dir):
             inputs_different = True
             sys.stdout.write("Number of files in " +
                              "{0} ".format(dir_entry_1) +
-                             "and {1} differ\n".format(dir_entry_2))
+                             "and {0} differ\n".format(dir_entry_2))
         for filename in input_1_files:
             input_1_file = os.path.join(dir_entry_1, filename)
             input_2_file = os.path.join(dir_entry_2, filename)
@@ -380,5 +383,6 @@ if __name__ == '__main__':
         scratch_dir = tempfile.mkdtemp()
         sys.exit(main(scratch_dir))
     finally:
-        shutil.rmtree(scratch_dir)
+        #shutil.rmtree(scratch_dir)
+        pass
 
