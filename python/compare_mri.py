@@ -69,9 +69,9 @@ def compare_curves(subject1, subject2, subject1_dir, subject2_dir):
     for hemi in ['rh', 'lh']:
         for curve in CURVES:
                 sys.stdout.write("Comparing curve {0}... ".format(curve))
-                cmd = "mris_diff -s1 {0} -s2 {1} ".format(subject1, subject2)
-                cmd += "--sd1 {2} --sd2 ".format(subject1_dir,
-                                                 subject2_dir)
+                cmd = "mris_diff --s1 {0} --s2 {1} ".format(subject1, subject2)
+                cmd += "--sd1 {0} --sd2 {1} ".format(subject1_dir,
+                                                     subject2_dir)
                 cmd += "--hemi {0} --curv {1}".format(hemi, curve)
                 return_code = os.system(cmd)
                 signal, exit_code = get_exitcode(return_code)
@@ -115,7 +115,7 @@ def compare_surfaces(subject1_dir, subject2_dir):
                 surface_2 = os.path.join(subject2_dir,
                                          "surf",
                                          "{0}.{1}".format(hemi, surface))
-                cmd = "mris_diff --debug --thresh 0 --maxerrors 1000 "
+                cmd = "mris_diff --thresh 0 --maxerrs 1000 "
                 cmd += "{0} {1}".format(surface_1, surface_2)
                 return_code = os.system(cmd)
                 signal, exit_code = get_exitcode(return_code)
@@ -148,9 +148,9 @@ def compare_aparcs(subject1, subject2, subject1_dir, subject2_dir):
         for aparc in APARCS:
                 sys.stdout.write("Comparing aparc {0}... \n".format(aparc))
                 sys.stdout.write("mris_diff... ".format(aparc))
-                cmd = "mris_diff -s1 {0} -s2 {1} ".format(subject1, subject2)
-                cmd += "--sd1 {2} --sd2 ".format(subject1_dir,
-                                                 subject2_dir)
+                cmd = "mris_diff --s1 {0} --s2 {1} ".format(subject1, subject2)
+                cmd += "--sd1 {0} --sd2 {1} ".format(subject1_dir,
+                                                     subject2_dir)
                 cmd += "--hemi {0} --aparc {1}".format(hemi, aparc)
                 return_code = os.system(cmd)
                 signal, exit_code = get_exitcode(return_code)
@@ -213,6 +213,7 @@ def compare_volumes(subject1_dir, subject2_dir):
     :param subject2_dir: path to files for second subject
     :return: True if files have different volumes, False otherwise
     """
+    differences = False
     sys.stdout.write("Comparing volumes\n")
     subj1_files = os.listdir(subject1_dir)
     subj2_files = os.listdir(subject2_dir)
@@ -229,7 +230,7 @@ def compare_volumes(subject1_dir, subject2_dir):
             volume_2 = os.path.join(subject2_dir,
                                     "mri",
                                     "{0}".format(volume))
-            cmd = "mri_diff --debug --thresh 0 --maxerrors 1000 "
+            cmd = "mri_diff --thresh 0 "
             cmd += "{0} {1}".format(volume_1, volume_2)
             return_code = os.system(cmd)
             signal, exit_code = get_exitcode(return_code)
