@@ -180,7 +180,6 @@ def compare_aparcs(subject1, subject2, subject1_dir, subject2_dir,
                                                                             hemi,
                                                                             subject1,
                                                                             aparc)
-                print cmd
                 return_code = os.system(cmd)
                 signal, exit_code = get_exitcode(return_code)
                 if signal != 0:
@@ -195,7 +194,6 @@ def compare_aparcs(subject1, subject2, subject1_dir, subject2_dir,
                 cmd += "--annot1 {0} ".format(aparc)
                 cmd += "--annot2 {0}_ref.{1} ".format(subject1, aparc)
                 cmd += "--debug-overlap"
-                print cmd
                 return_code = os.system(cmd)
                 signal, exit_code = get_exitcode(return_code)
                 if signal != 0:
@@ -411,6 +409,5 @@ if __name__ == '__main__':
         scratch_dir = tempfile.mkdtemp()
         sys.exit(main(scratch_dir))
     finally:
-        #shutil.rmtree(scratch_dir)
-        pass
+        shutil.rmtree(scratch_dir)
 
