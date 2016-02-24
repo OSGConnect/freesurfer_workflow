@@ -5,7 +5,7 @@ import os
 import sys
 import tempfile
 import tarfile
-
+import subprocess
 import shutil
 
 VOL_DIRS = ['mri', 'mri/orig', 'mri/tranforms']
@@ -38,6 +38,17 @@ CURVES = ['curv',
 APARCS = ['aparc.a2009s', 'aparc']
 STATS_FILES = ['aseg.stats', 'lh.aparc.a2009s.stats', 'lh.aparc.stats',
                'rh.aparc.a2009s.stats', 'rh.aparc.stats', 'wmparc.stats']
+
+
+def run_command(command):
+    """
+    Run a command and return results
+    :param command: command to run
+    :return: a tuple (signal, exit code)
+    """
+    dev_null = open(os.devnull, 'w')
+    retval = subprocess.call(command, stdout=dev_null)
+    return get_exitcode(retval)
 
 
 def get_exitcode(return_code):
@@ -73,7 +84,7 @@ def compare_curves(subject1, subject2, subject1_dir, subject2_dir):
                 cmd += "--sd1 {0} --sd2 {1} ".format(subject1_dir,
                                                      subject2_dir)
                 cmd += "--hemi {0} --curv {1}".format(hemi, curve)
-                return_code = os.system(cmd)
+                return_code = run_command(cmd)
                 signal, exit_code = get_exitcode(return_code)
                 if signal != 0:
                     differences = True
@@ -117,7 +128,7 @@ def compare_surfaces(subject1_dir, subject2_dir):
                                          "{0}.{1}".format(hemi, surface))
                 cmd = "mris_diff --thresh 0 --maxerrs 1000 "
                 cmd += "{0} {1}".format(surface_1, surface_2)
-                return_code = os.system(cmd)
+                return_code = run_command(cmd)
                 signal, exit_code = get_exitcode(return_code)
                 if signal != 0:
                     differences = True
@@ -157,7 +168,7 @@ def compare_aparcs(subject1, subject2, subject1_dir, subject2_dir,
                 cmd += "--sd1 {0} --sd2 {1} ".format(subject1_dir,
                                                      subject2_dir)
                 cmd += "--hemi {0} --aparc {1}".format(hemi, aparc)
-                return_code = os.system(cmd)
+                return_code = run_command(cmd)
                 signal, exit_code = get_exitcode(return_code)
                 if signal != 0:
                     differences = True
@@ -180,7 +191,7 @@ def compare_aparcs(subject1, subject2, subject1_dir, subject2_dir,
                                                                             hemi,
                                                                             subject1,
                                                                             aparc)
-                return_code = os.system(cmd)
+                return_code = run_command(cmd)
                 signal, exit_code = get_exitcode(return_code)
                 if signal != 0:
                     differences = True
@@ -194,7 +205,7 @@ def compare_aparcs(subject1, subject2, subject1_dir, subject2_dir,
                 cmd += "--annot1 {0} ".format(aparc)
                 cmd += "--annot2 {0}_ref.{1} ".format(subject1, aparc)
                 cmd += "--debug-overlap"
-                return_code = os.system(cmd)
+                return_code = run_command(cmd)
                 signal, exit_code = get_exitcode(return_code)
                 if signal != 0:
                     differences = True
@@ -236,7 +247,7 @@ def compare_volumes(subject1_dir, subject2_dir):
                                     "{0}".format(volume))
             cmd = "mri_diff --thresh 0 "
             cmd += "{0} {1}".format(volume_1, volume_2)
-            return_code = os.system(cmd)
+            return_code = run_command(cmd)
             signal, exit_code = get_exitcode(return_code)
             if signal != 0:
                 differences = True
@@ -268,7 +279,7 @@ def compare_volumes(subject1_dir, subject2_dir):
     sys.stdout.write("Comparing seg overlap... ")
     cmd = "mri_compute_seg_overlap {0}/mri/aseg.mgz ".format(subject1_dir)
     cmd += "{0}/mri/aseg.mgz".format(subject2_dir)
-    return_code = os.system(cmd)
+    return_code = run_command(cmd)
     signal, exit_code = get_exitcode(return_code)
     if signal != 0:
         differences = True
