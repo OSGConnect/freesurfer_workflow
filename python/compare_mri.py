@@ -47,7 +47,7 @@ def run_command(command):
     :return: a tuple (signal, exit code)
     """
     dev_null = open(os.devnull, 'w')
-    retval = subprocess.call(command, stdout=dev_null)
+    retval = subprocess.call(command, stdout=dev_null, stderr=dev_null, shell=True)
     return get_exitcode(retval)
 
 
@@ -59,6 +59,7 @@ def get_exitcode(return_code):
     :return: a tuple (signal, exit code)
     """
 
+    print return_code
     signal = return_code & 0x00FF
     exitcode = (return_code & 0xFF00) >> 8
     return signal, exitcode
@@ -75,7 +76,7 @@ def compare_curves(subject1, subject2, subject1_dir, subject2_dir):
     :param subject2_dir: path to files for second subject
     :return: True if files have different curves, False otherwise
     """
-    sys.stdout.write("Comparing surfaces\n")
+    sys.stdout.write("Comparing curves\n")
     differences = False
     for hemi in ['rh', 'lh']:
         for curve in CURVES:
@@ -84,8 +85,7 @@ def compare_curves(subject1, subject2, subject1_dir, subject2_dir):
                 cmd += "--sd1 {0} --sd2 {1} ".format(subject1_dir,
                                                      subject2_dir)
                 cmd += "--hemi {0} --curv {1}".format(hemi, curve)
-                return_code = run_command(cmd)
-                signal, exit_code = get_exitcode(return_code)
+                signal, exit_code = run_command(cmd)
                 if signal != 0:
                     differences = True
                     sys.stdout.write("Signal {0} occurred\n".format(signal))
@@ -128,8 +128,7 @@ def compare_surfaces(subject1_dir, subject2_dir):
                                          "{0}.{1}".format(hemi, surface))
                 cmd = "mris_diff --thresh 0 --maxerrs 1000 "
                 cmd += "{0} {1}".format(surface_1, surface_2)
-                return_code = run_command(cmd)
-                signal, exit_code = get_exitcode(return_code)
+                signal, exit_code = run_command(cmd)
                 if signal != 0:
                     differences = True
                     sys.stdout.write("Signal {0} occurred\n".format(signal))
@@ -168,8 +167,7 @@ def compare_aparcs(subject1, subject2, subject1_dir, subject2_dir,
                 cmd += "--sd1 {0} --sd2 {1} ".format(subject1_dir,
                                                      subject2_dir)
                 cmd += "--hemi {0} --aparc {1}".format(hemi, aparc)
-                return_code = run_command(cmd)
-                signal, exit_code = get_exitcode(return_code)
+                signal, exit_code = run_command(cmd)
                 if signal != 0:
                     differences = True
                     sys.stdout.write("Signal {0} occurred\n".format(signal))
@@ -191,12 +189,11 @@ def compare_aparcs(subject1, subject2, subject1_dir, subject2_dir,
                                                                             hemi,
                                                                             subject1,
                                                                             aparc)
-                return_code = run_command(cmd)
-                signal, exit_code = get_exitcode(return_code)
+                signal, exit_code = run_command(cmd)
                 if signal != 0:
                     differences = True
                     sys.stdout.write("Signal {0} occurred\n".format(signal))
-                else:
+                elif exit_code != 0:
                     differences = True
                     sys.stdout.write("Error comparing parcellations, "
                                      "exit code: {0}\n".format(exit_code))
@@ -205,8 +202,7 @@ def compare_aparcs(subject1, subject2, subject1_dir, subject2_dir,
                 cmd += "--annot1 {0} ".format(aparc)
                 cmd += "--annot2 {0}_ref.{1} ".format(subject1, aparc)
                 cmd += "--debug-overlap"
-                return_code = run_command(cmd)
-                signal, exit_code = get_exitcode(return_code)
+                signal, exit_code = run_command(cmd)
                 if signal != 0:
                     differences = True
                     sys.stdout.write("Signal {0} occurred\n".format(signal))
@@ -247,8 +243,7 @@ def compare_volumes(subject1_dir, subject2_dir):
                                     "{0}".format(volume))
             cmd = "mri_diff --thresh 0 "
             cmd += "{0} {1}".format(volume_1, volume_2)
-            return_code = run_command(cmd)
-            signal, exit_code = get_exitcode(return_code)
+            signal, exit_code = run_command(cmd)
             if signal != 0:
                 differences = True
                 sys.stdout.write("Signal {0} occurred\n".format(signal))
@@ -279,8 +274,7 @@ def compare_volumes(subject1_dir, subject2_dir):
     sys.stdout.write("Comparing seg overlap... ")
     cmd = "mri_compute_seg_overlap {0}/mri/aseg.mgz ".format(subject1_dir)
     cmd += "{0}/mri/aseg.mgz".format(subject2_dir)
-    return_code = run_command(cmd)
-    signal, exit_code = get_exitcode(return_code)
+    signal, exit_code = run_command(cmd)
     if signal != 0:
         differences = True
         sys.stdout.write("Signal {0} occurred\n".format(signal))
