@@ -59,7 +59,6 @@ def get_exitcode(return_code):
     :return: a tuple (signal, exit code)
     """
 
-    print return_code
     signal = return_code & 0x00FF
     exitcode = (return_code & 0xFF00) >> 8
     return signal, exitcode
@@ -177,7 +176,7 @@ def compare_aparcs(subject1, subject2, subject1_dir, subject2_dir,
                     differences = True
                     sys.stdout.write("Files differ, "
                                      "exit code: {0}\n".format(exit_code))
-                sys.stdout.write("Comparing overlaps... ".format(aparc))
+                sys.stdout.write("Comparing overlaps... ")
                 cmd = "mri_surf2surf --srcsubject subject1 "
                 cmd += "--trgsubject subject2 ".format(subject2)
                 cmd += "--hemi {0} ".format(hemi)
