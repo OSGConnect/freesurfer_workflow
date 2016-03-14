@@ -283,7 +283,7 @@ def submit_workflow(username, password, input_directory, subject_name,
                                 "{0}_defaced.mgz".format(subject_name))
     subject_file = os.path.abspath(subject_file)
     if not os.path.isfile(subject_file):
-        sys.stderr.write("{0} is not present and is needed, exiting".format(subject_file))
+        sys.stderr.write("{0} is not present and is needed, exiting\n".format(subject_file))
         return 1
     with open(subject_file, 'rb') as f:
         body = f.read()
