@@ -329,7 +329,8 @@ def submit_job(environ):
                  "                                      multicore," \
                  "                                      username," \
                  "                                      subject)" \
-                 "VALUES(%s, %s, 'UPLOADED', %s, %s, %s)"
+                 "VALUES(%s, %s, 'UPLOADED', %s, %s, %s)" \
+                 "RETURNING id"
     try:
         cursor.execute(job_insert,
                        [query_dict['jobname'][0],
@@ -337,6 +338,8 @@ def submit_job(environ):
                         query_dict['multicore'][0],
                         userid,
                         query_dict['subject'][0]])
+        id = cursor.fetchone()[0]
+        response['job_id'] = id
         conn.commit()
     except Exception, e:
         response = {'status': 500,

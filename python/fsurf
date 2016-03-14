@@ -303,6 +303,9 @@ def submit_workflow(username, password, input_directory, subject_name,
     if status != 200:
         sys.stdout.write("Error while submitting workflow\n")
         return 1
+    response_obj = json.loads(response)
+    job_id = response_obj['job_id']
+    sys.stdout.write("Workflow {0} submitted for processing\n".format(job_id))
     return 0
 
 
