@@ -84,7 +84,6 @@ def get_db_client():
 def delete_job(environ):
     """
     Remove a job from being processed
-    TODO: placeholder for now
 
     :param environ: dictionary with environment variables (See PEP 333)
     :return: a tuple with response_body, status
@@ -233,7 +232,6 @@ def validate_user(userid, token, timestamp):
 def get_current_jobs(environ):
     """
     Get status for all jobs submitted by user in last week
-    TODO: placeholder for now
 
     :param environ: dictionary with environment variables (See PEP 333)
     :return: a tuple with response_body, status
@@ -268,6 +266,52 @@ def get_current_jobs(environ):
             response['jobs'].append((row[0], row[1], row[2],
                                      row[3].isoformat(),
                                      row[4]))
+    except Exception, e:
+        response = {'status': 500,
+                    'result': str(e)}
+        status = '500 Server Error'
+
+    conn.close()
+    return json.dumps(response), status
+
+
+def get_job_status(environ):
+    """
+    Get status for job specified
+
+    :param environ: dictionary with environment variables (See PEP 333)
+    :return: a tuple with response_body, status
+    """
+    query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
+    parameters = {'userid': str,
+                  'token': str,
+                  'jobid': str}
+    if not validate_parameters(query_dict, parameters):
+        response = {'status': 400,
+                    'result': "invalid or missing parameter"}
+        return json.dumps(response), '400 Bad Request'
+
+    userid, secret, timestamp = get_user_params(environ)
+    if not validate_user(userid, secret, timestamp):
+        response = {'status': 401,
+                    'result': "invalid user"}
+        return json.dumps(response), '401 Not Authorized'
+
+    response = {'status': 200,
+                'job': []}
+    status = '200 OK'
+    conn = get_db_client()
+    cursor = conn.cursor()
+    job_query = "SELECT state " \
+                "FROM freesurfer_interface.jobs " \
+                "WHERE id = %s AND username = %s;"
+    try:
+        cursor.execute(job_query, [query_dict['jobid'][0], userid])
+        row = cursor.fetchone()
+        if row is None:
+            response = {'status': 404,
+                        'result': "invalid workflow"}
+        response['job_status'] = row[0]
     except Exception, e:
         response = {'status': 500,
                     'result': str(e)}
@@ -491,6 +535,8 @@ def application(environ, start_response):
                 response_body = json.dumps({'status': 500,
                                             'result': 'Could not read output file'})
                 status = '500 Server Error'
+    elif environ['PATH_INFO'] == '/freesurfer/job/log':
+        response_body, status = get_job_status(environ)
     elif environ['PATH_INFO'] == '/freesurfer/job/log':
         # need to do something a bit special because
         # we're returning a file

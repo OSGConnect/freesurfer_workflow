@@ -368,6 +368,36 @@ def get_log(workflow_id, username, password):
     return 0
 
 
+def get_status(workflow_id, username, password):
+    """
+    Get status for a workflow
+
+    :param workflow_id: pegasus id for workflow
+    :param username: username to use when authenticating
+    :param password: password to user when authenticating
+    :return: 0 on success, 1 on error
+    """
+    query_params = {}
+    timestamp, token = get_token(username, password)
+    if token is None:
+        return 1
+    query_params['userid'] = username
+    query_params['timestamp'] = timestamp
+    query_params['token'] = token
+    query_params['jobid'] = workflow_id
+    status, response = get_response(query_params,
+                                    'job/status',
+                                    'GET')
+    response_obj = json.loads(response)
+    if status != 200:
+        sys.stdout.write("Error while getting job status:\n")
+        sys.stdout.write("{0}\n".format(response_obj['result']))
+        return 1
+
+    sys.stdout.write("{0}\n".format(response_obj['job_status']))
+    return 0
+
+
 def main():
     """
     Main function that parses arguments and generates the pegasus
@@ -387,7 +417,7 @@ def main():
                         help='List current jobs')
     parser.add_argument('--status', dest='action',
                         action='store_const', const='status',
-                        help='Submit job for processing')
+                        help='Get status for specified job')
     parser.add_argument('--remove', dest='action',
                         action='store_const', const='remove',
                         help='Submit job for processing')
@@ -420,7 +450,6 @@ def main():
     parser.add_argument('--password', dest='password',
                         default=None, help='Password used to login')
 
-
     args = parser.parse_args(sys.argv[1:])
 
     if args.action == 'list':
@@ -444,6 +473,9 @@ def main():
     elif args.action == 'log':
         username, password = get_user_info(args)
         status = get_log(args.workflow_id, username, password)
+    elif args.action == 'status':
+        username, password = get_user_info(args)
+        status = get_status(args.workflow_id, username, password)
     else:
         sys.stdout.write("Must specify an action, exiting...\n")
         parser.print_help()
