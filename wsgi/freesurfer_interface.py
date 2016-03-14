@@ -535,7 +535,7 @@ def application(environ, start_response):
                 response_body = json.dumps({'status': 500,
                                             'result': 'Could not read output file'})
                 status = '500 Server Error'
-    elif environ['PATH_INFO'] == '/freesurfer/job/log':
+    elif environ['PATH_INFO'] == '/freesurfer/job/status':
         response_body, status = get_job_status(environ)
     elif environ['PATH_INFO'] == '/freesurfer/job/log':
         # need to do something a bit special because
