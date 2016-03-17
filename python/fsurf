@@ -389,9 +389,9 @@ def get_status(workflow_id, username, password):
                                     'job/status',
                                     'GET')
     response_obj = json.loads(response)
-    print status
     if status == 404:
         sys.stdout.write("Workflow with id {0} not found\n".format(workflow_id))
+        return 0
     elif status != 200:
         sys.stdout.write("Error while getting job status:\n")
         sys.stdout.write("{0}\n".format(response_obj['result']))
