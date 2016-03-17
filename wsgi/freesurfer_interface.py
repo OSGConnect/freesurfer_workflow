@@ -310,8 +310,9 @@ def get_job_status(environ):
         row = cursor.fetchone()
         if row is None:
             response = {'status': 404,
-                        'result': "invalid workflow"}
-        response['job_status'] = row[0]
+                        'result': "invalid workflow id"}
+        else:
+            response['job_status'] = row[0]
     except Exception, e:
         response = {'status': 500,
                     'result': str(e)}
