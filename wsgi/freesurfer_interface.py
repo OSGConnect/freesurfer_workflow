@@ -311,6 +311,7 @@ def get_job_status(environ):
         if row is None:
             response = {'status': 404,
                         'result': "invalid workflow id"}
+            status = '404 Not Found'
         else:
             response['job_status'] = row[0]
     except Exception, e:
