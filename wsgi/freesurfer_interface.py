@@ -223,7 +223,6 @@ def validate_user(userid, token, timestamp):
         row = cursor.fetchone()
         if row:
             db_hash = hashlib.sha256(row[1] + str(timestamp)).hexdigest()
-            conn.close()
             return token == db_hash
         return False
     except psycopg2.Error:
