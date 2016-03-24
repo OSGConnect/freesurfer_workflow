@@ -138,11 +138,12 @@ def delete_job(environ):
             conn.commit()
 
     except Exception, e:
+        conn.rollback()
         response = {'status': 500,
                     'result': str(e)}
         status = '500 Server Error'
-
-    conn.close()
+    finally:
+        conn.close()
     return json.dumps(response), status
 
 
@@ -197,7 +198,9 @@ def get_user_salt(environ):
         response = {'status': 500,
                     'result': str(e)}
         status = '500 Server Error'
-    conn.close()
+    finally:
+        conn.commit()
+        conn.close()
     return json.dumps(response), status
 
 
@@ -222,11 +225,12 @@ def validate_user(userid, token, timestamp):
             db_hash = hashlib.sha256(row[1] + str(timestamp)).hexdigest()
             conn.close()
             return token == db_hash
-        conn.close()
         return False
     except psycopg2.Error:
-        conn.close()
         return False
+    finally:
+        conn.commit()
+        conn.close()
 
 
 def get_current_jobs(environ):
@@ -270,8 +274,10 @@ def get_current_jobs(environ):
         response = {'status': 500,
                     'result': str(e)}
         status = '500 Server Error'
+    finally:
+        conn.commit()
+        conn.close()
 
-    conn.close()
     return json.dumps(response), status
 
 
@@ -318,8 +324,9 @@ def get_job_status(environ):
         response = {'status': 500,
                     'result': str(e)}
         status = '500 Server Error'
-
-    conn.close()
+    finally:
+        conn.commit()
+        conn.close()
     return json.dumps(response), status
 
 
@@ -391,7 +398,9 @@ def submit_job(environ):
         response = {'status': 500,
                     'result': str(e)}
         status = '500 Server Error'
-    conn.close()
+        conn.rollback()
+    finally:
+        conn.close()
     return json.dumps(response), status
 
 
@@ -442,7 +451,9 @@ def get_job_output(environ):
         response = {'status': 500,
                     'result': str(e)}
         status = '500 Server Error'
-    conn.close()
+    finally:
+        conn.commit()
+        conn.close()
     return json.dumps(response), status
 
 
@@ -492,7 +503,9 @@ def get_job_log(environ):
         response = {'status': 500,
                     'result': str(e)}
         status = '500 Server Error'
-    conn.close()
+    finally:
+        conn.commit()
+        conn.close()
     return json.dumps(response), status
 
 
