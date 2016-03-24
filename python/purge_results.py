@@ -2,6 +2,7 @@
 
 # Copyright 2016 University of Chicago
 # Licensed under the APL 2.0 license
+import argparse
 import os
 import sys
 import logging
@@ -11,7 +12,7 @@ import shutil
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
 FREESURFER_BASE = '/stash2/user/fsurf/'
-
+VERSION = '1.3.2'
 
 def get_db_parameters():
     """
@@ -40,12 +41,49 @@ def get_db_client():
     return psycopg2.connect(database=db, user=user, host=host, password=password)
 
 
+def purge_workflow_files(result_dir, log_filename, input_file, output_filename):
+    """
+    Remove the results in specified directory
+
+    :param result_dir: path to directory with workflow outputs
+    :param log_filename: path to log file for workflow
+    :param input_file: path to input for workflow
+    :param output_filename: path to mgz output file for workflow
+    :return: True if successfully removed, False otherwise
+    """
+    if not os.path.exists(result_dir):
+        return True
+    try:
+
+        shutil.rmtree(result_dir)
+        if os.path.isfile(log_filename):
+            os.unlink(log_filename)
+        if os.path.isfile(output_filename):
+            os.unlink(output_filename)
+        if os.path.exists(input_file):
+            os.unlink(input_file)
+            input_dir = os.path.dirname(input_file)
+            os.rmdir(input_dir)
+        return True
+    except OSError, e:
+        logging.error("Exception: {0}".format(str(e)))
+        return False
+
+
 def process_results():
     """
     Process results from jobs, removing any that are more than 30 days old
 
     :return: exit code (0 for success, non-zero for failure)
     """
+    parser = argparse.ArgumentParser(description="Process and remove old results")
+    # version info
+    parser.add_argument('--version', action='version', version='%(prog)s ' + VERSION)
+    # Arguments for action
+    parser.add_argument('--dry-run', dest='dry_run',
+                        action='store_true', default=False,
+                        help='Mock actions instead of carrying them out')
+    args = parser.parse_args(sys.argv[1:])
 
     conn = get_db_client()
     cursor = conn.cursor()
@@ -53,8 +91,7 @@ def process_results():
                 "  FROM freesurfer_interface.jobs " \
                 "WHERE (state = 'COMPLETED' OR" \
                 "      state = 'ERROR') AND" \
-                "      age(job_date) > '30 days' AND " \
-                "      age(job_date) < '35 days'"
+                "      age(job_date) > '30 days';"
     job_update = "UPDATE freesurfer_interface.jobs " \
                  "SET state = 'PURGED' " \
                  "WHERE id = %s;"
@@ -80,26 +117,21 @@ def process_results():
                                            'results',
                                            "{0}_{1}_output.tar.bz2".format(row[0],
                                                                            row[5]))
-            if not os.path.exists(result_dir):
+            if args.dry_run:
+                sys.stdout.write("Would delete {0}\n".format(result_dir))
+                sys.stdout.write("Would delete {0}\n".format(input_file))
+                sys.stdout.write("Would delete {0}\n".format(log_filename))
+                sys.stdout.write("Would delete {0}\n".format(output_filename))
                 continue
-            try:
-                if os.path.exists(result_dir):
-                    shutil.rmtree(result_dir)
-                if os.path.isfile(log_filename):
-                    os.unlink(log_filename)
-                if os.path.isfile(output_filename):
-                    os.unlink(output_filename)
-                if os.path.exists(input_file):
-                    os.unlink(input_file)
-                    input_dir = os.path.dirname(input_file)
-                    os.rmdir(input_dir)
-            except OSError, e:
+            if not purge_workflow_files(result_dir,
+                                        log_filename,
+                                        input_file,
+                                        output_filename):
                 logging.error("Can't remove {0} for job {1}".format(input_file,
                                                                     row[0]))
-                logging.error("Exception: {0}".format(str(e)))
-            finally:
-                cursor.execute(job_update, [row[0]])
-                conn.commit()
+                continue
+            cursor.execute(job_update, [row[0]])
+            conn.commit()
     except psycopg2.Error:
         logging.error("Can't connect to database")
         return 1
