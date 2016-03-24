@@ -10,7 +10,8 @@ import psycopg2
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
 FREESURFER_BASE = '/stash2/user/fsurf/'
-VERSION
+VERSION = '1.3.2'
+
 
 def get_db_parameters():
     """
@@ -72,6 +73,8 @@ def process_inputs():
                 cursor.execute(job_update, ['ERROR', row[0]])
                 conn.commit()
                 return 1
+            conn.commit()
+            conn.close()
     except psycopg2.Error:
         logging.error("Can't connect to database")
         return 1

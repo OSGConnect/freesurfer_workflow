@@ -103,6 +103,9 @@ def process_results():
     except psycopg2.Error:
         logging.error("Can't connect to database")
         return 1
+    finally:
+        conn.commit()
+        conn.close()
     return 0
 
 
