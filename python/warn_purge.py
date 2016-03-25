@@ -3,8 +3,6 @@
 # Copyright 2016 University of Chicago
 # Licensed under the APL 2.0 license
 import argparse
-import getpass
-import os
 import subprocess
 import sys
 import logging
@@ -15,7 +13,7 @@ import shutil
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
 FREESURFER_BASE = '/stash2/user/fsurf/'
-VERSION = '1.3.2'
+VERSION = fsurfer.__version__
 
 
 def get_db_parameters():
