@@ -70,8 +70,7 @@ def process_inputs():
     conn = get_db_client()
     cursor = conn.cursor()
     job_query = "SELECT id, username, image_filename, state FROM freesurfer_interface.jobs " \
-                "WHERE age(job_date) > '21 days' AND " \
-                "      age(job_date) < '22 days'"
+                "WHERE age(job_date) > '21 days'"
     job_update = "UPDATE freesurfer_interface.jobs " \
                  "SET state = %s " \
                  "WHERE id = %s;"
@@ -104,9 +103,10 @@ def process_inputs():
                 conn.commit()
                 return 1
             conn.commit()
-            conn.close()
-    except psycopg2.Error:
+        conn.close()
+    except psycopg2.Error, e:
         logging.error("Can't connect to database")
+        logging.error("{0}".format(e))
         return 1
     return 0
 

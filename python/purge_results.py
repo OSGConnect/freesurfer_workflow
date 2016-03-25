@@ -96,7 +96,7 @@ def process_results():
                 "      state = 'ERROR') AND" \
                 "      age(job_date) > '30 days';"
     job_update = "UPDATE freesurfer_interface.jobs " \
-                 "SET state = 'PURGED' " \
+                 "SET state = 'DELETED' " \
                  "WHERE id = %s;"
     try:
         cursor.execute(job_query)
@@ -135,8 +135,8 @@ def process_results():
                 continue
             cursor.execute(job_update, [row[0]])
             conn.commit()
-    except psycopg2.Error:
-        logging.error("Can't connect to database")
+    except psycopg2.Error, e:
+        logging.error("Error: {0}".format(e))
         return 1
     finally:
         conn.commit()
