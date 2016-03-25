@@ -85,7 +85,7 @@ def process_inputs():
                         help='Mock actions instead of carrying them out')
     args = parser.parse_args(sys.argv[1:])
     if args.dry_run:
-        sys.stdout.write("Doing a dry run, no changes will be made")
+        sys.stdout.write("Doing a dry run, no changes will be made\n")
     try:
         cursor.execute(job_query)
         for row in cursor.fetchall():
