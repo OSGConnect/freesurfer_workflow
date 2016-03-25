@@ -11,7 +11,7 @@ import psycopg2
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
 FREESURFER_BASE = '/stash2/user/fsurf/'
-VERSION = '1.3.2'
+VERSION = fsurfer.__version__
 
 
 def get_db_parameters():
