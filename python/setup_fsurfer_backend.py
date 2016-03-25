@@ -12,6 +12,10 @@ setup(name='fsurfer-backend',
       author='Suchandra Thapa',
       author_email='sthapa@ci.uchicago.edu',
       url='https://github.com/OSGConnect/freesurfer_workflow',
-      scripts=['process_mri.py', 'update_fsurf_job.py'],
+      scripts=['process_mri.py',
+               'update_fsurf_job.py',
+               'purge_inputs.py',
+               'purge_results.py',
+               'warn_purge.py'],
       license='Apache 2.0')
 
