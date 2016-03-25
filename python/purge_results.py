@@ -14,6 +14,7 @@ PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
 FREESURFER_BASE = '/stash2/user/fsurf/'
 VERSION = '1.3.2'
 
+
 def get_db_parameters():
     """
     Read database parameters from a file and return it
@@ -84,6 +85,8 @@ def process_results():
                         action='store_true', default=False,
                         help='Mock actions instead of carrying them out')
     args = parser.parse_args(sys.argv[1:])
+    if args.dry_run:
+        sys.stdout.write("Doing a dry run, no changes will be made")
 
     conn = get_db_client()
     cursor = conn.cursor()
