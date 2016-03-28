@@ -9,36 +9,11 @@ import logging
 
 import psycopg2
 
-PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
+import fsurfer.fsurf_helpers
+import fsurfer
+
 FREESURFER_BASE = '/stash2/user/fsurf/'
 VERSION = fsurfer.__version__
-
-
-def get_db_parameters():
-    """
-    Read database parameters from a file and return it
-
-    :return: a tuple of (database_name, user, password, hostname)
-    """
-    parameters = {}
-    with open(PARAM_FILE_LOCATION) as param_file:
-        for line in param_file:
-            key, val = line.strip().split('=')
-            parameters[key.strip()] = val.strip()
-    return (parameters['database'],
-            parameters['user'],
-            parameters['password'],
-            parameters['hostname'])
-
-
-def get_db_client():
-    """
-    Get a postgresql client instance and return it
-
-    :return: a redis client instance or None if failure occurs
-    """
-    db, user, password, host = get_db_parameters()
-    return psycopg2.connect(database=db, user=user, host=host, password=password)
 
 
 def remove_inputs(input_file):
@@ -67,7 +42,7 @@ def process_inputs():
     :return: exit code (0 for success, non-zero for failure)
     """
 
-    conn = get_db_client()
+    conn = fsurfer.fsurf_helpers.get_db_client()
     cursor = conn.cursor()
     job_query = "SELECT id, username, image_filename, state FROM freesurfer_interface.jobs " \
                 "WHERE age(job_date) > '21 days'"
