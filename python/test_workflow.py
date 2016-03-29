@@ -148,7 +148,7 @@ def remove_workflow(workflow_id, username, password):
     query_params = {}
     timestamp, token = get_token(username, password)
     if token is None:
-        return 1
+        return 'Error'
     query_params['userid'] = username
     query_params['timestamp'] = timestamp
     query_params['token'] = token
@@ -158,9 +158,9 @@ def remove_workflow(workflow_id, username, password):
     if status != 200:
         sys.stdout.write("Error deleting "
                          "workflow:\n{0}\n".format(resp_dict['result']))
-        return 1
+        return 'Error'
     sys.stdout.write("Workflow removed\n")
-    return 0
+    return 'Success'
 
 
 def submit_workflow(username, password, input_directory, subject_name):
@@ -230,11 +230,11 @@ def get_output(workflow_id, username, password):
     if status != 200:
         sys.stdout.write("Error while downloading results:\n")
         sys.stdout.write("{0}\n".format(response_obj['result']))
-        return 1
+        return response_obj
     sys.stdout.write("Downloaded to {0}\n".format(response_obj['filename']))
     sys.stdout.write("To extract the results: tar "
                      "xvjf {0}\n".format(response_obj['filename']))
-    return 0
+    return response_obj
 
 
 def get_status(workflow_id, username, password):
@@ -249,7 +249,7 @@ def get_status(workflow_id, username, password):
     query_params = {}
     timestamp, token = get_token(username, password)
     if token is None:
-        return 1
+        return 'ERROR'
     query_params['userid'] = username
     query_params['timestamp'] = timestamp
     query_params['token'] = token
@@ -316,14 +316,20 @@ def main():
     if error:
         remove_workflow(job_id, args.user, args.password)
         sys.exit(1)
-    output_file = get_output(job_id, args.user, args.password)
+    response = get_output(job_id, args.user, args.password)
+    if response['status'] != 200:
+        remove_workflow(job_id, args.user, args.password)
+        sys.exit(1)
+    output_file = response['filename']
     remove_workflow(job_id, args.user, args.password)
     if args.reference == 'MRN_3':
         reference_output = "../MRN_3_reference.tbz"
     elif args.reference == 'MRN_1':
         reference_output = "../MRN_1_reference.tbz"
     try:
-        subprocess.check_call(["./compare_mri.py", output_file, reference_output])
+        subprocess.check_call(["./compare_mri.py",
+                               output_file,
+                               reference_output])
     except subprocess.CalledProcessError:
         sys.exit(1)
     sys.exit(0)
