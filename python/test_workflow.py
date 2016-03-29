@@ -280,7 +280,7 @@ def main():
     # version info
     parser.add_argument('--version', action='version', version='%(prog)s ' + VERSION)
     parser.add_argument('--reference', dest='reference',
-                        choces=['MRN_3', 'MRN_1'], help='reference image to process')
+                        choices=['MRN_3', 'MRN_1'], help='reference image to process')
     parser.add_argument('--dir', dest='input_directory',
                         default='.', help='directory containing input file')
     parser.add_argument('--reference_output', dest='check_file',
