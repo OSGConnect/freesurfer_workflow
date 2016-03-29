@@ -265,7 +265,7 @@ def get_status(workflow_id, username, password):
         sys.stdout.write("Error while getting job status:\n")
         sys.stdout.write("{0}\n".format(response_obj['result']))
         return response_obj['result']
-    sys.stdout.write("Current job status: {0}\n".format(response_obj['result']))
+    sys.stdout.write("Current job status: {0}\n".format(response_obj['job_status']))
     return response_obj['job_status']
 
 
