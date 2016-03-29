@@ -307,7 +307,7 @@ def main():
     error = False
     while running:
         status = get_status(job_id, args.user, args.password)
-        if status != 'PROCESSING':
+        if (status != 'PROCESSING') and (status != 'UPLOADED'):
             break
 
         if (time.time() - start_time) > (86400 * 2):
