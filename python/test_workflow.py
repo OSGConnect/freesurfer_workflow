@@ -143,7 +143,7 @@ def remove_workflow(workflow_id, username, password):
     :param workflow_id: pegasus id for workflow
     :param username: username to use when authenticating
     :param password: password to user when authenticating
-    :return: 0 on success, 1 on error
+    :return: 'Success' or 'Error'
     """
     query_params = {}
     timestamp, token = get_token(username, password)
@@ -172,23 +172,23 @@ def submit_workflow(username, password, input_directory, subject_name):
     :param input_directory:    path to file with MRI data in mgz format
     :param subject_name:  name of subject in the file
     :param multicore:     boolean indicating whether to use a multicore workflow or not
-    :return:              0 on success, 1 on error
+    :return:              job_id on success, None on error
     """
     if subject_name is None:
         sys.stdout.write("Subject name is missing, exiting...\n")
-        return 1
+        return None
     subject_file = os.path.join(input_directory,
                                 "{0}_defaced.mgz".format(subject_name))
     subject_file = os.path.abspath(subject_file)
     if not os.path.isfile(subject_file):
         sys.stderr.write("{0} is not present and is needed, exiting\n".format(subject_file))
-        return 1
+        return None
     with open(subject_file, 'rb') as f:
         body = f.read()
     query_params = {}
     timestamp, token = get_token(username, password)
     if token is None:
-        return 1
+        return None
     query_params['userid'] = username
     query_params['timestamp'] = timestamp
     query_params['token'] = token
@@ -200,7 +200,7 @@ def submit_workflow(username, password, input_directory, subject_name):
     status, response = upload_item(query_params, 'job', body, 'POST')
     if status != 200:
         sys.stdout.write("Error while submitting workflow\n")
-        return 1
+        return None
     response_obj = json.loads(response)
     job_id = response_obj['job_id']
     sys.stdout.write("Workflow {0} submitted for processing\n".format(job_id))
@@ -214,12 +214,12 @@ def get_output(workflow_id, username, password):
     :param workflow_id: pegasus id for workflow
     :param username: username to use when authenticating
     :param password: password to user when authenticating
-    :return: 0 on success, 1 on error
+    :return: response_obj with status and filename
     """
     query_params = {}
     timestamp, token = get_token(username, password)
     if token is None:
-        return 1
+        return {'status': 400, 'result': 'Can\'t authenticate'}
     query_params['userid'] = username
     query_params['timestamp'] = timestamp
     query_params['token'] = token
@@ -244,7 +244,7 @@ def get_status(workflow_id, username, password):
     :param workflow_id: pegasus id for workflow
     :param username: username to use when authenticating
     :param password: password to user when authenticating
-    :return: 0 on success, 1 on error
+    :return: job status
     """
     query_params = {}
     timestamp, token = get_token(username, password)
@@ -300,6 +300,8 @@ def main():
                              args.password,
                              args.input_directory,
                              args.reference)
+    if job_id is None:
+        sys.exit(1)
     running = True
     start_time = time.time()
     error = False
