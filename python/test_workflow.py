@@ -12,10 +12,8 @@ import re
 import subprocess
 
 
-import fsurfer
-
 REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer"
-VERSION = fsurfer.__version__
+VERSION = '1.3.3'
 
 
 def get_response(query_parameters, noun, method, endpoint=REST_ENDPOINT):
