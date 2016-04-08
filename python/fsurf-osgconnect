@@ -241,7 +241,7 @@ def list_workflows():
                 subject = workflows[workflow][0]
                 cores = workflows[workflow][1]
                 status = get_status(workflow)
-                if status.upper() in ['COMPLETED', 'FAILED', 'SUCCESS']:
+                if status.upper() in ['COMPLETED', 'FAILED', 'ERROR']:
                     workflows[workflow].append(status)
             else:
                 subject = workflows[workflow][0]
