@@ -68,53 +68,22 @@ def main(args):
     :return: exit code (0 on success, 1 on failure)
     """
     if args.username is None:
-        username = query_user("Username")
+        username = query_user("username")
     else:
         username = args.username
     password = query_user("password", echo=False)
-    if args.first_name is None:
-        first_name = query_user("First name")
-    else:
-        first_name = args.first_name
-    if args.last_name is None:
-        last_name = query_user("Last name")
-    else:
-        last_name = args.last_name
-    if args.email is None:
-        email = query_user("Email")
-    else:
-        email = args.email
-    if args.phone is None:
-        phone = query_user("Phone")
-    else:
-        phone = args.phone
-    if args.institution is None:
-        institution = query_user("Institution")
-    else:
-        institution = args.institution
     salt = hashlib.sha256(str(time.time())).hexdigest()
     password = hashlib.sha256(salt + password).hexdigest()
 
-    user_insert = "INSERT INTO freesurfer_interface.users(username," \
-                  "                                       first_name," \
-                  "                                       last_name," \
-                  "                                       email," \
-                  "                                       institution," \
-                  "                                       phone," \
-                  "                                       password," \
-                  "                                       salt) " \
-                  "VALUES(%s, %s, %s, %s, %s, %s, %s, %s)"
+    user_insert = "UPDATE freesurfer_interface.users " \
+                  "SET password = %s, salt = %s " \
+                  "WHERE username = %s"
     try:
         conn = get_db_client(args.db_param_file)
         with conn.cursor() as cursor:
-            cursor.execute(user_insert, (username,
-                                         first_name,
-                                         last_name,
-                                         email,
-                                         institution,
-                                         phone,
-                                         password,
-                                         salt))
+            cursor.execute(user_insert, (password,
+                                         salt,
+                                         username))
             if cursor.rowcount != 1:
                 sys.stderr.write("{0}\n".format(cursor.statusmessage))
                 return 1
@@ -126,19 +95,9 @@ def main(args):
         return 1
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Create a fsurf user account')
+    parser = argparse.ArgumentParser(description='Change password for a fsurf users')
     parser.add_argument('--username', dest='username', default=None,
                         help='username')
-    parser.add_argument('--first-name', dest='first_name', default=None,
-                        help='firstname')
-    parser.add_argument('--last-name', dest='last_name', default=None,
-                        help='lastname')
-    parser.add_argument('--email', dest='email', default=None,
-                        help='email')
-    parser.add_argument('--phone', dest='phone', default=None,
-                        help='phone')
-    parser.add_argument('--institution', dest='institution', default=None,
-                        help='institution')
     parser.add_argument('--dbparams', dest='db_param_file', default=PARAM_FILE_LOCATION,
                         help='location of file with database information')
     args = parser.parse_args(sys.argv[1:])
