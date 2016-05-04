@@ -589,7 +589,12 @@ def load_workflow_summary():
     if not os.path.exists(pickle_filename):
         return {}
     with open(pickle_filename, 'rb') as f:
-        return cPickle.load(f)
+        try:
+            pickle = cPickle.load(f)
+            return pickle
+        except EOFError:
+            return regenerate_workflow_info()
+
 
 
 def main():
