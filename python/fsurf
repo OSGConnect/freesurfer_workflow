@@ -356,11 +356,11 @@ def get_log(workflow_id, username, password):
     query_params['timestamp'] = timestamp
     query_params['token'] = token
     query_params['jobid'] = workflow_id
-    sys.stdout.write("Downloading results, this may take a while\n")
+    sys.stdout.write("Downloading logs, this may take a while\n")
     status, response = download_output(query_params, 'job/log')
     response_obj = json.loads(response)
     if status != 200:
-        sys.stdout.write("Error while downloading results:\n")
+        sys.stdout.write("Error while downloading logs:\n")
         sys.stdout.write("{0}\n".format(response_obj['result']))
         return 1
 
@@ -423,10 +423,10 @@ def main():
                         help='Get status for specified job')
     parser.add_argument('--remove', dest='action',
                         action='store_const', const='remove',
-                        help='Submit job for processing')
+                        help='Remove specified job')
     parser.add_argument('--output', dest='action',
                         action='store_const', const='output',
-                        help='Submit job for processing')
+                        help='Download results for specified job')
     parser.add_argument('--log', dest='action',
                         action='store_const', const='log',
                         help="Get log file for specified job")
@@ -455,6 +455,12 @@ def main():
 
     args = parser.parse_args(sys.argv[1:])
 
+    if args.action in ('status', 'remove', 'output', 'log'):
+        if args.workflow_id is None:
+            msg = 'ERROR: Use --id to specify a workflow\n'.format(args.action)
+            sys.stdout.write(msg)
+            sys.exit(3)
+
     if args.action == 'list':
         username, password = get_user_info(args)
         status = list_workflows(username, password)
@@ -482,7 +488,7 @@ def main():
     else:
         sys.stdout.write("Must specify an action, exiting...\n")
         parser.print_help()
-        status = 0
+        status = 2
     sys.exit(status)
 
 if __name__ == '__main__':
