@@ -204,6 +204,45 @@ def get_user_salt(environ):
     return json.dumps(response), status
 
 
+def set_user_password(environ):
+    """
+    Set password for a userid
+
+    :param environ: dictionary with environment variables (See PEP 333)
+    :return: tuple with userid, security_token
+    """
+    status = '200 OK'
+    userid, _, _ = get_user_params(environ)
+    conn = get_db_client()
+    cursor = conn.cursor()
+    salt_query = "UPDATE freesurfer_interface.users " \
+                 "SET salt = %s, password = %s " \
+                 "WHERE username = %s;"
+    query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
+    try:
+        cursor.execute(salt_query, (query_dict['salt'],
+                                    query_dict['password'],
+                                    userid))
+        if cursor.rowcount == 1:
+            response = {'status': 200,
+                        'result': 'Password updated'}
+        elif cursor.rowcount == 0:
+            response = {'status': 400,
+                        'result': 'Userid not found'}
+        else:
+            response = {'status': 400,
+                        'result': 'Error: ' + cursor.statusmessage}
+            status = '400 Bad Request'
+    except Exception, e:
+        response = {'status': 500,
+                    'result': str(e)}
+        status = '500 Server Error'
+    finally:
+        conn.commit()
+        conn.close()
+    return json.dumps(response), status
+
+
 def validate_user(userid, token, timestamp):
     """
     Given an userid and security token, validate this against database
@@ -390,8 +429,8 @@ def submit_job(environ):
                         query_dict['multicore'][0],
                         userid,
                         query_dict['subject'][0]])
-        id = cursor.fetchone()[0]
-        response['job_id'] = id
+        job_id = cursor.fetchone()[0]
+        response['job_id'] = job_id
         conn.commit()
     except Exception, e:
         response = {'status': 500,
@@ -435,7 +474,11 @@ def get_job_output(environ):
     try:
         cursor.execute(job_query, [query_dict['jobid'][0], userid])
         row = cursor.fetchone()
-        if row[2] != 'COMPLETED':
+        if cursor.rowcount == 0:
+            response['status'] = 404
+            response["result"] = "Workflow not found"
+            status = "404 Not Found"
+        elif row[2] != 'COMPLETED':
             response['status'] = 404
             response["result"] = "Workflow does not have any output to download"
             status = "404 Not Found"
@@ -488,9 +531,13 @@ def get_job_log(environ):
     try:
         cursor.execute(job_query, [query_dict['jobid'][0], userid])
         row = cursor.fetchone()
-        if row[2] != 'COMPLETED':
+        if cursor.rowcount == 0:
             response['status'] = 404
-            response["result"] = "Workflow does not have any output to download"
+            response["result"] = "Workflow not found"
+            status = "404 Not Found"
+        elif row[2] != 'COMPLETED':
+            response['status'] = 404
+            response["result"] = "Workflow does not have any logs to download"
             status = "404 Not Found"
         else:
             output_filename = os.path.join(output_dir,
@@ -575,6 +622,8 @@ def application(environ, start_response):
                 status = '500 Server Error'
     elif environ['PATH_INFO'] == '/freesurfer/user/salt':
         response_body, status = get_user_salt(environ)
+    elif environ['PATH_INFO'] == '/freesurfer/user/password':
+        response_body, status = set_user_password(environ)
     else:
         status = '400 Bad Request'
         response_body = json.dumps({'status': 400,
