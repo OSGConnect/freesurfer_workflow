@@ -6,40 +6,9 @@ import getpass
 import hashlib
 import time
 
-import psycopg2
+import fsurfer
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
-
-
-def get_db_parameters(config_file=None):
-    """
-    Read database parameters from a file and return it
-
-    :param config_file: location of file with database parameters
-    :return: a tuple of (database_name, user, password, hostname)
-    """
-    parameters = {}
-    if config_file is None:
-        config_file = PARAM_FILE_LOCATION
-    with open(config_file) as param_file:
-        for line in param_file.readlines():
-            key, val = line.strip().split('=')
-            parameters[key.strip()] = val.strip()
-    return (parameters['database'],
-            parameters['user'],
-            parameters['password'],
-            parameters['hostname'])
-
-
-def get_db_client(config_file=None):
-    """
-    Get a postgresql client instance and return it
-
-    :param config_file: location of file with database parameters
-    :return: a redis client instance or None if failure occurs
-    """
-    db, user, password, host = get_db_parameters(config_file)
-    return psycopg2.connect(database=db, user=user, host=host, password=password)
 
 
 def query_user(parameter, echo=True):
@@ -105,7 +74,7 @@ def main(args):
                   "                                       salt) " \
                   "VALUES(%s, %s, %s, %s, %s, %s, %s, %s)"
     try:
-        conn = get_db_client(args.db_param_file)
+        conn = fsurfer.fsurf_helpers.get_db_client()
         with conn.cursor() as cursor:
             cursor.execute(user_insert, (username,
                                          first_name,

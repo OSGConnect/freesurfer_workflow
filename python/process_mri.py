@@ -134,6 +134,7 @@ def submit_workflow(subject_file, user, jobid, multicore=False, workflow='diamon
         exit_code, output = pegasus_submit(dax="{0}".format(dax_name),
                                            workflow_directory=workflow_directory)
         if exit_code != 0:
+            os.unlink(dax_name)
             return 1
         os.unlink(dax_name)
         capture_id = False
