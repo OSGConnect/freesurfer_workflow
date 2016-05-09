@@ -9,6 +9,13 @@ from email.mime.text import MIMEText
 REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer"
 VERSION = '0.2'
 
+EMAIL_TEMPLATE = '''
+This email is being sent to inform you that your freesurfer workflow {0} has
+completed {2}.  You can download the output by running `fsurf --output {0}`
+or download the Freesurfer log files by running `fsurf --log {0} .`
+
+Please contact support@osgconnect.net if you have any questions.
+'''
 
 def email_user(success=True):
     """
@@ -22,12 +29,12 @@ def email_user(success=True):
     else:
         workflow = ''
     if success:
-        msg = MIMEText('Your freesurfer workflow {0} '.format(workflow) +
-                       'has completed succesfully')
+        status = 'succesfully'
     else:
-        msg = MIMEText('Your freesurfer workflow {0} '.format(workflow) +
-                       'has completed with errors')
+        status = 'with errors'
 
+    msg = MIMEText(EMAIL_TEMPLATE.format(workflow,
+                                         status))
     msg['Subject'] = 'Freesurfer workflow {0} completed'.format(workflow)
     sender = 'fsurf@login.osgconnect.net'
     dest = getpass.getuser()
