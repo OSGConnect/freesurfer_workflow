@@ -17,6 +17,7 @@ or download the Freesurfer log files by running `fsurf --log {0} .`
 Please contact support@osgconnect.net if you have any questions.
 '''
 
+
 def email_user(success=True):
     """
     Email user informing them that a workflow has completed
