@@ -14,6 +14,15 @@ VERSION = fsurfer.__version__
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
 FREESURFER_BASE = '/stash2/user/fsurf/'
 
+EMAIL_TEMPLATE = '''
+This email is being sent to inform you that your freesurfer workflow {0} submitted on {1}
+has completed {2}.  You can download the output by running
+`fsurf --output {0} --user {3} --password <pass>`
+or download the Freesurfer log files by running `fsurf --log {0} --user {3} --password <pass>.`
+
+Please contact support@osgconnect.net if you have any questions.
+'''
+
 
 def get_db_parameters():
     """
@@ -52,7 +61,7 @@ def process_results(jobid, success=True):
     """
     info_query = "SELECT jobs.subject, " \
                  "       jobs.job_date, " \
-                 "       jobs.pegasus_ts, " \
+                 "       date_trunc('second', jobs.pegasus_ts), " \
                  "       users.email, " \
                  "       users.username " \
                  "FROM freesurfer_interface.jobs AS jobs, " \
@@ -73,16 +82,15 @@ def process_results(jobid, success=True):
             return
     except psycopg2.Error:
         return
+
     if success:
-        msg = MIMEText('Your freesurfer workflow {0} '.format(jobid) +
-                       'submitted on {0} and processing '.format(submit_date) +
-                       'subject {0} '.format(subject_name) +
-                       'has completed succesfully')
+        status = 'succesfully'
     else:
-        msg = MIMEText('Your freesurfer workflow {0} '.format(jobid) +
-                       'submitted on {0} and processing '.format(submit_date) +
-                       'subject {0} '.format(subject_name) +
-                       'has completed with errors')
+        status = 'with errors'
+    msg = MIMEText(EMAIL_TEMPLATE.format(jobid,
+                                         submit_date,
+                                         status,
+                                         username))
 
     msg['Subject'] = 'Freesurfer workflow {0} completed'.format(jobid)
     sender = 'fsurf@login.osgconnect.net'
