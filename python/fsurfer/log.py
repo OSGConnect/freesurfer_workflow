@@ -22,9 +22,9 @@ def initialize_logging():
     logger = logging.getLogger('fsurf')
     log_file = os.path.abspath(os.path.expanduser(LOG_FILENAME))
     handle = logging.handlers.RotatingFileHandler(log_file,
-                                              mode='a',
-                                              maxBytes=MAX_BYTES,
-                                              backupCount=NUM_BACKUPS)
+                                                  mode='a',
+                                                  maxBytes=MAX_BYTES,
+                                                  backupCount=NUM_BACKUPS)
     handle.setLevel(logging.WARN)
     logger.addHandler(handle)
 
