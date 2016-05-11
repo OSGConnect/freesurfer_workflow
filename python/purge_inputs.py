@@ -5,7 +5,7 @@
 import argparse
 import os
 import sys
-import logging
+import log
 
 import psycopg2
 
@@ -31,7 +31,7 @@ def remove_inputs(input_file):
         os.rmdir(input_dir)
         return True
     except OSError, e:
-        logging.error("Exception: {0}".format(str(e)))
+        log.error("Exception: {0}".format(str(e)))
         return False
 
 
@@ -70,8 +70,8 @@ def process_inputs():
             if not os.path.exists(input_file):
                 continue
             if not remove_inputs(input_file):
-                logging.error("Can't remove {0} for job {1}".format(input_file,
-                                                                    row[0]))
+                log.error("Can't remove {0} for job {1}".format(input_file,
+                                                                row[0]))
 
             if row[3].upper() == 'UPLOADED':
                 cursor.execute(job_update, ['ERROR', row[0]])
@@ -80,8 +80,8 @@ def process_inputs():
             conn.commit()
         conn.close()
     except psycopg2.Error, e:
-        logging.error("Can't connect to database")
-        logging.error("{0}".format(e))
+        log.error("Can't connect to database")
+        log.error("{0}".format(e))
         return 1
     return 0
 

@@ -5,7 +5,7 @@
 import argparse
 import subprocess
 import sys
-import logging
+import log
 from email.mime.text import MIMEText
 
 import psycopg2
@@ -77,12 +77,12 @@ def process_results():
                 sys.stdout.write("about workflow {0}\n".format(row[0]))
                 continue
             if not email_user(row[0], row[2]):
-                logging.error("Can't email {0} for job {1}".format(row[2],
-                                                                   row[0]))
+                log.error("Can't email {0} for job {1}".format(row[2],
+                                                               row[0]))
                 continue
             conn.commit()
     except psycopg2.Error:
-        logging.error("Can't connect to database")
+        log.error("Can't connect to database")
         return 1
     finally:
         conn.commit()

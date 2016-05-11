@@ -606,12 +606,12 @@ def check_groups():
     """
     groups = os.getgroups()
     freesurfer_member = False
-    for group in  groups:
-        if grp.getgrgid().gr_name == '@freesurfer':
+    for group in groups:
+        if grp.getgrgid(group).gr_name == '@freesurfer':
             freesurfer_member = True
     if not freesurfer_member:
         sys.stderr.write("You need to be a member of the freesurfer "
-                         "project to submit workflows.  Please request"
+                         "project to submit workflows.  Please request "
                          "membership using the OSG Connect website.\n")
         sys.exit(1)
 

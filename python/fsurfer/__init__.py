@@ -8,9 +8,9 @@ from fsurfer import create_diamond_workflow
 from fsurfer import create_single_workflow
 from helpers import get_db_client
 from helpers import get_db_parameters
-from logging import get_logger
-from logging import initialize_logging
-from logging import set_debugging
+from log import get_logger
+from log import initialize_logging
+from log import set_debugging
 
 __version__ = '1.3.3'
 

@@ -5,13 +5,13 @@
 import argparse
 import os
 import sys
-import logging
+import log
 
 import psycopg2
 import shutil
 
 import fsurfer
-import fsurfer.logging
+import fsurfer.log
 import fsurfer.helpers
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
@@ -44,7 +44,7 @@ def purge_workflow_files(result_dir, log_filename, input_file, output_filename):
             os.rmdir(input_dir)
         return True
     except OSError, e:
-        logging.error("Exception: {0}".format(str(e)))
+        log.error("Exception: {0}".format(str(e)))
         return False
 
 
@@ -107,13 +107,13 @@ def process_results():
                                         log_filename,
                                         input_file,
                                         output_filename):
-                logging.error("Can't remove {0} for job {1}".format(input_file,
-                                                                    row[0]))
+                log.error("Can't remove {0} for job {1}".format(input_file,
+                                                                row[0]))
                 continue
             cursor.execute(job_update, [row[0]])
             conn.commit()
     except psycopg2.Error, e:
-        logging.error("Error: {0}".format(e))
+        log.error("Error: {0}".format(e))
         return 1
     finally:
         conn.commit()

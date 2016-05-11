@@ -7,7 +7,7 @@ import hashlib
 import time
 
 import fsurfer
-import fsurfer.logging
+import fsurfer.log
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
 
@@ -64,7 +64,7 @@ def main(args):
         institution = args.institution
     salt = hashlib.sha256(str(time.time())).hexdigest()
     password = hashlib.sha256(salt + password).hexdigest()
-    logger = fsurfer.logging.get_logger()
+    logger = fsurfer.log.get_logger()
     user_insert = "INSERT INTO freesurfer_interface.users(username," \
                   "                                       first_name," \
                   "                                       last_name," \
