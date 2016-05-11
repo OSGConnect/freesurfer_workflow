@@ -10,8 +10,9 @@ import logging
 import psycopg2
 import shutil
 
-import fsurf_helpers
 import fsurfer
+import fsurfer.logging
+import fsurfer.helpers
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
 FREESURFER_BASE = '/stash2/user/fsurf/'
@@ -64,7 +65,7 @@ def process_results():
     if args.dry_run:
         sys.stdout.write("Doing a dry run, no changes will be made\n")
 
-    conn = fsurf_helpers.get_db_client()
+    conn = fsurfer.helpers.get_db_client()
     cursor = conn.cursor()
     job_query = "SELECT id, username, image_filename, state, pegasus_ts, subject " \
                 "  FROM freesurfer_interface.jobs " \

@@ -48,7 +48,7 @@ def main(args):
                   "SET password = %s, salt = %s " \
                   "WHERE username = %s"
     try:
-        conn = fsurfer.fsurf_helpers.get_db_client()
+        conn = fsurfer.helpers.get_db_client()
 
         with conn.cursor() as cursor:
             cursor.execute(user_insert, (password,

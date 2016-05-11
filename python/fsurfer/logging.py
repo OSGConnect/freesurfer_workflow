@@ -12,6 +12,7 @@ LOG_FILENAME = '~/logs/fsurf.log'
 MAX_BYTES = 1024*1024*50  # 50 MB
 NUM_BACKUPS = 10  # 10 files
 
+
 def initialize_logging():
     """
     Initialize logging for fsurf

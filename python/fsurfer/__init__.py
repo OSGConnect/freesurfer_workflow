@@ -6,8 +6,11 @@ from fsurfer import create_final_job
 from fsurfer import create_serial_workflow
 from fsurfer import create_diamond_workflow
 from fsurfer import create_single_workflow
-from fsurf_helpers import get_db_client
-from fsurf_helpers import get_db_parameters
+from helpers import get_db_client
+from helpers import get_db_parameters
+from logging import get_logger
+from logging import initialize_logging
+from logging import set_debugging
 
 __version__ = '1.3.3'
 

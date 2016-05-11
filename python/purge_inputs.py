@@ -9,7 +9,7 @@ import logging
 
 import psycopg2
 
-import fsurfer.fsurf_helpers
+import fsurfer.helpers
 import fsurfer
 
 FREESURFER_BASE = '/stash2/user/fsurf/'
@@ -42,7 +42,7 @@ def process_inputs():
     :return: exit code (0 for success, non-zero for failure)
     """
 
-    conn = fsurfer.fsurf_helpers.get_db_client()
+    conn = fsurfer.helpers.get_db_client()
     cursor = conn.cursor()
     job_query = "SELECT id, username, image_filename, state FROM freesurfer_interface.jobs " \
                 "WHERE age(job_date) > '21 days'"

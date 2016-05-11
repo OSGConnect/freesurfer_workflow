@@ -7,6 +7,7 @@ import hashlib
 import time
 
 import fsurfer
+import fsurfer.logging
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
 
@@ -63,7 +64,7 @@ def main(args):
         institution = args.institution
     salt = hashlib.sha256(str(time.time())).hexdigest()
     password = hashlib.sha256(salt + password).hexdigest()
-
+    logger = fsurfer.logging.get_logger()
     user_insert = "INSERT INTO freesurfer_interface.users(username," \
                   "                                       first_name," \
                   "                                       last_name," \
@@ -74,8 +75,9 @@ def main(args):
                   "                                       salt) " \
                   "VALUES(%s, %s, %s, %s, %s, %s, %s, %s)"
     try:
-        conn = fsurfer.fsurf_helpers.get_db_client()
+        conn = fsurfer.helpers.get_db_client()
         with conn.cursor() as cursor:
+            logger.info("Adding {0} to database\n".format(username))
             cursor.execute(user_insert, (username,
                                          first_name,
                                          last_name,
@@ -86,7 +88,10 @@ def main(args):
                                          salt))
             if cursor.rowcount != 1:
                 sys.stderr.write("{0}\n".format(cursor.statusmessage))
+                logger.error("Encountered error while adding" +
+                             "user {0}: {1}\n".format(username, cursor.statusmessage))
                 return 1
+        logger.info("User added")
         conn.commit()
         conn.close()
         return 0
