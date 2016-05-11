@@ -3,8 +3,8 @@
 # Copyright 2016 University of Chicago
 # Licensed under the APL 2.0 license
 
-import log
-import log.handlers
+import logging
+import logging.handlers
 import os
 
 
@@ -19,13 +19,13 @@ def initialize_logging():
 
     :return: None
     """
-    logger = log.getLogger('fsurf')
+    logger = logging.getLogger('fsurf')
     log_file = os.path.abspath(os.path.expanduser(LOG_FILENAME))
-    handle = log.handlers.RotatingFileHandler(log_file,
+    handle = logging.handlers.RotatingFileHandler(log_file,
                                               mode='a',
                                               maxBytes=MAX_BYTES,
                                               backupCount=NUM_BACKUPS)
-    handle.setLevel(log.WARN)
+    handle.setLevel(logging.WARN)
     logger.addHandler(handle)
 
 
@@ -35,10 +35,10 @@ def set_debugging():
 
     :return: None
     """
-    logger = log.getLogger('fsurf')
+    logger = logging.getLogger('fsurf')
     log_file = os.path.abspath(os.path.expanduser('~/logs/fsurf_debug.log'))
-    handle = log.FileHandler(log_file)
-    handle.setLevel(log.DEBUG)
+    handle = logging.FileHandler(log_file)
+    handle.setLevel(logging.DEBUG)
     logger.addHandler(handle)
 
 
@@ -48,4 +48,4 @@ def get_logger():
 
     :return: logger object
     """
-    return log.getLogger('fsurf')
+    return logging.getLogger('fsurf')
