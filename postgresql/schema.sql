@@ -37,4 +37,12 @@ CREATE TABLE freesurfer_interface.jobs (
     purged          boolean NOT NULL DEFAULT FALSE
 );
 
+CREATE TABLE freesurfer_interface.verifications (
+    id              SERIAL PRIMARY KEY,
+    kernel_version  varchar(128) NOT NULL,
+    successful      int DEFAULT 0,
+    attempts        int DEFAULT 0,
+    log_directory   varchar(256) DEFAUlT '',
+);
+
 COMMIT;
