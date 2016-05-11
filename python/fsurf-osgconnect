@@ -10,6 +10,7 @@ import cStringIO
 import time
 import shutil
 import cPickle
+import grp
 
 import fsurfer
 import Pegasus.DAX3
@@ -596,6 +597,24 @@ def load_workflow_summary():
             return regenerate_workflow_info()
 
 
+def check_groups():
+    """
+    Check groups that current user belongs to and exit with message if user
+    isn't in freesurfer group
+
+    :return: None
+    """
+    groups = os.getgroups()
+    freesurfer_member = False
+    for group in  groups:
+        if grp.getgrgid().gr_name == '@freesurfer':
+            freesurfer_member = True
+    if not freesurfer_member:
+        sys.stderr.write("You need to be a member of the freesurfer "
+                         "project to submit workflows.  Please request"
+                         "membership using the OSG Connect website.\n")
+        sys.exit(1)
+
 
 def main():
     """
@@ -604,6 +623,7 @@ def main():
 
     :return: True if any errors occurred during DAX generaton
     """
+    check_groups()
     parser = argparse.ArgumentParser(description="Process freesurfer information")
     # version info
     parser.add_argument('--version', action='version', version='%(prog)s ' + VERSION)
