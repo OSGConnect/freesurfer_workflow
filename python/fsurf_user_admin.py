@@ -192,8 +192,8 @@ def list_users():
         conn = fsurfer.helpers.get_db_client()
         with conn.cursor() as cursor:
             cursor.execute(user_query)
-            sys.stdout.write("{0:30} {1:20}\n ".format('User',
-                                                       'Status'))
+            sys.stdout.write("{0:30} {1:20}\n".format('User',
+                                                      'Status'))
             for row in cursor.fetchall():
                 status = 'Enabled'
                 if 'xxx' in row[1]:
