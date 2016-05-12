@@ -158,8 +158,11 @@ def get_token(userid, password):
     """
     parameters = {'userid': userid}
     code, response = get_response(parameters, 'user/salt', 'GET', REST_ENDPOINT)
-    if code != 200:
-        sys.stdout.write("Can't get authentication token\n")
+    if code == 401:
+        sys.stdout.write("User account disabled\n")
+        return None, None
+    elif code == 400:
+        sys.stdout.write("Userid not found\n")
         return None, None
     timestamp = time.time()
     response_obj = json.loads(response)

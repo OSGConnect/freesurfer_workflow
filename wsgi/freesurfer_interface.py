@@ -188,10 +188,13 @@ def get_user_salt(environ):
     try:
         cursor.execute(salt_query, [userid])
         row = cursor.fetchone()
-        if row:
+        if row and not row[0].startswith('xxx'):
             response = {'status': 200, 'result': row[0]}
+        elif row and row[0].startswith('xxx'):
+            response = {'status': 401,
+                        'result': 'User account disabled'}
         else:
-            response = {'status': 400,
+            response = {'status': 401,
                         'result': 'Userid not found'}
             status = '400 Bad Request'
     except Exception, e:
