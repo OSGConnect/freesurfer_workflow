@@ -122,7 +122,7 @@ def disable_user(args):
     try:
         conn = fsurfer.helpers.get_db_client()
         with conn.cursor() as cursor:
-            cursor.execute(user_disable, username)
+            cursor.execute(user_disable, [username])
             if cursor.rowcount != 1:
                 sys.stderr.write("{0}\n".format(cursor.statusmessage))
                 logger.error("Got pgsql error: {0}".format(cursor.statusmessage))
@@ -220,6 +220,7 @@ def main():
     fsurfer.log.initialize_logging()
     parser = argparse.ArgumentParser(description='Manage fsurf user accounts')
     parser.add_argument('--action', dest='action', default='list',
+                        choices=['list', 'create', 'disable', 'modify'],
                         help='Action to conduct on specified user account')
     parser.add_argument('--username', dest='username', default=None,
                         help='username')
