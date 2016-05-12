@@ -98,6 +98,7 @@ def add_user(args):
         return 0
     except Exception, e:
         sys.stderr.write("Got exception: {0}".format(e))
+        logger.error("Got exception: {0}".format(e))
         return 1
 
 
@@ -133,6 +134,7 @@ def disable_user(args):
         return 0
     except Exception, e:
         sys.stderr.write("Got exception: {0}\n".format(e))
+        logger.error("Got exception: {0}".format(e))
         return 1
 
 
@@ -174,7 +176,7 @@ def modify_user(args):
         return 0
     except Exception, e:
         sys.stderr.write("Got exception: {0}\n".format(e))
-        logger.info("Got exception: {0}".format(e))
+        logger.error("Got exception: {0}".format(e))
         return 1
 
 
@@ -206,7 +208,7 @@ def list_users():
         return 0
     except Exception, e:
         sys.stderr.write("Got exception: {0}\n".format(e))
-        logger.info("Got exception: {0}".format(e))
+        logger.error("Got exception: {0}".format(e))
         return 1
 
 
@@ -236,8 +238,11 @@ def main():
                         help='institution')
     parser.add_argument('--dbparams', dest='db_param_file', default=PARAM_FILE_LOCATION,
                         help='location of file with database information')
+    parser.add_argument('--debug', dest='debug', action='store_true',
+                        help='enable debug logging')
     args = parser.parse_args(sys.argv[1:])
-
+    if args.debug:
+        fsurfer.log.set_debugging()
     if args.action == 'list':
         return list_users()
     elif args.action == 'create':
