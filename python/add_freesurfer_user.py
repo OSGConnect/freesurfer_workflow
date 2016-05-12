@@ -64,6 +64,7 @@ def main(args):
         institution = args.institution
     salt = hashlib.sha256(str(time.time())).hexdigest()
     password = hashlib.sha256(salt + password).hexdigest()
+    fsurfer.log.initialize_logging()
     logger = fsurfer.log.get_logger()
     user_insert = "INSERT INTO freesurfer_interface.users(username," \
                   "                                       first_name," \
@@ -77,7 +78,7 @@ def main(args):
     try:
         conn = fsurfer.helpers.get_db_client()
         with conn.cursor() as cursor:
-            logger.info("Adding {0} to database\n".format(username))
+            logger.info("Adding {0} to database".format(username))
             cursor.execute(user_insert, (username,
                                          first_name,
                                          last_name,
@@ -87,16 +88,16 @@ def main(args):
                                          password,
                                          salt))
             if cursor.rowcount != 1:
-                sys.stderr.write("{0}\n".format(cursor.statusmessage))
+                sys.stderr.write("{0}".format(cursor.statusmessage))
                 logger.error("Encountered error while adding" +
-                             "user {0}: {1}\n".format(username, cursor.statusmessage))
+                             "user {0}: {1}".format(username, cursor.statusmessage))
                 return 1
-        logger.info("User added")
+        logger.info("User {0} added".format(username))
         conn.commit()
         conn.close()
         return 0
     except Exception, e:
-        sys.stderr.write("Got exception: {0}\n".format(e))
+        sys.stderr.write("Got exception: {0}".format(e))
         return 1
 
 if __name__ == '__main__':

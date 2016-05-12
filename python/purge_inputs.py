@@ -5,12 +5,12 @@
 import argparse
 import os
 import sys
-import log
 
 import psycopg2
 
-import fsurfer.helpers
 import fsurfer
+import fsurfer.helpers
+import fsurfer.log
 
 FREESURFER_BASE = '/stash2/user/fsurf/'
 VERSION = fsurfer.__version__
@@ -23,15 +23,18 @@ def remove_inputs(input_file):
     :param input_file: path to input file to remove
     :return: True if successful, False otherwise
     """
+    logger = fsurfer.log.get_logger()
     if not os.path.exists(input_file):
         return True
     try:
         os.unlink(input_file)
+        logger.info("Unlinked file")
         input_dir = os.path.dirname(input_file)
         os.rmdir(input_dir)
+        logger.info("Removed directory {0}".format(input_dir))
         return True
     except OSError, e:
-        log.error("Exception: {0}".format(str(e)))
+        logger.error("Exception: {0}".format(str(e)))
         return False
 
 
@@ -41,6 +44,9 @@ def process_inputs():
 
     :return: exit code (0 for success, non-zero for failure)
     """
+
+    fsurfer.log.initialize_logging()
+    logger = fsurfer.log.get_logger()
 
     conn = fsurfer.helpers.get_db_client()
     cursor = conn.cursor()
@@ -63,25 +69,32 @@ def process_inputs():
     try:
         cursor.execute(job_query)
         for row in cursor.fetchall():
+            logger.info("Processing workflow {0} for user {1} ".format(row[0],
+                                                                       row[1])+
+                        "in state {0}".format(row[3]))
+
             input_file = os.path.join(FREESURFER_BASE, row[1], 'input', row[2])
+            logger.info("Deleting file {0}".format(input_file))
             if args.dry_run:
                 sys.stdout.write("Would delete {0} and directory\n".format(input_file))
                 continue
             if not os.path.exists(input_file):
+                logger.info("File not present")
                 continue
             if not remove_inputs(input_file):
-                log.error("Can't remove {0} for job {1}".format(input_file,
-                                                                row[0]))
+                logger.error("Can't remove {0} for job {1}".format(input_file,
+                                                                   row[0]))
 
             if row[3].upper() == 'UPLOADED':
                 cursor.execute(job_update, ['ERROR', row[0]])
                 conn.commit()
+                logger.info("Changed workflow {0} status ".format(row[0]) +
+                            "to ERROR")
                 return 1
             conn.commit()
         conn.close()
     except psycopg2.Error, e:
-        log.error("Can't connect to database")
-        log.error("{0}".format(e))
+        logger.error("Got pgsql error: {0}".format(e))
         return 1
     return 0
 

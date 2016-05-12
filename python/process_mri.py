@@ -17,6 +17,7 @@ import psycopg2
 
 import Pegasus.DAX3
 import fsurfer
+import fsurfer.log
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
 FREESURFER_BASE = '/stash2/user/fsurf/'
@@ -97,7 +98,9 @@ def submit_workflow(subject_file, user, jobid, multicore=False, workflow='diamon
         cores = 8
     else:
         cores = 2
+    logger = fsurfer.log.get_logger()
     subject_name = os.path.basename(subject_file).replace("_defaced.mgz", "")
+    logger.debug("Processing workflow using {0} as input".format(subject_file))
     dax = Pegasus.DAX3.ADAG('freesurfer')
     dax_subject_file = Pegasus.DAX3.File("{0}_defaced.mgz".format(subject_name))
     dax_subject_file.addPFN(Pegasus.DAX3.PFN("file://{0}".format(subject_file),
@@ -133,6 +136,8 @@ def submit_workflow(subject_file, user, jobid, multicore=False, workflow='diamon
             dax.writeXML(f)
         exit_code, output = pegasus_submit(dax="{0}".format(dax_name),
                                            workflow_directory=workflow_directory)
+        logger.info("Submitted workflow, got exit code {0}".format(exit_code))
+        logger.info("Pegasus output: {0}".format(output))
         if exit_code != 0:
             os.unlink(dax_name)
             return 1
@@ -154,7 +159,9 @@ def submit_workflow(subject_file, user, jobid, multicore=False, workflow='diamon
                         cursor = conn.cursor()
                         cursor.execute(job_update, [workflow_id, jobid])
                         conn.commit()
-                    except psycopg2.Error:
+                        logger.info("Updated DB")
+                    except psycopg2.Error, e:
+                        logger.info("Got pgsql error: {0}".format(e))
                         pass
 
                 break
@@ -168,7 +175,8 @@ def process_images():
 
     :return: exit code (0 for success, non-zero for failure)
     """
-
+    fsurfer.log.initialize_logging()
+    logger = fsurfer.log.get_logger()
     conn = get_db_client()
     cursor = conn.cursor()
     job_query = "SELECT id, username, image_filename FROM freesurfer_interface.jobs " \
@@ -179,6 +187,7 @@ def process_images():
     try:
         cursor.execute(job_query)
         for row in cursor.fetchall():
+            logger.info("Processing workflow {0} for user {1}".format(row[0], row[1]))
             input_file = os.path.join(FREESURFER_BASE, row[1], 'input', row[2])
             workflow_directory = os.path.join(FREESURFER_BASE, row[1])
             if not os.path.exists(workflow_directory):
@@ -189,7 +198,9 @@ def process_images():
             if not errors:
                 cursor.execute(job_update, [row[0]])
                 conn.commit()
-    except psycopg2.Error:
+                logger.info("Set workflow {0} status to PROCESSING".format(row[0]))
+    except psycopg2.Error, e:
+        logger.error("Got pgsql error: {0}".format(e))
         pass
 
 

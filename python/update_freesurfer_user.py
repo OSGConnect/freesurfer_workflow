@@ -36,6 +36,9 @@ def main(args):
     :param args: returned object from argparse.parse_args
     :return: exit code (0 on success, 1 on failure)
     """
+    fsurfer.log.initialize_logging()
+    logger = fsurfer.log.get_logger()
+
     if args.username is None:
         username = query_user("username")
     else:
@@ -44,24 +47,27 @@ def main(args):
     salt = hashlib.sha256(str(time.time())).hexdigest()
     password = hashlib.sha256(salt + password).hexdigest()
 
-    user_insert = "UPDATE freesurfer_interface.users " \
+    user_update = "UPDATE freesurfer_interface.users " \
                   "SET password = %s, salt = %s " \
                   "WHERE username = %s"
     try:
         conn = fsurfer.helpers.get_db_client()
-
+        logger.info("Updating password for {0}".format(username))
         with conn.cursor() as cursor:
-            cursor.execute(user_insert, (password,
+            cursor.execute(user_update, (password,
                                          salt,
                                          username))
             if cursor.rowcount != 1:
+                logger.error("Got pgsql error: {0}".format(cursor.statusmessage))
                 sys.stderr.write("{0}\n".format(cursor.statusmessage))
                 return 1
         conn.commit()
+        logger.info("Password updated")
         conn.close()
         return 0
     except Exception, e:
         sys.stderr.write("Got exception: {0}\n".format(e))
+        logger.info("Got exception: {0}".format(e))
         return 1
 
 if __name__ == '__main__':

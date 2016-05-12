@@ -34,22 +34,27 @@ def main(args):
     :param args: returned object from argparse.parse_args
     :return: exit code (0 on success, 1 on failure)
     """
+    fsurfer.log.initialize_logging()
+    logger = fsurfer.log.get_logger()
+
     if args.username is None:
         username = query_user("username")
     else:
         username = args.username
 
-    user_insert = "UPDATE freesurfer_interface.users " \
-                  "SET password = 'xxx', salt = 'xxx' " \
-                  "WHERE username = %s"
+    user_disable = "UPDATE freesurfer_interface.users " \
+                   "SET password = 'xxx', salt = 'xxx' " \
+                   "WHERE username = %s"
     try:
         conn = fsurfer.helpers.get_db_client()
         with conn.cursor() as cursor:
-            cursor.execute(user_insert, username)
+            cursor.execute(user_disable, username)
             if cursor.rowcount != 1:
                 sys.stderr.write("{0}\n".format(cursor.statusmessage))
+                logger.error("Got pgsql error: {0}".format(cursor.statusmessage))
                 return 1
         conn.commit()
+        logger.info("Disabled user {0}".format(username))
         conn.close()
         return 0
     except Exception, e:

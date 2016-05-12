@@ -50,6 +50,9 @@ def process_results():
 
     :return: exit code (0 for success, non-zero for failure)
     """
+    fsurfer.log.initialize_logging()
+    logger = fsurfer.log.get_logger()
+
     parser = argparse.ArgumentParser(description="Process and remove old results")
     # version info
     parser.add_argument('--version', action='version', version='%(prog)s ' + VERSION)
@@ -72,17 +75,19 @@ def process_results():
     try:
         cursor.execute(job_query)
         for row in cursor.fetchall():
+            logger.info("Warning user {0} about workflow {1} purge".format(row[0],
+                                                                           row[1]))
             if args.dry_run:
                 sys.stdout.write("Would email {0}".format(row[2]))
                 sys.stdout.write("about workflow {0}\n".format(row[0]))
                 continue
             if not email_user(row[0], row[2]):
-                log.error("Can't email {0} for job {1}".format(row[2],
-                                                               row[0]))
+                logger.error("Can't email {0} for job {1}".format(row[2],
+                                                                  row[0]))
                 continue
             conn.commit()
-    except psycopg2.Error:
-        log.error("Can't connect to database")
+    except psycopg2.Error, e:
+        logger.error("Got pgsql error: {0}".format(e))
         return 1
     finally:
         conn.commit()

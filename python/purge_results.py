@@ -54,6 +54,9 @@ def process_results():
 
     :return: exit code (0 for success, non-zero for failure)
     """
+    fsurfer.log.initialize_logging()
+    logger = fsurfer.log.get_logger()
+
     parser = argparse.ArgumentParser(description="Process and remove old results")
     # version info
     parser.add_argument('--version', action='version', version='%(prog)s ' + VERSION)
@@ -78,6 +81,8 @@ def process_results():
     try:
         cursor.execute(job_query)
         for row in cursor.fetchall():
+            logger.info("Processing workflow {0} for user {1}".format(row[0],
+                                                                      row[1]))
             username = row[1]
             result_dir = os.path.join(FREESURFER_BASE,
                                       username,
@@ -103,17 +108,22 @@ def process_results():
                 sys.stdout.write("Would delete {0}\n".format(log_filename))
                 sys.stdout.write("Would delete {0}\n".format(output_filename))
                 continue
+            logger.info("Removing {0}, {1}, {2}, {3}".format(result_dir,
+                                                             input_file,
+                                                             log_filename,
+                                                             output_filename))
             if not purge_workflow_files(result_dir,
                                         log_filename,
                                         input_file,
                                         output_filename):
-                log.error("Can't remove {0} for job {1}".format(input_file,
-                                                                row[0]))
+                logger.error("Can't remove {0} for job {1}".format(input_file,
+                                                                   row[0]))
                 continue
+            logger.info("Setting workflow {0} to DELETED".format(row[0]))
             cursor.execute(job_update, [row[0]])
             conn.commit()
     except psycopg2.Error, e:
-        log.error("Error: {0}".format(e))
+        logger.error("Error: {0}".format(e))
         return 1
     finally:
         conn.commit()
