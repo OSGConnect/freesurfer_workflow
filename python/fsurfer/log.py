@@ -37,7 +37,10 @@ def set_debugging():
     """
     logger = logging.getLogger('fsurf')
     log_file = os.path.abspath(os.path.expanduser('~/logs/fsurf_debug.log'))
-    handle = logging.FileHandler(log_file)
+    handle = logging.handlers.RotatingFileHandler(log_file,
+                                                  mode='a',
+                                                  maxBytes=MAX_BYTES,
+                                                  backupCount=NUM_BACKUPS)
     handle.setLevel(logging.DEBUG)
     logger.addHandler(handle)
 
