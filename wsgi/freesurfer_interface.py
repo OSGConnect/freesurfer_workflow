@@ -284,7 +284,8 @@ def get_current_jobs(environ):
     """
     query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
     parameters = {'userid': str,
-                  'token': str}
+                  'token': str,
+                  'all': bool}
     if not validate_parameters(query_dict, parameters):
         response = {'status': 400,
                     'result': "invalid or missing parameter"}
@@ -301,11 +302,18 @@ def get_current_jobs(environ):
     status = '200 OK'
     conn = get_db_client()
     cursor = conn.cursor()
-    job_query = "SELECT id, subject, state, job_date, multicore " \
-                "FROM freesurfer_interface.jobs " \
-                "WHERE purged IS NOT TRUE AND " \
-                "      age(job_date) < '7 days' AND username = %s " \
-                "ORDER BY job_date DESC;"
+    if bool(query_dict['all'][0]):
+        job_query = "SELECT id, subject, state, job_date, multicore " \
+                    "FROM freesurfer_interface.jobs " \
+                    "WHERE purged IS NOT TRUE AND " \
+                    "      username = %s " \
+                    "ORDER BY job_date DESC;"
+    else:
+        job_query = "SELECT id, subject, state, job_date, multicore " \
+                    "FROM freesurfer_interface.jobs " \
+                    "WHERE purged IS NOT TRUE AND " \
+                    "      age(job_date) < '7 days' AND username = %s " \
+                    "ORDER BY job_date DESC;"
     try:
         cursor.execute(job_query, [userid])
         for row in cursor.fetchall():
