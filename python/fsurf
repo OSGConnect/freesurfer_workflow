@@ -183,7 +183,6 @@ def list_workflows(username, password):
     try:
         query_params = {}
         timestamp, token = get_token(username, password)
-        sys.stdout.write("token: {0}\n".format(token))
         if token is None:
             return 1
         query_params['userid'] = username
