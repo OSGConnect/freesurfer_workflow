@@ -172,12 +172,13 @@ def get_token(userid, password):
     return str(timestamp), token
 
 
-def list_workflows(username, password):
+def list_workflows(username, password, all=False):
     """
     List the workflows currently in the system
 
     :param username: username to use when authenticating
     :param password: password to user when authenticating
+    :param all:      whether to return all workflows or just the last 7 days
     :return: 0 on success, 1 on error
     """
     try:
@@ -188,6 +189,7 @@ def list_workflows(username, password):
         query_params['userid'] = username
         query_params['timestamp'] = timestamp
         query_params['token'] = token
+        query_params['all'] = all
         status, response = get_response(query_params, 'job', 'GET')
         if status != 200:
             sys.stdout.write("Error getting workflow information\n")
@@ -436,6 +438,9 @@ def main():
     # Arguments identifying workflow
     parser.add_argument('--id', dest='workflow_id',
                         action='store', help='Pegasus workflow id to use')
+    # Arguments for list  action
+    parser.add_argument('--all-workflows', dest='all_workflows',
+                        action='store_true', help='List all workflows')
     # Arguments for submit action
     parser.add_argument('--subject', dest='subject', default=None,
                         help='Subject id to process ')
@@ -466,7 +471,10 @@ def main():
 
     if args.action == 'list':
         username, password = get_user_info(args)
-        status = list_workflows(username, password)
+        if args.all_workflows:
+            status = list_workflows(username, password, all=True)
+        else:
+            status = list_workflows(username, password)
     elif args.action == 'remove':
         username, password = get_user_info(args)
         status = remove_workflow(args.workflow_id, username, password)
