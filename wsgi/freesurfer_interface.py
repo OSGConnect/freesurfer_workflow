@@ -103,7 +103,7 @@ def delete_job(environ):
     userid, token, timestamp = get_user_params(environ)
     if not validate_user(userid, token, timestamp):
         response = {'status': 401,
-                    'result': "invalid user"}
+                    'result': "invalid user/password"}
         return json.dumps(response), '401 Not Authorized'
     job_id = query_dict['jobid'][0]
     conn = get_db_client()
@@ -293,7 +293,7 @@ def get_current_jobs(environ):
     userid, secret, timestamp = get_user_params(environ)
     if not validate_user(userid, secret, timestamp):
         response = {'status': 401,
-                    'result': "invalid user"}
+                    'result': "invalid user/password"}
         return json.dumps(response), '401 Not Authorized'
 
     response = {'status': 200,
@@ -342,7 +342,7 @@ def get_job_status(environ):
     userid, secret, timestamp = get_user_params(environ)
     if not validate_user(userid, secret, timestamp):
         response = {'status': 401,
-                    'result': "invalid user"}
+                    'result': "invalid user/password"}
         return json.dumps(response), '401 Not Authorized'
 
     response = {'status': 200,
@@ -396,7 +396,7 @@ def submit_job(environ):
     userid, token, timestamp = get_user_params(environ)
     if not validate_user(userid, token, timestamp):
         response = {'status': 401,
-                    'result': "invalid user"}
+                    'result': "invalid user/password"}
         return json.dumps(response), '401 Not Authorized'
     # setup user directories if not present
     user_dir = os.path.join(FREESURFER_BASE, userid)
@@ -467,7 +467,7 @@ def get_job_output(environ):
     userid, token, timestamp = get_user_params(environ)
     if not validate_user(userid, token, timestamp):
         response = {'status': 401,
-                    'result': "invalid user"}
+                    'result': "invalid user/password"}
         return json.dumps(response), '401 Not Authorized'
     output_dir = os.path.join(FREESURFER_BASE, userid, 'results')
     conn = get_db_client()
@@ -524,7 +524,7 @@ def get_job_log(environ):
     userid, token, timestamp = get_user_params(environ)
     if not validate_user(userid, token, timestamp):
         response = {'status': 401,
-                    'result': "invalid user"}
+                    'result': "invalid user/password"}
         return json.dumps(response), '401 Not Authorized'
     output_dir = os.path.join(FREESURFER_BASE, userid, 'results')
     conn = get_db_client()
