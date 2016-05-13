@@ -195,7 +195,7 @@ def get_user_salt(environ):
                         'result': 'User account disabled'}
             status = '401 Not Authorized'
         else:
-            response = {'status': 401,
+            response = {'status': 400,
                         'result': 'Userid not found'}
             status = '400 Bad Request'
     except Exception, e:
