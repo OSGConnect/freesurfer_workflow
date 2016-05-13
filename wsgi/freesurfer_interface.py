@@ -193,6 +193,7 @@ def get_user_salt(environ):
         elif row and row[0].startswith('xxx'):
             response = {'status': 401,
                         'result': 'User account disabled'}
+            status = '401 Not Authorized'
         else:
             response = {'status': 401,
                         'result': 'Userid not found'}

@@ -183,6 +183,7 @@ def list_workflows(username, password):
     try:
         query_params = {}
         timestamp, token = get_token(username, password)
+        sys.stdout.write("token: {0}\n".format(token))
         if token is None:
             return 1
         query_params['userid'] = username
@@ -278,7 +279,7 @@ def submit_workflow(username, password, input_directory, subject_name,
         if not agree:
             sys.stdout.write("We recommend defacing MRI data\n")
             agree = get_user_response("Are you sure you want to submit this "
-                                         "file [y/n]?")
+                                      "file [y/n]?")
             if not agree:
                 sys.stdout.write("Aborting submission on user request\n")
                 return 1
