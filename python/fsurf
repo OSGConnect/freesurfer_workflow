@@ -11,8 +11,52 @@ import urllib
 import urlparse
 import re
 
+import cPickle
+
 REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer"
 VERSION = '1.3.2'
+CREDENTIAL_FILE = os.path.expanduser('~/.fsurf/credentials')
+
+
+def get_user_credentials():
+    """
+    Try to get user credentials from a file
+
+    :return: username, password
+    """
+    if os.path.isfile(CREDENTIAL_FILE):
+        with open(CREDENTIAL_FILE, 'rb') as f:
+            try:
+                pickle = cPickle.load(f)
+                if type(pickle) == dict:
+                    username = pickle['username']
+                    password = pickle['password']
+                    return username, password
+                else:
+                    sys.stdout.write("Credential file is invalid\n")
+            except EOFError:
+                sys.stdout.write("Credential file is invalid\n")
+    return None, None
+
+
+def save_user_credentials(username, password):
+    """
+    Try to save user credentials to a file
+
+    :return: None
+    """
+    if get_user_response('Save credentials? '):
+        try:
+            cred_dict = {'username': username,
+                         'password': password}
+            cred_dir = os.path.dirname(CREDENTIAL_FILE)
+            if not os.path.exists(cred_dir):
+                os.mkdir(cred_dir)
+            with open(CREDENTIAL_FILE, 'wb') as f:
+                cPickle.dump(cred_dict, f, cPickle.HIGHEST_PROTOCOL)
+        except OSError:
+            sys.stdout.write("Can't save credentials to {0}\n".format(CREDENTIAL_FILE))
+    return
 
 
 def get_user_info(args):
@@ -22,14 +66,21 @@ def get_user_info(args):
     :param args: argparse object
     :return: username, password
     """
+    if not args.user and not args.password:
+        username, password = get_user_credentials()
+        if username and password:
+            return username, password
+
     if args.user:
         username = args.user
     else:
         username = raw_input("Enter username: ").strip()
+
     if args.password:
         password = args.password
     else:
         password = getpass.getpass("Enter password: ")
+    save_user_credentials(username, password)
     return username, password
 
 
@@ -406,6 +457,49 @@ def get_status(workflow_id, username, password):
     return 0
 
 
+def change_password(username, password):
+    """
+    Change the user's password
+
+    :param username: username to use when authenticating
+    :param password: password to user when authenticating
+    :return: 0 on success, 1 on error
+    """
+    query_params = {}
+    timestamp, token = get_token(username, password)
+    if token is None:
+        return 1
+    new_password = getpass.getpass("Enter new password: ")
+    tmp2 = getpass.getpass("Re-enter new password: ")
+    if new_password != tmp2:
+        sys.stdout.write("Passwords do not match, please try again.\n")
+    salt = hashlib.sha256(str(time.time())).hexdigest()
+    pw_hash = hashlib.sha256(salt + password).hexdigest()
+
+    query_params['userid'] = username
+    query_params['timestamp'] = timestamp
+    query_params['token'] = token
+    query_params['salt'] = salt
+    query_params['pw_hash'] = pw_hash
+    status, response = get_response(query_params,
+                                    'user/password',
+                                    'PUT')
+    response_obj = json.loads(response)
+    if status == 401:
+        sys.stdout.write("User not authorized to change password\n")
+        return 0
+    if status == 404:
+        sys.stdout.write("User not found\n")
+        return 0
+    elif status != 200:
+        sys.stdout.write("Error while changing password:\n")
+        sys.stdout.write("{0}\n".format(response_obj['result']))
+        return 1
+
+    sys.stdout.write("{0}\n".format(response_obj['job_status']))
+    return 0
+
+
 def main():
     """
     Main function that parses arguments and generates the pegasus
@@ -435,6 +529,9 @@ def main():
     parser.add_argument('--log', dest='action',
                         action='store_const', const='log',
                         help="Get log file for specified job")
+    parser.add_argument('--change-password', dest='action',
+                        action='store_const', const='change_password',
+                        help="Change the user password")
     # Arguments identifying workflow
     parser.add_argument('--id', dest='workflow_id',
                         action='store', help='Pegasus workflow id to use')
@@ -496,6 +593,9 @@ def main():
     elif args.action == 'status':
         username, password = get_user_info(args)
         status = get_status(args.workflow_id, username, password)
+    elif args.action == 'change_password':
+        username, password = get_user_info(args)
+        status = change_password(username, password)
     else:
         sys.stdout.write("Must specify an action, exiting...\n")
         parser.print_help()

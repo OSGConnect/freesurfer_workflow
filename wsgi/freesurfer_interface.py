@@ -225,14 +225,15 @@ def set_user_password(environ):
     query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
     try:
         cursor.execute(salt_query, (query_dict['salt'],
-                                    query_dict['password'],
+                                    query_dict['pw_hash'],
                                     userid))
         if cursor.rowcount == 1:
             response = {'status': 200,
                         'result': 'Password updated'}
         elif cursor.rowcount == 0:
-            response = {'status': 400,
+            response = {'status': 404,
                         'result': 'Userid not found'}
+            status = '404 User not found'
         else:
             response = {'status': 400,
                         'result': 'Error: ' + cursor.statusmessage}
