@@ -216,16 +216,28 @@ def set_user_password(environ):
     :return: tuple with userid, security_token
     """
     status = '200 OK'
-    userid, _, _ = get_user_params(environ)
+    parameters = {'userid': str,
+                  'salt': str,
+                  'pw_hash': str}
+    query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
+    if not validate_parameters(query_dict, parameters):
+        response = {'status': 400,
+                    'result': "invalid or missing parameter"}
+        return json.dumps(response), '400 Bad Request'
+
+    userid, token, timestamp = get_user_params(environ)
+    if not validate_user(userid, token, timestamp):
+        response = {'status': 401,
+                    'result': "invalid user/password"}
+        return json.dumps(response), '401 Not Authorized'
     conn = get_db_client()
     cursor = conn.cursor()
     salt_query = "UPDATE freesurfer_interface.users " \
                  "SET salt = %s, password = %s " \
                  "WHERE username = %s;"
-    query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
     try:
-        cursor.execute(salt_query, (query_dict['salt'],
-                                    query_dict['pw_hash'],
+        cursor.execute(salt_query, (query_dict['salt'][0],
+                                    query_dict['pw_hash'][0],
                                     userid))
         if cursor.rowcount == 1:
             response = {'status': 200,

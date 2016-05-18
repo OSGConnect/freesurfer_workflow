@@ -473,6 +473,7 @@ def change_password(username, password):
     tmp2 = getpass.getpass("Re-enter new password: ")
     if new_password != tmp2:
         sys.stdout.write("Passwords do not match, please try again.\n")
+        return 1
     salt = hashlib.sha256(str(time.time())).hexdigest()
     pw_hash = hashlib.sha256(salt + password).hexdigest()
 
@@ -496,7 +497,7 @@ def change_password(username, password):
         sys.stdout.write("{0}\n".format(response_obj['result']))
         return 1
 
-    sys.stdout.write("{0}\n".format(response_obj['job_status']))
+    sys.stdout.write("{0}\n".format(response_obj['result']))
     return 0
 
 
