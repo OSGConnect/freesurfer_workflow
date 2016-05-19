@@ -30,13 +30,11 @@ def validate_parameters(query_dict, parameters):
             return False
         if val == int:
             try:
-                int(query_dict[key])
+                int(query_dict[key][0])
             except ValueError:
                 return False
         elif val == bool:
-            try:
-                bool(query_dict[key])
-            except ValueError:
+            if query_dict[key][0].lower() not in ('true', 'false'):
                 return False
     return True
 
@@ -316,7 +314,7 @@ def get_current_jobs(environ):
     status = '200 OK'
     conn = get_db_client()
     cursor = conn.cursor()
-    if bool(query_dict['all'][0]):
+    if query_dict['all'][0].lower() == 'false':
         job_query = "SELECT id, subject, state, job_date, multicore " \
                     "FROM freesurfer_interface.jobs " \
                     "WHERE purged IS NOT TRUE AND " \
