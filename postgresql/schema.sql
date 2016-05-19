@@ -14,35 +14,44 @@ CREATE TYPE freesurfer_interface.job_state AS ENUM (
 
 CREATE TABLE freesurfer_interface.users (
     id              SERIAL PRIMARY KEY,
-    username        varchar(128) NOT NULL UNIQUE CHECK ( username <> ''),
-    first_name      varchar(128) NOT NULL CHECK ( first_name <> ''),
-    last_name       varchar(128) NOT NULL CHECK ( last_name <> ''),
-    email           varchar(128) NOT NULL CHECK ( email <> ''),
-    institution     varchar(128) NOT NULL CHECK ( institution <> ''),
-    phone           varchar(128) NOT NULL CHECK ( phone <> ''),
-    password        char(64) NOT NULL CHECK ( password <> ''),
-    salt            char(64) NOT NULL CHECK ( salt <> '')
+    username        VARCHAR(128) NOT NULL UNIQUE CHECK ( username <> ''),
+    first_name      VARCHAR(128) NOT NULL CHECK ( first_name <> ''),
+    last_name       VARCHAR(128) NOT NULL CHECK ( last_name <> ''),
+    email           VARCHAR(128) NOT NULL CHECK ( email <> ''),
+    institution     VARCHAR(128) NOT NULL CHECK ( institution <> ''),
+    phone           VARCHAR(128) NOT NULL CHECK ( phone <> ''),
+    password        CHAR(64) NOT NULL CHECK ( password <> ''),
+    salt            CHAR(64) NOT NULL CHECK ( salt <> '')
 );
 
 CREATE TABLE freesurfer_interface.jobs (
     id              SERIAL PRIMARY KEY,
-    name            varchar(128) NOT NULL,
-    username        varchar(128) NOT NULL REFERENCES freesurfer_interface.users(username),
-    subject         varchar(128) NOT NULL,
+    name            VARCHAR(128) NOT NULL,
+    username        VARCHAR(128) NOT NULL REFERENCES freesurfer_interface.users(username),
+    subject         VARCHAR(128) NOT NULL,
     multicore       BOOLEAN NOT NULL DEFAULT FALSE,
-    image_filename  varchar(128) NOT NULL,
-    pegasus_ts      varchar(128),
+    image_filename  VARCHAR(128) NOT NULL,
+    pegasus_ts      VARCHAR(128),
     state           freesurfer_interface.job_state NOT NULL,
     job_date        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    purged          boolean NOT NULL DEFAULT FALSE
+    options         VARCHAR(1024),
+    purged          BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE freesurfer_interface.input_files (
+    id              SERIAL PRIMARY KEY,
+    filename        VARCHAR(255) NOT NULL,
+    job_id          INTEGER NOT NULL REFERENCES freesurfer_interface.jobs(id),
+    purged          BOOLEAN NOT NULL DEFAULT FALSE,
+    subject_dir     BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE freesurfer_interface.verifications (
     id              SERIAL PRIMARY KEY,
-    kernel_version  varchar(128) NOT NULL,
-    successful      int DEFAULT 0,
-    attempts        int DEFAULT 0,
-    log_directory   varchar(256) DEFAUlT '',
+    kernel_version  VARCHAR(128) NOT NULL,
+    successful      INTEGER DEFAULT 0,
+    attempts        INTEGER DEFAULT 0,
+    log_directory   VARCHAR(256) DEFAUlT '',
 );
 
 COMMIT;
