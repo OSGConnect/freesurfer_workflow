@@ -175,7 +175,7 @@ def get_user_salt(environ):
     Get salt for a userid and return it
 
     :param environ: dictionary with environment variables (See PEP 333)
-    :return: tuple with userid, security_token
+    :return: a tuple with response_body, status
     """
     status = '200 OK'
     userid, _, _ = get_user_params(environ)
@@ -213,11 +213,12 @@ def set_user_password(environ):
     Set password for a userid
 
     :param environ: dictionary with environment variables (See PEP 333)
-    :return: tuple with userid, security_token
+    :return: a tuple with response_body, status
     """
     status = '200 OK'
     parameters = {'userid': str,
                   'salt': str,
+                  'token': str,
                   'pw_hash': str}
     query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
     if not validate_parameters(query_dict, parameters):
@@ -232,11 +233,11 @@ def set_user_password(environ):
         return json.dumps(response), '401 Not Authorized'
     conn = get_db_client()
     cursor = conn.cursor()
-    salt_query = "UPDATE freesurfer_interface.users " \
-                 "SET salt = %s, password = %s " \
-                 "WHERE username = %s;"
+    user_update = "UPDATE freesurfer_interface.users " \
+                  "SET salt = %s, password = %s " \
+                  "WHERE username = %s;"
     try:
-        cursor.execute(salt_query, (query_dict['salt'][0],
+        cursor.execute(user_update, (query_dict['salt'][0],
                                     query_dict['pw_hash'][0],
                                     userid))
         if cursor.rowcount == 1:

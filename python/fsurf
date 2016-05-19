@@ -242,7 +242,10 @@ def list_workflows(username, password, all=False):
         query_params['token'] = token
         query_params['all'] = all
         status, response = get_response(query_params, 'job', 'GET')
-        if status != 200:
+        if status == 401:
+            sys.stdout.write("Invalid username or password\n")
+            return 0
+        elif status != 200:
             sys.stdout.write("Error getting workflow information\n")
             return 1
         sys.stdout.write("Current workflows\n")
@@ -475,7 +478,7 @@ def change_password(username, password):
         sys.stdout.write("Passwords do not match, please try again.\n")
         return 1
     salt = hashlib.sha256(str(time.time())).hexdigest()
-    pw_hash = hashlib.sha256(salt + password).hexdigest()
+    pw_hash = hashlib.sha256(salt + new_password).hexdigest()
 
     query_params['userid'] = username
     query_params['timestamp'] = timestamp
@@ -487,9 +490,9 @@ def change_password(username, password):
                                     'PUT')
     response_obj = json.loads(response)
     if status == 401:
-        sys.stdout.write("User not authorized to change password\n")
+        sys.stdout.write("Invalid username or password\n")
         return 0
-    if status == 404:
+    elif status == 404:
         sys.stdout.write("User not found\n")
         return 0
     elif status != 200:
