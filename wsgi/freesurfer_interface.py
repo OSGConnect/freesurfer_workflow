@@ -121,8 +121,8 @@ def delete_job(environ):
             state = 'None'
         if state not in ['PROCESSING', 'UPLOADED', 'FAILED', 'COMPLETED']:
             response = {'status': 400,
-                        'result': 'Job has already been marked for deletion '
-                                  'or has been deleted'}
+                        'result': 'Workflow has already been marked for '
+                                  'deletion or has been deleted'}
             status = '400 Bad Request'
         else:
             job_update = "UPDATE freesurfer_interface.jobs  " \

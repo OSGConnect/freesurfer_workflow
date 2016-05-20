@@ -14,7 +14,7 @@ import re
 import cPickle
 
 REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer"
-VERSION = '1.3.2'
+VERSION = '1.3.5'
 CREDENTIAL_FILE = os.path.expanduser('~/.fsurf/credentials')
 
 
@@ -223,16 +223,15 @@ def get_token(userid, password):
     return str(timestamp), token
 
 
-def list_workflows(username, password, all=False):
+def list_workflows(args):
     """
     List the workflows currently in the system
 
-    :param username: username to use when authenticating
-    :param password: password to user when authenticating
-    :param all:      whether to return all workflows or just the last 7 days
-    :return: 0 on success, 1 on error
+    :param args: parsed command line args from argparse
+    :return: exits with 0 on success, 1 on error
     """
     try:
+        username, password = get_user_info(args)
         query_params = {}
         timestamp, token = get_token(username, password)
         if token is None:
@@ -240,14 +239,14 @@ def list_workflows(username, password, all=False):
         query_params['userid'] = username
         query_params['timestamp'] = timestamp
         query_params['token'] = token
-        query_params['all'] = all
+        query_params['all'] = args.all_workflows
         status, response = get_response(query_params, 'job', 'GET')
         if status == 401:
             sys.stdout.write("Invalid username or password\n")
-            return 0
+            sys.exit(0)
         elif status != 200:
             sys.stdout.write("Error getting workflow information\n")
-            return 1
+            sys.exit(1)
         sys.stdout.write("Current workflows\n")
         response_object = json.loads(response)
         sys.stdout.write("{0:10} {1:20} {2:27} ".format('Subject',
@@ -271,20 +270,19 @@ def list_workflows(username, password, all=False):
                                                               job_time))
             sys.stdout.write("{0:<10} {1:10}\n".format(cores,
                                                        status))
-        return 0
+        sys.exit(0)
     except IOError:
-        return 1
+        sys.exit(1)
 
 
-def remove_workflow(workflow_id, username, password):
+def remove_workflow(args):
     """
     Stop and remove a specified pegasus workflow
 
-    :param workflow_id: pegasus id for workflow
-    :param username: username to use when authenticating
-    :param password: password to user when authenticating
-    :return: 0 on success, 1 on error
+    :param args: parsed command line args from argparse
+    :return: exits with 0 on success, 1 on error
     """
+    username, password = get_user_info(args)
     query_params = {}
     timestamp, token = get_token(username, password)
     if token is None:
@@ -292,7 +290,7 @@ def remove_workflow(workflow_id, username, password):
     query_params['userid'] = username
     query_params['timestamp'] = timestamp
     query_params['token'] = token
-    query_params['jobid'] = workflow_id
+    query_params['jobid'] = args.workflow_id
     status, response = get_response(query_params, 'job', 'DELETE')
     resp_dict = json.loads(response)
     if status != 200:
@@ -303,32 +301,24 @@ def remove_workflow(workflow_id, username, password):
     return 0
 
 
-def submit_workflow(username, password, input_directory, subject_name,
-                    multicore=False, deidentified=False, defaced=False):
+def submit_workflow(args):
     """
     Submit a workflow to OSG for processing
 
-    :param username: username to use when authenticating
-    :param password: password to user when authenticating
-    :param input_directory:    path to file with MRI data in mgz format
-    :param subject_name:  name of subject in the file
-    :param multicore:     boolean indicating whether to use a multicore workflow or not
-    :param deidentified:  boolean indicating whether MRI image has been
-                          deidentified
-    :param defaced:       boolean indicating whether MRI image has been defaced
-    :return:              0 on success, 1 on error
+    :param args: parsed command line args from argparse
+    :return: exits with 0 on success, 1 on error
     """
-    if subject_name is None:
+    if args.subject is None:
         sys.stdout.write("Subject name is missing, exiting...\n")
-        return 1
-    if not deidentified:
+        sys.exit(1)
+    if not args.deidentified:
         agree = get_user_response("Has the MRI data been deidentified "
                                   "(This is required) [y/n]? ")
         if not agree:
             sys.stdout.write("MRI data must be deidentified, please "
                              "deidentify the data before submitting\n")
-            return 1
-    if not defaced:
+            sys.exit(1)
+    if not args.defaced:
         agree = get_user_response("Has the MRI data been defaced "
                                   "(This is recommended) [y/n]? ")
         if not agree:
@@ -337,146 +327,124 @@ def submit_workflow(username, password, input_directory, subject_name,
                                       "file [y/n]?")
             if not agree:
                 sys.stdout.write("Aborting submission on user request\n")
-                return 1
-    subject_file = os.path.join(input_directory,
-                                "{0}_defaced.mgz".format(subject_name))
+                sys.exit(1)
+    subject_file = os.path.join(args.input_directory,
+                                "{0}_defaced.mgz".format(args.subject))
     subject_file = os.path.abspath(subject_file)
     if not os.path.isfile(subject_file):
         sys.stderr.write("{0} is not present and is needed, exiting\n".format(subject_file))
-        return 1
+        sys.exit(1)
     with open(subject_file, 'rb') as f:
         body = f.read()
     query_params = {}
+    username, password = get_user_info(args)
     timestamp, token = get_token(username, password)
     if token is None:
-        return 1
+        sys.exit(1)
     query_params['userid'] = username
     query_params['timestamp'] = timestamp
     query_params['token'] = token
-    query_params['multicore'] = multicore
-    query_params['subject'] = subject_name
-    query_params['jobname'] = "{0}_{1}".format(subject_name, timestamp)
-    query_params['filename'] = "{0}_defaced.mgz".format(subject_name)
+    query_params['multicore'] = args.dualcore
+    query_params['subject'] = args.subject
+    query_params['jobname'] = "{0}_{1}".format(args.subject, timestamp)
+    query_params['filename'] = "{0}_defaced.mgz".format(args.subject)
     sys.stdout.write("Creating and submitting workflow\n")
     status, response = upload_item(query_params, 'job', body, 'POST')
     if status != 200:
         sys.stdout.write("Error while submitting workflow\n")
-        return 1
+        sys.exit(1)
     response_obj = json.loads(response)
     job_id = response_obj['job_id']
     sys.stdout.write("Workflow {0} submitted for processing\n".format(job_id))
-    return 0
+    sys.exit(0)
 
 
-def get_output(workflow_id, username, password):
+def get_output(args):
     """
-    Get MRI data for a completed workflow
+    Get output for a completed workflow
 
-    :param workflow_id: pegasus id for workflow
-    :param username: username to use when authenticating
-    :param password: password to user when authenticating
-    :return: 0 on success, 1 on error
+    :param args: parsed command line args from argparse
+    :return: exits with 0 on success, 1 on error
     """
+    username, password = get_user_info(args)
     query_params = {}
     timestamp, token = get_token(username, password)
     if token is None:
-        return 1
+        sys.exit(1)
     query_params['userid'] = username
     query_params['timestamp'] = timestamp
     query_params['token'] = token
-    query_params['jobid'] = workflow_id
-    sys.stdout.write("Downloading results, this may take a while\n")
-    status, response = download_output(query_params, 'job/output')
+    query_params['jobid'] = args.workflow_id
+    if args.log_only:
+        sys.stdout.write("Downloading logs, this may take a while\n")
+        status, response = download_output(query_params, 'job/log')
+    else:
+        sys.stdout.write("Downloading results, this may take a while\n")
+        status, response = download_output(query_params, 'job/output')
     response_obj = json.loads(response)
     if status != 200:
-        sys.stdout.write("Error while downloading results:\n")
+        if args.log_only:
+            sys.stdout.write("Error while downloading logs:\n")
+        else:
+            sys.stdout.write("Error while downloading results:\n")
         sys.stdout.write("{0}\n".format(response_obj['result']))
-        return 1
+        sys.exit(1)
     sys.stdout.write("Downloaded to {0}\n".format(response_obj['filename']))
-    sys.stdout.write("To extract the results: tar "
-                     "xvjf {0}\n".format(response_obj['filename']))
-    return 0
+    if not args.log_only:
+        sys.stdout.write("To extract the results: tar "
+                         "xvjf {0}\n".format(response_obj['filename']))
+    sys.exit(0)
 
 
-def get_log(workflow_id, username, password):
-    """
-    Get logs for a completed workflow
-
-    :param workflow_id: pegasus id for workflow
-    :param username: username to use when authenticating
-    :param password: password to user when authenticating
-    :return: 0 on success, 1 on error
-    """
-    query_params = {}
-    timestamp, token = get_token(username, password)
-    if token is None:
-        return 1
-    query_params['userid'] = username
-    query_params['timestamp'] = timestamp
-    query_params['token'] = token
-    query_params['jobid'] = workflow_id
-    sys.stdout.write("Downloading logs, this may take a while\n")
-    status, response = download_output(query_params, 'job/log')
-    response_obj = json.loads(response)
-    if status != 200:
-        sys.stdout.write("Error while downloading logs:\n")
-        sys.stdout.write("{0}\n".format(response_obj['result']))
-        return 1
-
-    sys.stdout.write("Downloaded to {0}\n".format(response_obj['filename']))
-    return 0
-
-
-def get_status(workflow_id, username, password):
+def get_status(args):
     """
     Get status for a workflow
 
-    :param workflow_id: pegasus id for workflow
-    :param username: username to use when authenticating
-    :param password: password to user when authenticating
-    :return: 0 on success, 1 on error
+    :param args: parsed command line args from argparse
+    :return: exits with 0 on success, 1 on error
     """
+    username, password = get_user_info(args)
     query_params = {}
     timestamp, token = get_token(username, password)
     if token is None:
-        return 1
+        sys.exit(1)
     query_params['userid'] = username
     query_params['timestamp'] = timestamp
     query_params['token'] = token
-    query_params['jobid'] = workflow_id
+    query_params['jobid'] = args.workflow_id
     status, response = get_response(query_params,
                                     'job/status',
                                     'GET')
     response_obj = json.loads(response)
     if status == 404:
-        sys.stdout.write("Workflow with id {0} not found\n".format(workflow_id))
-        return 0
+        sys.stdout.write("Workflow with id {0} not found\n".format(args.workflow_id))
+        sys.exit(0)
     elif status != 200:
         sys.stdout.write("Error while getting job status:\n")
         sys.stdout.write("{0}\n".format(response_obj['result']))
-        return 1
+        sys.exit(1)
 
     sys.stdout.write("{0}\n".format(response_obj['job_status']))
-    return 0
+    sys.exit(0)
 
 
-def change_password(username, password):
+def change_password(args):
     """
     Change the user's password
 
-    :param username: username to use when authenticating
-    :param password: password to user when authenticating
-    :return: 0 on success, 1 on error
+    :param args: parsed command line args from argparse
+    :return: exits with 0 on success, 1 on error
     """
     query_params = {}
+    username, password = get_user_info(args)
     timestamp, token = get_token(username, password)
     if token is None:
-        return 1
+        sys.exit(1)
     new_password = getpass.getpass("Enter new password: ")
-    tmp2 = getpass.getpass("Re-enter new password: ")
-    if new_password != tmp2:
+    password_confirm = getpass.getpass("Re-enter new password: ")
+    if new_password != password_confirm:
         sys.stdout.write("Passwords do not match, please try again.\n")
-        return 1
+        sys.exit(1)
     salt = hashlib.sha256(str(time.time())).hexdigest()
     pw_hash = hashlib.sha256(salt + new_password).hexdigest()
 
@@ -491,17 +459,17 @@ def change_password(username, password):
     response_obj = json.loads(response)
     if status == 401:
         sys.stdout.write("Invalid username or password\n")
-        return 0
+        sys.exit(1)
     elif status == 404:
         sys.stdout.write("User not found\n")
-        return 0
+        sys.exit(1)
     elif status != 200:
         sys.stdout.write("Error while changing password:\n")
         sys.stdout.write("{0}\n".format(response_obj['result']))
-        return 1
+        sys.exit(1)
 
     sys.stdout.write("{0}\n".format(response_obj['result']))
-    return 0
+    sys.exit(0)
 
 
 def main():
@@ -511,100 +479,108 @@ def main():
 
     :return: True if any errors occurred during DAX generaton
     """
-    parser = argparse.ArgumentParser(description="Process freesurfer information")
-    # version info
-    parser.add_argument('--version', action='version', version='%(prog)s ' + VERSION)
-    # Arguments for action
-    parser.add_argument('--submit', dest='action',
-                        action='store_const', const='submit',
-                        help='Submit job for processing')
-    parser.add_argument('--list', dest='action',
-                        action='store_const', const='list',
-                        help='List current jobs')
-    parser.add_argument('--status', dest='action',
-                        action='store_const', const='status',
-                        help='Get status for specified job')
-    parser.add_argument('--remove', dest='action',
-                        action='store_const', const='remove',
-                        help='Remove specified job')
-    parser.add_argument('--output', dest='action',
-                        action='store_const', const='output',
-                        help='Download results for specified job')
-    parser.add_argument('--log', dest='action',
-                        action='store_const', const='log',
-                        help="Get log file for specified job")
-    parser.add_argument('--change-password', dest='action',
-                        action='store_const', const='change_password',
-                        help="Change the user password")
-    # Arguments identifying workflow
-    parser.add_argument('--id', dest='workflow_id',
-                        action='store', help='Pegasus workflow id to use')
-    # Arguments for list  action
-    parser.add_argument('--all-workflows', dest='all_workflows',
-                        action='store_true', help='List all workflows')
-    # Arguments for submit action
-    parser.add_argument('--subject', dest='subject', default=None,
-                        help='Subject id to process ')
-    parser.add_argument('--dir', dest='input_directory',
-                        default='.', help='directory containing input file')
-    parser.add_argument('--dualcore', dest='multicore',
-                        action='store_false', default=True,
-                        help='Use 2 cores to process certain steps')
-    parser.add_argument('--deidentified', dest="deidentified",
-                        action="store_true", default=False,
-                        help=argparse.SUPPRESS)
-    parser.add_argument('--defaced', dest="defaced",
-                        action="store_true", default=False,
-                        help=argparse.SUPPRESS)
+    parser = argparse.ArgumentParser(description="Process and mange freesurfer workflows",
+                                     version='%(prog)s ' + VERSION)
     # General arguments
     parser.add_argument('--user', dest='user', default=None,
                         help='Username to use to login')
     parser.add_argument('--password', dest='password',
                         default=None, help='Password used to login')
 
+    subparsers = parser.add_subparsers(title='commands',
+                                       description='actions that can be taken')
+    # create subparser for list action
+    list_parser = subparsers.add_parser('list',
+                                        help='List workflows')
+    list_parser.add_argument('--all-workflows',
+                             dest='all_workflows',
+                             action='store_true',
+                             help='List all workflows')
+    list_parser.set_defaults(func=list_workflows)
+
+    # create subparser for status action
+    status_parser = subparsers.add_parser('status',
+                                          help='Get status for specified '
+                                               'workflow')
+    status_parser.add_argument('--id',
+                               dest='workflow_id',
+                               action='store',
+                               type=int,
+                               required=True,
+                               help='ID for workflow to show')
+    status_parser.set_defaults(func=get_status)
+
+    # create subparser for remove action
+    remove_parser = subparsers.add_parser('remove',
+                                          help='Remove specified workflow')
+    remove_parser.add_argument('--id',
+                               dest='workflow_id',
+                               type=int,
+                               required=True,
+                               action='store',
+                               help='ID for workflow to remove')
+    remove_parser.set_defaults(func=remove_workflow)
+
+    # create subparser for output action
+    output_parser = subparsers.add_parser('output',
+                                          help='Get output for specified '
+                                               'workflow')
+    output_parser.add_argument('--id',
+                               dest='workflow_id',
+                               action='store',
+                               type=int,
+                               required=True,
+                               help='ID for workflow to get output for')
+    output_parser.add_argument('--log-only',
+                               dest='log_only',
+                               action='store_true',
+                               help="Only retrieve log file")
+    output_parser.set_defaults(func=get_output)
+
+    # create subparser for change password action
+    change_parser = subparsers.add_parser('change-password',
+                                          help='Change user password')
+    change_parser.set_defaults(func=change_password)
+
+    # create subparser for submit action
+    submit_parser = subparsers.add_parser('submit',
+                                          help='Submit a workflow for '
+                                               'processing')
+    submit_parser.add_argument('--subject',
+                               dest='subject',
+                               default=None,
+                               help='Subject id to process ')
+    submit_parser.add_argument('--dir',
+                               dest='input_directory',
+                               default='.',
+                               help='directory containing input file')
+    submit_parser.add_argument('--dualcore',
+                               dest='dualcore',
+                               action='store_false',
+                               default=True,
+                               help='Use 2 cores to process all steps')
+    submit_parser.add_argument('--deidentified',
+                               dest="deidentified",
+                               action="store_true",
+                               help=argparse.SUPPRESS)
+    submit_parser.add_argument('--defaced',
+                               dest="defaced",
+                               action="store_true",
+                               help=argparse.SUPPRESS)
+    # submit_parser.add_argument('--input-file',
+    #                            dest='input_file',
+    #                            default='.',
+    #                            help='name of  input file(s), this can be used '
+    #                                 'multiple times')
+    # submit_parser.add_argument('--subject-dir',
+    #                            dest='subject_dir',
+    #                            default='.',
+    #                            help='name of zip file with subject directory '
+    #                                 'to use')
+    submit_parser.set_defaults(func=submit_workflow)
+
     args = parser.parse_args(sys.argv[1:])
-
-    if args.action in ('status', 'remove', 'output', 'log'):
-        if args.workflow_id is None:
-            msg = 'ERROR: Use --id to specify a workflow\n'.format(args.action)
-            sys.stdout.write(msg)
-            sys.exit(3)
-
-    if args.action == 'list':
-        username, password = get_user_info(args)
-        if args.all_workflows:
-            status = list_workflows(username, password, all=True)
-        else:
-            status = list_workflows(username, password)
-    elif args.action == 'remove':
-        username, password = get_user_info(args)
-        status = remove_workflow(args.workflow_id, username, password)
-    elif args.action == 'submit':
-        username, password = get_user_info(args)
-        status = submit_workflow(username,
-                                 password,
-                                 args.input_directory,
-                                 args.subject,
-                                 args.multicore,
-                                 args.deidentified,
-                                 args.defaced)
-    elif args.action == 'output':
-        username, password = get_user_info(args)
-        status = get_output(args.workflow_id, username, password)
-    elif args.action == 'log':
-        username, password = get_user_info(args)
-        status = get_log(args.workflow_id, username, password)
-    elif args.action == 'status':
-        username, password = get_user_info(args)
-        status = get_status(args.workflow_id, username, password)
-    elif args.action == 'change_password':
-        username, password = get_user_info(args)
-        status = change_password(username, password)
-    else:
-        sys.stdout.write("Must specify an action, exiting...\n")
-        parser.print_help()
-        status = 2
-    sys.exit(status)
+    args.func(args)
 
 if __name__ == '__main__':
     main()
