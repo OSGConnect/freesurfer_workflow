@@ -624,9 +624,8 @@ def main():
     :return: True if any errors occurred during DAX generaton
     """
     check_groups()
-    parser = argparse.ArgumentParser(description="Process freesurfer information")
-    # version info
-    parser.add_argument('--version', action='version', version='%(prog)s ' + VERSION)
+    parser = argparse.ArgumentParser(description="Process freesurfer information",
+                                     version='%(prog)s ' + VERSION)
     # Arguments for action
     parser.add_argument('--submit', dest='action',
                         action='store_const', const='submit',
