@@ -180,10 +180,11 @@ def modify_user(args):
         return 1
 
 
-def list_users():
+def list_users(args):
     """
     List current users in fsurf database and current status
 
+    :param args: needed for function signature but unused
     :return: exit code (0 on success, 1 on failure)
     """
     logger = fsurfer.log.get_logger()
@@ -221,39 +222,46 @@ def main():
     """
     fsurfer.log.initialize_logging()
     parser = argparse.ArgumentParser(description='Manage fsurf user accounts')
-    parser.add_argument('--action', dest='action', default='list',
-                        choices=['list', 'create', 'disable', 'modify'],
-                        help='Action to conduct on specified user account')
-    parser.add_argument('--username', dest='username', default=None,
-                        help='username')
-    parser.add_argument('--first-name', dest='first_name', default=None,
-                        help='firstname')
-    parser.add_argument('--last-name', dest='last_name', default=None,
-                        help='lastname')
-    parser.add_argument('--email', dest='email', default=None,
-                        help='email')
-    parser.add_argument('--phone', dest='phone', default=None,
-                        help='phone')
-    parser.add_argument('--institution', dest='institution', default=None,
-                        help='institution')
-    parser.add_argument('--dbparams', dest='db_param_file', default=PARAM_FILE_LOCATION,
-                        help='location of file with database information')
-    parser.add_argument('--debug', dest='debug', action='store_true',
-                        help='enable debug logging')
-    args = parser.parse_args(sys.argv[1:])
-    if args.debug:
-        fsurfer.log.set_debugging()
-    if args.action == 'list':
-        return list_users()
-    elif args.action == 'create':
-        return add_user(args)
-    elif args.action == 'modify':
-        return modify_user(args)
-    elif args.action == 'disable':
-        return disable_user(args)
-    else:
-        sys.stderr.write("Invalid action - {0}, exiting\n".format(args.action))
-        return 1
+    subparsers = parser.add_subparsers(title='commands',
+                                       description='actions that can be taken')
+
+    # create subparser for list action
+    list_parser = subparsers.add_parser('list',
+                                        help='List users')
+    list_parser.set_defaults(func=list_users)
+
+    # create subparser for status action
+    create_parser = subparsers.add_parser('create',
+                                          help='Create a new user account')
+    create_parser.add_argument('--username', dest='username', default=None,
+                               help='username')
+    create_parser.add_argument('--first-name', dest='first_name', default=None,
+                               help='firstname')
+    create_parser.add_argument('--last-name', dest='last_name', default=None,
+                               help='lastname')
+    create_parser.add_argument('--email', dest='email', default=None,
+                               help='email')
+    create_parser.add_argument('--phone', dest='phone', default=None,
+                               help='phone')
+    create_parser.add_argument('--institution', dest='institution', default=None,
+                               help='institution')
+    create_parser.set_defaults(func=add_user)
+
+    # create subparser for disable action
+    disable_parser = subparsers.add_parser('disable',
+                                      help='Disable specified user')
+    disable_parser.add_argument('--username', dest='username', default=None,
+                               help='Username to disable')
+    disable_parser.set_defaults(func=disable_user)
+
+    # create subparser for modify action
+    modify_parser = subparsers.add_parser('disable',
+                                           help='Disable specified user')
+    modify_parser.add_argument('--username', dest='username', default=None,
+                                help='Username to disable')
+    modify_parser.set_defaults(func=modify_user)
+
+
 
 if __name__ == '__main__':
     sys.exit(main())
