@@ -467,7 +467,7 @@ def change_password(args):
         sys.stdout.write("Error while changing password:\n")
         sys.stdout.write("{0}\n".format(response_obj['result']))
         sys.exit(1)
-
+    save_user_credentials(username, new_password)
     sys.stdout.write("{0}\n".format(response_obj['result']))
     sys.exit(0)
 
@@ -491,11 +491,17 @@ def main():
                                        description='actions that can be taken')
     # create subparser for list action
     list_parser = subparsers.add_parser('list',
-                                        help='List workflows')
+                                        help='List workflows submitted in the '
+                                             'last week')
     list_parser.add_argument('--all-workflows',
                              dest='all_workflows',
                              action='store_true',
-                             help='List all workflows')
+                             help='List all workflows (instead of just '
+                                  'those in the last week)')
+    list_parser.add_argument('--user', dest='user', default=None,
+                             help='Username to use to login')
+    list_parser.add_argument('--password', dest='password',
+                             default=None, help='Password used to login')
     list_parser.set_defaults(func=list_workflows)
 
     # create subparser for status action
@@ -508,6 +514,10 @@ def main():
                                type=int,
                                required=True,
                                help='ID for workflow to show')
+    status_parser.add_argument('--user', dest='user', default=None,
+                               help='Username to use to login')
+    status_parser.add_argument('--password', dest='password',
+                               default=None, help='Password used to login')
     status_parser.set_defaults(func=get_status)
 
     # create subparser for remove action
@@ -519,6 +529,10 @@ def main():
                                required=True,
                                action='store',
                                help='ID for workflow to remove')
+    remove_parser.add_argument('--user', dest='user', default=None,
+                               help='Username to use to login')
+    remove_parser.add_argument('--password', dest='password',
+                               default=None, help='Password used to login')
     remove_parser.set_defaults(func=remove_workflow)
 
     # create subparser for output action
@@ -535,11 +549,19 @@ def main():
                                dest='log_only',
                                action='store_true',
                                help="Only retrieve log file")
+    output_parser.add_argument('--user', dest='user', default=None,
+                               help='Username to use to login')
+    output_parser.add_argument('--password', dest='password',
+                               default=None, help='Password used to login')
     output_parser.set_defaults(func=get_output)
 
     # create subparser for change password action
     change_parser = subparsers.add_parser('change-password',
                                           help='Change user password')
+    change_parser.add_argument('--user', dest='user', default=None,
+                               help='Username to use to login')
+    change_parser.add_argument('--password', dest='password',
+                               default=None, help='Password used to login')
     change_parser.set_defaults(func=change_password)
 
     # create subparser for submit action
