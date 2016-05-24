@@ -1,9 +1,18 @@
 #!/usr/bin/env python
 import argparse
+import math
 import os
+import re
 import subprocess
 import sys
+import time
 from email.mime.text import MIMEText
+
+from datetime import tzinfo, timedelta, datetime
+from dateutil import parser
+
+from xml.dom.minidom import parse
+import xml.dom.minidom
 
 import psycopg2
 import shutil
@@ -19,9 +28,198 @@ This email is being sent to inform you that your freesurfer workflow {0} submitt
 has completed {2}.  You can download the output by running
 `fsurf --output {0} --user {3} --password <pass>`
 or download the Freesurfer log files by running `fsurf --log {0} --user {3} --password <pass>.`
-
+{4}
 Please contact support@osgconnect.net if you have any questions.
 '''
+
+
+# helper class for time delta calculations
+ZERO = timedelta(0)
+class UTC(tzinfo):
+  def utcoffset(self, dt):
+    return ZERO
+  def tzname(self, dt):
+    return "UTC"
+  def dst(self, dt):
+    return ZERO
+
+
+def format_seconds(duration, max_comp = 2):
+    """
+    Utility for converting time to a readable format
+
+    :param duration: time in seconds and miliseconds
+    :param max_comp: number of components of the returned time
+    :return: time in n component format
+    """
+    comp = 0
+    if duration is None:
+        return '-'
+    milliseconds = math.modf(duration)[0]
+    sec = int(duration)
+    formatted_duration = ''
+    years = sec / 31536000
+    sec -= 31536000 * years
+    days = sec / 86400
+    sec -= 86400 * days
+    hrs = sec / 3600
+    sec -= 3600 * hrs
+    mins = sec / 60
+    sec -= 60 * mins
+
+    # years
+    if comp < max_comp and (years >= 1 or comp > 0):
+        comp += 1
+        if days == 1:
+            formatted_duration += str(years) + ' year, '
+        else:
+            formatted_duration += str(years) + ' years, '
+
+    # days
+    if comp < max_comp and (days >= 1 or comp > 0):
+        comp += 1
+        if days == 1:
+            formatted_duration += str(days) + ' day, '
+        else:
+            formatted_duration += str(days) + ' days, '
+
+    # hours
+    if comp < max_comp and (hrs >= 1 or comp > 0):
+        comp += 1
+        if hrs == 1:
+            formatted_duration += str(hrs) + ' hr, '
+        else:
+            formatted_duration += str(hrs) + ' hrs, '
+
+    # mins
+    if comp < max_comp and (mins >= 1 or comp > 0):
+        comp += 1
+        if mins == 1:
+            formatted_duration += str(mins) + ' min, '
+        else:
+            formatted_duration += str(mins) + ' mins, '
+
+    # seconds
+    if comp < max_comp and (sec >= 1 or comp > 0):
+        comp += 1
+        if sec == 1:
+            formatted_duration += str(sec) + " sec, "
+        else:
+            formatted_duration += str(sec) + " secs, "
+
+    if formatted_duration[-2:] == ", ":
+        formatted_duration = formatted_duration[:-2]
+
+    return formatted_duration
+
+
+
+def parse_ks_record(fname):
+    """
+    Parses a Pegasus kickstart XML records
+
+    :param fname: the filename of the job output file
+    :return: a data dicttionary with a small set of keys/values from the record
+    """
+
+    data = {}
+    data['duration'] = 0.0
+    data['utime'] = 0.0
+
+    DOMTree = xml.dom.minidom.parse(fname)
+    collection = DOMTree.documentElement
+
+    for mainjob in collection.getElementsByTagName('mainjob'):
+        data['start'] = mainjob.getAttribute('start')
+        data['duration'] += float(mainjob.getAttribute("duration"))
+        for usage in mainjob.getElementsByTagName('usage'):
+            data['utime'] += float(usage.getAttribute('utime'))
+
+    # convert start date to unix ts
+    # example: 2016-05-18T12:55:23.507-05:00
+    dt = parser.parse(data['start'])
+    # epoch calculations in Python 2.6 makes me sad
+    td = dt - datetime(1970, 1, 1, tzinfo=UTC())
+    data['start_ts'] = (td.microseconds + (td.seconds + td.days * 86400) * 10**6) / 10**6 
+
+    data['end_ts'] = data['start_ts'] + int(data['duration'])
+
+    return data
+
+
+def parse_submit_file(fname):
+    """
+    Retrieves the HTCondor classad from a submit file
+
+    :param fname: full path to the submit file
+    :return: a dictionary of the classad
+    """
+
+    ad = {}
+    ad['request_cpus'] = 1
+
+    f = open(fname)
+    for line in f:
+        line = line.strip()
+        if line == '' or line[0] == '#':
+            continue
+        if line.find('=') == -1:
+            continue
+        key, value = line.split('=', 1)
+        key = key.strip().lower()
+        value = value.strip()
+        ad[key] = value
+    f.close()
+    return ad
+
+
+def calculate_usage(submit_dir):
+    """
+    walks a Pegasus workflow directory and calculates the walltime and cpu usage
+
+    :param submit_dir: the Pegasus workflow submit dir
+    :return: a string summarizing the usage
+    """
+
+    start_ts = float('inf')
+    end_ts = -float('inf')
+    total_core_time = 0.0
+    
+    for f in os.listdir(submit_dir):
+    
+        # only consider
+        if not re.search('\.out\.[0-9]+$', f):
+            continue
+    
+        full_name = os.path.join(submit_dir, f)
+    
+        # parse the kickstart record, if available
+        try:
+            ks = parse_ks_record(full_name)
+            submit_file = re.sub('\.out\.[0-9]+$', '.sub', full_name)
+            submit = parse_submit_file(submit_file)
+        except xml.parsers.expat.ExpatError as e:
+            # not a valid xml file
+            continue
+    
+        cores = int(submit['request_cpus'])
+        total_core_time += cores * ks['duration']
+    
+        if ks['start_ts'] < start_ts:
+            start_ts = ks['start_ts']
+        if ks['end_ts'] > end_ts:
+            end_ts = ks['end_ts']
+  
+    # only return data if it is valid 
+    msg = ""
+    if end_ts - start_ts > 0 and total_core_time > 0:
+        msg = '\nThe workflow was active for ' + format_seconds(end_ts - start_ts) \
+            + ' and used a total CPU time of ' \
+            + format_seconds(total_core_time) + ' on the Open Science Grid.' \
+            + ' Please note that the CPU time' \
+            + ' might be larger than the active time due to multi-threading.\n'
+
+    return msg
 
 
 def get_db_parameters():
@@ -89,6 +287,23 @@ def process_results(jobid, success=True):
         logger.error("Got pgsql error: {0}".format(e))
         return
 
+    # pegasus_ts is stored as datetime in the database, convert it to what we have on the fs
+    pegasus_ts = pegasus_ts.strftime('%Y%m%dT%H%M%S%z')
+
+    stats = ""
+    try:
+        submit_dir = os.path.join(FREESURFER_BASE,
+                                  username,
+                                  'workflows',
+                                  'fsurf',
+                                  'pegasus',
+                                  'freesurfer',
+                                  pegasus_ts)
+        stats = calculate_usage(submit_dir)
+    except Exception, e:
+        logger.error("Can't calculate stats, got exception: {0}".format(e))
+        pass
+
     if success:
         status = 'succesfully'
     else:
@@ -96,7 +311,8 @@ def process_results(jobid, success=True):
     msg = MIMEText(EMAIL_TEMPLATE.format(jobid,
                                          submit_date,
                                          status,
-                                         username))
+                                         username,
+                                         stats))
 
     msg['Subject'] = 'Freesurfer workflow {0} completed'.format(jobid)
     sender = 'fsurf@login.osgconnect.net'
