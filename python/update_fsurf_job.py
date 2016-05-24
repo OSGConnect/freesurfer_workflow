@@ -63,8 +63,10 @@ def process_results(jobid, success=True):
     logger = fsurfer.log.get_logger()
 
     info_query = "SELECT jobs.subject, " \
-                 "       jobs.job_date, " \
-                 "       date_trunc('second', jobs.pegasus_ts), " \
+                 "       date_trunc('second'," \
+                 "                  jobs.job_date), " \
+                 "       date_trunc('second', " \
+                 "                  jobs.pegasus_ts::timestamp with time zone), " \
                  "       users.email, " \
                  "       users.username " \
                  "FROM freesurfer_interface.jobs AS jobs, " \
