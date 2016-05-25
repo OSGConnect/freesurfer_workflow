@@ -26,7 +26,7 @@ def get_input(parameter, echo=True):
             user_input = raw_input("Please enter {0}: ".format(parameter))
         else:
             user_input = getpass.getpass("Please enter {0}: ".format(parameter))
-    return user_input
+    return user_input.strip()
 
 
 def add_user(args):
@@ -43,6 +43,7 @@ def add_user(args):
         username = get_input("Username")
     else:
         username = args.username
+    username = username.strip()
     password = get_input("password", echo=False)
     if args.first_name is None:
         first_name = get_input("First name")
@@ -116,7 +117,7 @@ def disable_user(args):
         username = get_input("username")
     else:
         username = args.username
-
+    username = username.strip()
     user_disable = "UPDATE freesurfer_interface.users " \
                    "SET password = 'xxx', salt = 'xxx' " \
                    "WHERE username = %s"
@@ -152,6 +153,7 @@ def modify_user(args):
         username = get_input("username")
     else:
         username = args.username
+    username = username.strip()
     password = get_input("password", echo=False)
     salt = hashlib.sha256(str(time.time())).hexdigest()
     password = hashlib.sha256(salt + password).hexdigest()

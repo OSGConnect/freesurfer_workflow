@@ -81,7 +81,7 @@ def get_user_info(args):
     else:
         password = getpass.getpass("Enter password: ")
     save_user_credentials(username, password)
-    return username, password
+    return username.strip(), password
 
 
 def get_user_response(prompt):
