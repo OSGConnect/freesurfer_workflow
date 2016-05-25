@@ -81,7 +81,7 @@ def get_db_client():
     return psycopg2.connect(database=db, user=user, host=host, password=password)
 
 
-def submit_workflow(subject_file, user, jobid, multicore=False, workflow='diamond'):
+def submit_workflow(subject_file, user, jobid, multicore=True, workflow='diamond'):
     """
     Submit a workflow to OSG for processing
 
