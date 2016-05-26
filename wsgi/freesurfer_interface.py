@@ -401,6 +401,72 @@ def get_job_status(environ):
         conn.close()
     return json.dumps(response), status
 
+def get_input(environ):
+    """
+    Submit an input for a job to be processed
+
+    :param environ: dictionary with environment variables (See PEP 333)
+    :return: a tuple with response_body, status
+    """
+    response = {"status": 200,
+                "result": "success"}
+    status = '200 OK'
+    query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
+    parameters = {'userid': str,
+                  'token': str,
+                  'filename': str,
+                  'subjectdir': bool,
+                  'jobid': int}
+    if not validate_parameters(query_dict, parameters):
+        response = {'status': 400,
+                    'result': "invalid or missing parameter"}
+        return json.dumps(response), '400 Bad Request'
+    userid, token, timestamp = get_user_params(environ)
+    if not validate_user(userid, token, timestamp):
+        response = {'status': 401,
+                    'result': "invalid user/password"}
+        return json.dumps(response), '401 Not Authorized'
+    # setup user directories if not present
+    user_dir = os.path.join(FREESURFER_BASE, userid)
+    if not os.path.exists(user_dir):
+        os.mkdir(user_dir, 0o770)
+    output_dir = os.path.join(user_dir, 'input')
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir, 0o770)
+    if not os.path.exists(os.path.join(user_dir, 'results')):
+        os.mkdir(os.path.join(user_dir, 'results'), 0o770)
+    if not os.path.exists(os.path.join(user_dir, 'output')):
+        os.mkdir(os.path.join(user_dir, 'output'), 0o770)
+    if not os.path.exists(os.path.join(user_dir, 'workflows')):
+        os.mkdir(os.path.join(user_dir, 'workflows'), 0o770)
+    # upload
+    temp_dir = tempfile.mkdtemp(dir=output_dir)
+    input_file = os.path.join(temp_dir,
+                              query_dict['filename'][0])
+    save_file(environ, input_file)
+    conn = get_db_client()
+    cursor = conn.cursor()
+    input_insert = "INSERT INTO freesurfer_interface.input_files(filename," \
+                   "                                             path," \
+                   "                                             job_id," \
+                   "                                             subject_dir)" \
+                   "VALUES(%s, %s, %s, %s)"
+    try:
+        cursor.execute(input_insert,
+                       [query_dict['filename'][0],
+                        input_file,
+                        query_dict['jobid'][0],
+                        query_dict['subjectdir'][0]])
+        conn.commit()
+    except Exception, e:
+        response = {'status': 500,
+                    'result': str(e)}
+        status = '500 Server Error'
+        conn.rollback()
+    finally:
+        conn.close()
+    return json.dumps(response), status
+
 
 def submit_job(environ):
     """
@@ -415,7 +481,6 @@ def submit_job(environ):
     query_dict = urlparse.parse_qs(environ['QUERY_STRING'])
     parameters = {'userid': str,
                   'token': str,
-                  'filename': str,
                   'multicore': bool,
                   'subject': str,
                   'jobname': str}

@@ -297,14 +297,13 @@ def list_workflows(args):
     """
     try:
         username, password = get_user_info(args)
-        query_params = {}
         timestamp, token = get_token(username, password)
         if token is None:
             return 1
-        query_params['userid'] = username
-        query_params['timestamp'] = timestamp
-        query_params['token'] = token
-        query_params['all'] = args.all_workflows
+        query_params = {'userid': username,
+                        'timestamp': timestamp,
+                        'token': token,
+                        'all': args.all_workflows}
         status, response = get_response(query_params, 'job', 'GET')
         if status == 401:
             error_message("Invalid username or password")
@@ -348,14 +347,13 @@ def remove_workflow(args):
     :return: exits with 0 on success, 1 on error
     """
     username, password = get_user_info(args)
-    query_params = {}
     timestamp, token = get_token(username, password)
     if token is None:
         return 1
-    query_params['userid'] = username
-    query_params['timestamp'] = timestamp
-    query_params['token'] = token
-    query_params['jobid'] = args.workflow_id
+    query_params = {'userid': username,
+                    'timestamp': timestamp,
+                    'token': token,
+                    'jobid': args.workflow_id}
     status, response = get_response(query_params, 'job', 'DELETE')
     resp_dict = json.loads(response)
     if status != 200:
@@ -407,15 +405,25 @@ def submit_workflow(args):
     timestamp, token = get_token(username, password)
     if token is None:
         sys.exit(1)
-    query_params['userid'] = username
-    query_params['timestamp'] = timestamp
-    query_params['token'] = token
-    query_params['multicore'] = args.dualcore
-    query_params['subject'] = args.subject
-    query_params['jobname'] = "{0}_{1}".format(args.subject, timestamp)
-    query_params['filename'] = "{0}_defaced.mgz".format(args.subject)
+    # verify inputs are present before trying to create workflow
+    for input_file in args.input_file:
+
+        input_path = os.path.join(args.input_directory, input_file)
+        input_path = os.path.abspath(input_path)
+        if not os.path.isfile(input_path):
+            sys.stderr.write("{0} is not present and is needed, "
+                             "exiting\n".format(input_path))
+            sys.exit(1)
+
+    query_params = {'userid': username,
+                    'timestamp': timestamp,
+                    'token': token,
+                    'multicore': not bool(args.dualcore),
+                    'subject': args.subject,
+                    'numinputs': len(args.input_file),
+                    'jobname': "{0}_{1}".format(args.subject, timestamp)}
     sys.stdout.write("Creating and submitting workflow\n")
-    status, response = upload_item(query_params, 'job', body, 'POST')
+    status, response = get_response(query_params, 'job', 'POST')
     if status != 200:
         response_obj = json.loads(response)
         error_message("Error while uploading workflow:\n" +
@@ -423,7 +431,44 @@ def submit_workflow(args):
         sys.exit(1)
     response_obj = json.loads(response)
     job_id = response_obj['job_id']
-    sys.stdout.write("Workflow {0} submitted for processing\n".format(job_id))
+    sys.stdout.write("Workflow {0} created\n".format(job_id))
+    total_inputs = len(args.input_file)
+    file_num = 0
+    for input_file in args.input_file:
+        attempts = 1
+        sys.stdout.write("Uploading {0} (file {1}/{2})\n".format(input_file,
+                                                                 file_num,
+                                                                 total_inputs))
+        while attempts < 6:
+            query_params = {'userid': username,
+                            'timestamp': timestamp,
+                            'token': token,
+                            'job_id': job_id,
+                            'filename': input_file}
+            input_path = os.path.join(args.input_directory,
+                                      input_file)
+            input_path = os.path.abspath(input_path)
+            if not os.path.isfile(input_path):
+                sys.stderr.write("{0} is not present and is needed, "
+                                 "exiting\n".format(input_path))
+                sys.exit(1)
+            with open(input_path, 'rb') as f:
+                body = f.read()
+
+            status, response = upload_item(query_params, 'job/input', body, 'POST')
+            if status == 200:
+                sys.stdout.write("Uploaded {0} successfully\n".format(input_file))
+                break
+            response_obj = json.loads(response)
+            sys.stdout.write("Error while uploading {0}\n".format(input_file))
+            sys.stdout.write("Error: {0}\n".format(response_obj['result']))
+            sys.stdout.write("Retrying upload, attempt {0}/5\n".format(attempts))
+            attempts += 1
+        if attempts == 6:
+            sys.stdout.write("Could not upload {0}\n".format(input_file))
+            sys.stdout.write("Exiting...\n")
+
+        file_num += 1
     sys.exit(0)
 
 
@@ -435,14 +480,13 @@ def get_output(args):
     :return: exits with 0 on success, 1 on error
     """
     username, password = get_user_info(args)
-    query_params = {}
     timestamp, token = get_token(username, password)
     if token is None:
         sys.exit(1)
-    query_params['userid'] = username
-    query_params['timestamp'] = timestamp
-    query_params['token'] = token
-    query_params['jobid'] = args.workflow_id
+    query_params = {'userid': username,
+                    'timestamp': timestamp,
+                    'token': token,
+                    'jobid': args.workflow_id}
     if args.log_only:
         sys.stdout.write("Downloading logs, this may take a while\n")
         status, response = download_output(query_params, 'job/log')
@@ -473,14 +517,13 @@ def get_status(args):
     :return: exits with 0 on success, 1 on error
     """
     username, password = get_user_info(args)
-    query_params = {}
     timestamp, token = get_token(username, password)
     if token is None:
         sys.exit(1)
-    query_params['userid'] = username
-    query_params['timestamp'] = timestamp
-    query_params['token'] = token
-    query_params['jobid'] = args.workflow_id
+    query_params = {'userid': username,
+                    'timestamp': timestamp,
+                    'token': token,
+                    'jobid': args.workflow_id}
     status, response = get_response(query_params,
                                     'job/status',
                                     'GET')
@@ -504,7 +547,6 @@ def change_password(args):
     :param args: parsed command line args from argparse
     :return: exits with 0 on success, 1 on error
     """
-    query_params = {}
     username, password = get_user_info(args)
     timestamp, token = get_token(username, password)
     if token is None:
@@ -517,11 +559,11 @@ def change_password(args):
     salt = hashlib.sha256(str(time.time())).hexdigest()
     pw_hash = hashlib.sha256(salt + new_password).hexdigest()
 
-    query_params['userid'] = username
-    query_params['timestamp'] = timestamp
-    query_params['token'] = token
-    query_params['salt'] = salt
-    query_params['pw_hash'] = pw_hash
+    query_params = {'userid': username,
+                    'timestamp': timestamp,
+                    'token': token,
+                    'salt': salt,
+                    'pw_hash': pw_hash}
     status, response = get_response(query_params,
                                     'user/password',
                                     'GET')
@@ -650,18 +692,17 @@ def main():
                                dest="defaced",
                                action="store_true",
                                help=argparse.SUPPRESS)
-    submit_parser.add_argument('--user', dest='user', default=None,
-                               help='Username to use to login')
-    # submit_parser.add_argument('--input-file',
-    #                            dest='input_file',
-    #                            default='.',
-    #                            help='name of  input file(s), this can be used '
-    #                                 'multiple times')
-    # submit_parser.add_argument('--subject-dir',
-    #                            dest='subject_dir',
-    #                            default='.',
-    #                            help='name of zip file with subject directory '
-    #                                 'to use')
+    submit_parser.add_argument('--input-file',
+                               dest='input_file',
+                               action='append',
+                               default='.',
+                               help='name of input file(s), this can be used '
+                                    'multiple times')
+    submit_parser.add_argument('--subject-dir',
+                               dest='subject_dir',
+                               default='.',
+                               help='name of zip file with subject directory '
+                                    'to use')
     submit_parser.set_defaults(func=submit_workflow)
 
     args = parser.parse_args(sys.argv[1:])

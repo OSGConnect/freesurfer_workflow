@@ -1,18 +1,9 @@
 #!/usr/bin/env python
 import argparse
-import math
 import os
-import re
 import subprocess
 import sys
-import time
 from email.mime.text import MIMEText
-
-from datetime import tzinfo, timedelta, datetime
-from dateutil import parser
-
-from xml.dom.minidom import parse
-import xml.dom.minidom
 
 import psycopg2
 import shutil

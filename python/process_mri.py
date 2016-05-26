@@ -205,11 +205,13 @@ def process_images():
 
     conn = get_db_client()
     cursor = conn.cursor()
-    job_query = "SELECT id, username, image_filename FROM freesurfer_interface.jobs " \
+    job_query = "SELECT id, username, num_inputs  FROM freesurfer_interface.jobs " \
                 "WHERE state = 'UPLOADED'"
     job_update = "UPDATE freesurfer_interface.jobs " \
                  "SET state = 'PROCESSING' " \
                  "WHERE id = %s;"
+    job_query = "SELECT id, username  FROM freesurfer_interface.jobs " \
+                "WHERE state = 'UPLOADED'"
     try:
         cursor.execute(job_query)
         for row in cursor.fetchall():

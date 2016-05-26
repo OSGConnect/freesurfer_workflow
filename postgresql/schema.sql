@@ -35,12 +35,14 @@ CREATE TABLE freesurfer_interface.jobs (
     state           freesurfer_interface.job_state NOT NULL,
     job_date        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     options         VARCHAR(1024),
-    purged          BOOLEAN NOT NULL DEFAULT FALSE
+    purged          BOOLEAN NOT NULL DEFAULT FALSE,
+    num_inputs      INTEGER NOT NULL DEFAULT 0,
 );
 
 CREATE TABLE freesurfer_interface.input_files (
     id              SERIAL PRIMARY KEY,
     filename        VARCHAR(255) NOT NULL,
+    path            VARCHAR(1024) NOT NULL,
     job_id          INTEGER NOT NULL REFERENCES freesurfer_interface.jobs(id),
     purged          BOOLEAN NOT NULL DEFAULT FALSE,
     subject_dir     BOOLEAN NOT NULL DEFAULT FALSE
