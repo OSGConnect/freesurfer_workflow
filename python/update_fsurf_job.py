@@ -26,8 +26,8 @@ FREESURFER_BASE = '/stash2/user/fsurf/'
 EMAIL_TEMPLATE = '''
 This email is being sent to inform you that your freesurfer workflow {0} submitted on {1}
 has completed {2}.  You can download the output by running
-`fsurf --output {0} --user {3} --password <pass>`
-or download the Freesurfer log files by running `fsurf --log {0} --user {3} --password <pass>.`
+`fsurf output --id {0} `
+or download the Freesurfer log files by running `fsurf output --id {0} --log-only .`
 {4}
 Please contact support@osgconnect.net if you have any questions.
 '''
@@ -35,13 +35,17 @@ Please contact support@osgconnect.net if you have any questions.
 
 # helper class for time delta calculations
 ZERO = timedelta(0)
+
+
 class UTC(tzinfo):
-  def utcoffset(self, dt):
-    return ZERO
-  def tzname(self, dt):
-    return "UTC"
-  def dst(self, dt):
-    return ZERO
+    def utcoffset(self, dt):
+        return ZERO
+
+    def tzname(self, dt):
+        return "UTC"
+
+    def dst(self, dt):
+        return ZERO
 
 
 def format_seconds(duration, max_comp = 2):
@@ -111,7 +115,6 @@ def format_seconds(duration, max_comp = 2):
         formatted_duration = formatted_duration[:-2]
 
     return formatted_duration
-
 
 
 def parse_ks_record(fname):
@@ -384,7 +387,9 @@ def main():
 
     :return: True if any errors occurred during DAX generaton
     """
-    parser = argparse.ArgumentParser(description="Process freesurfer information")
+    parser = argparse.ArgumentParser(description="Update fsurf job info and "
+                                                 "email user about job "
+                                                 "completion")
     # version info
     parser.add_argument('--version', action='version', version='%(prog)s ' + VERSION)
     # Arguments for workflow outcome
