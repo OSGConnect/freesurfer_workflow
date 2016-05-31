@@ -14,7 +14,7 @@ import re
 import cPickle
 
 REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer"
-VERSION = '1.3.5'
+VERSION = '1.3.6'
 CREDENTIAL_FILE = os.path.expanduser('~/.fsurf/credentials')
 
 
@@ -455,7 +455,7 @@ def change_password(args):
     query_params['pw_hash'] = pw_hash
     status, response = get_response(query_params,
                                     'user/password',
-                                    'PUT')
+                                    'GET')
     response_obj = json.loads(response)
     if status == 401:
         sys.stdout.write("Invalid username or password\n")
