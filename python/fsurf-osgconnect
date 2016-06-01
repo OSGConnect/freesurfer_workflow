@@ -626,7 +626,7 @@ def main():
     check_groups()
     parser = argparse.ArgumentParser(description="Process freesurfer information")
     # Arguments for action
-    parser.add_argument('--version', action='verison',
+    parser.add_argument('--version', action='version',
                         version='%(prog)s ' + VERSION)
     parser.add_argument('--submit', dest='action',
                         action='store_const', const='submit',

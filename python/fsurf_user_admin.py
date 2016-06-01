@@ -227,7 +227,7 @@ def main():
     parser = argparse.ArgumentParser(description='Manage fsurf user accounts')
     subparsers = parser.add_subparsers(title='commands',
                                        description='actions that can be taken')
-    parser.add_argument('--version', action='verison',
+    parser.add_argument('--version', action='version',
                         version='%(prog)s ' + VERSION)
     # create subparser for list action
     list_parser = subparsers.add_parser('list',

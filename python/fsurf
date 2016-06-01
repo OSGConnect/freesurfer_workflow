@@ -482,7 +482,7 @@ def main():
     parser = argparse.ArgumentParser(description="Process and manage "
                                                  "freesurfer workflows")
     # General arguments
-    parser.add_argument('--version', action='verison',
+    parser.add_argument('--version', action='version',
                         version='%(prog)s ' + VERSION)
     parser.add_argument('--user', dest='user', default=None,
                         help='Username to use to login')
