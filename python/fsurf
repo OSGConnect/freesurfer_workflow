@@ -479,9 +479,11 @@ def main():
 
     :return: True if any errors occurred during DAX generaton
     """
-    parser = argparse.ArgumentParser(description="Process and mange freesurfer workflows",
-                                     version='%(prog)s ' + VERSION)
+    parser = argparse.ArgumentParser(description="Process and manage "
+                                                 "freesurfer workflows")
     # General arguments
+    parser.add_argument('--version', action='verison',
+                        version='%(prog)s ' + VERSION)
     parser.add_argument('--user', dest='user', default=None,
                         help='Username to use to login')
     parser.add_argument('--password', dest='password',

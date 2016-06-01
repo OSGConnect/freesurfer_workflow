@@ -9,6 +9,7 @@ import time
 import fsurfer
 import fsurfer.log
 
+VERSION = fsurfer.__version__
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
 
 
@@ -226,7 +227,8 @@ def main():
     parser = argparse.ArgumentParser(description='Manage fsurf user accounts')
     subparsers = parser.add_subparsers(title='commands',
                                        description='actions that can be taken')
-
+    parser.add_argument('--version', action='verison',
+                        version='%(prog)s ' + VERSION)
     # create subparser for list action
     list_parser = subparsers.add_parser('list',
                                         help='List users')
