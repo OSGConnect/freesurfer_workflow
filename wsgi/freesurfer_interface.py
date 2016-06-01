@@ -314,7 +314,7 @@ def get_current_jobs(environ):
     status = '200 OK'
     conn = get_db_client()
     cursor = conn.cursor()
-    if query_dict['all'][0].lower() == 'false':
+    if query_dict['all'][0].lower() == 'true':
         job_query = "SELECT id, subject, state, job_date, multicore " \
                     "FROM freesurfer_interface.jobs " \
                     "WHERE purged IS NOT TRUE AND " \
