@@ -12,6 +12,11 @@ CREATE TYPE freesurfer_interface.job_state AS ENUM (
     'ERROR'
 );
 
+CREATE TYPE freesurfer_interface.freesufer_version AS ENUM (
+    '5.3',
+    '6.0'
+);
+
 CREATE TABLE freesurfer_interface.users (
     id              SERIAL PRIMARY KEY,
     username        VARCHAR(128) NOT NULL UNIQUE CHECK ( username <> ''),
@@ -37,6 +42,7 @@ CREATE TABLE freesurfer_interface.jobs (
     options         VARCHAR(1024),
     purged          BOOLEAN NOT NULL DEFAULT FALSE,
     num_inputs      INTEGER NOT NULL DEFAULT 0,
+    version         freesurfer_interface.job_state NOT NULL DEFAULT '5.3'
 );
 
 CREATE TABLE freesurfer_interface.input_files (
