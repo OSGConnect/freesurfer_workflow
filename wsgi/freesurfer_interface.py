@@ -315,13 +315,21 @@ def get_current_jobs(environ):
     conn = get_db_client()
     cursor = conn.cursor()
     if query_dict['all'][0].lower() == 'true':
-        job_query = "SELECT id, subject, state, job_date, multicore " \
+        job_query = "SELECT id, " \
+                    "       subject, " \
+                    "       state, " \
+                    "       date_trunc('seconds', job_date), " \
+                    "       multicore " \
                     "FROM freesurfer_interface.jobs " \
                     "WHERE purged IS NOT TRUE AND " \
                     "      username = %s " \
                     "ORDER BY job_date DESC;"
     else:
-        job_query = "SELECT id, subject, state, job_date, multicore " \
+        job_query = "SELECT id, " \
+                    "       subject, " \
+                    "       state, " \
+                    "       date_trunc('seconds', job_date), " \
+                    "       multicore " \
                     "FROM freesurfer_interface.jobs " \
                     "WHERE purged IS NOT TRUE AND " \
                     "      age(job_date) < '7 days' AND username = %s " \
