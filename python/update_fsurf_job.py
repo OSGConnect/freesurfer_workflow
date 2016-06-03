@@ -24,9 +24,9 @@ PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
 FREESURFER_BASE = '/stash2/user/fsurf/'
 
 EMAIL_TEMPLATE = '''
-This email is being sent to inform you that your freesurfer workflow {0}
+This email is being sent to inform you that your FreeSurfer workflow {0}
 submitted on {1} has completed {2}.  You can download the output by running
-`fsurf output --id {0} ` or download the Freesurfer log files by running
+`fsurf output --id {0} ` or download the FreeSurfer log files by running
 `fsurf output --id {0} --log-only .`
 
 {4}
@@ -319,7 +319,7 @@ def process_results(jobid, success=True):
                                          username,
                                          stats))
 
-    msg['Subject'] = 'Freesurfer workflow {0} completed'.format(jobid)
+    msg['Subject'] = 'FreeSurfer workflow {0} completed'.format(jobid)
     sender = 'fsurf@login.osgconnect.net'
     msg['From'] = sender
     msg['To'] = user_email
