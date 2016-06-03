@@ -35,6 +35,7 @@ def set_debugging():
 
     :return: None
     """
+    logging.basicConfig(format='%(asctime)s %(processName)s: %(message)s')
     logger = logging.getLogger('fsurf')
     log_file = os.path.abspath(os.path.expanduser('~/logs/fsurf_debug.log'))
     handle = logging.handlers.RotatingFileHandler(log_file,
