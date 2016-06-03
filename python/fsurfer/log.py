@@ -9,6 +9,7 @@ import os
 
 
 LOG_FILENAME = '~/logs/fsurf.log'
+LOG_FORMAT = '%(asctime)s %(processName)s: %(message)s'
 MAX_BYTES = 1024*1024*50  # 50 MB
 NUM_BACKUPS = 10  # 10 files
 
@@ -19,14 +20,14 @@ def initialize_logging():
 
     :return: None
     """
-    logger = logging.getLogger('fsurf')
+    logger = logging.getLogger(__name__)
     log_file = os.path.abspath(os.path.expanduser(LOG_FILENAME))
     handle = logging.handlers.RotatingFileHandler(log_file,
                                                   mode='a',
                                                   maxBytes=MAX_BYTES,
                                                   backupCount=NUM_BACKUPS)
     handle.setLevel(logging.WARN)
-    formatter = logging.Formatter('%(asctime)s %(processName)s: %(message)s')
+    formatter = logging.Formatter(LOG_FORMAT)
     handle.setFormatter(formatter)
     logger.addHandler(handle)
 
@@ -37,14 +38,14 @@ def set_debugging():
 
     :return: None
     """
-    logger = logging.getLogger('fsurf')
+    logger = logging.getLogger(__name__)
     log_file = os.path.abspath(os.path.expanduser('~/logs/fsurf_debug.log'))
     handle = logging.handlers.RotatingFileHandler(log_file,
                                                   mode='a',
                                                   maxBytes=MAX_BYTES,
                                                   backupCount=NUM_BACKUPS)
     handle.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s %(processName)s: %(message)s')
+    formatter = logging.Formatter(LOG_FORMAT)
     handle.setFormatter(formatter)
     logger.addHandler(handle)
 
@@ -55,4 +56,4 @@ def get_logger():
 
     :return: logger object
     """
-    return logging.getLogger('fsurf')
+    return logging.getLogger(__name__)
