@@ -259,10 +259,10 @@ def main():
     disable_parser.set_defaults(func=disable_user)
 
     # create subparser for modify action
-    modify_parser = subparsers.add_parser('disable',
-                                           help='Disable specified user')
+    modify_parser = subparsers.add_parser('modify',
+                                          help='Change password for specified user')
     modify_parser.add_argument('--username', dest='username', default=None,
-                                help='Username to disable')
+                               help='Username to modify')
     modify_parser.set_defaults(func=modify_user)
 
     args = parser.parse_args(sys.argv[1:])
