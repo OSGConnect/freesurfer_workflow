@@ -337,8 +337,10 @@ def get_current_jobs(environ):
     try:
         cursor.execute(job_query, [userid])
         for row in cursor.fetchall():
-            response['jobs'].append((row[0], row[1], row[2],
-                                     row[3].isoformat(),
+            response['jobs'].append((row[0],
+                                     row[1],
+                                     row[2],
+                                     row[3].strftime("%Y-%m-%d %H:%M:%S"),
                                      row[4]))
     except Exception, e:
         response = {'status': 500,
