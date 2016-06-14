@@ -16,7 +16,35 @@ import cPickle
 REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer"
 VERSION = '1.3.11'
 CREDENTIAL_FILE = os.path.expanduser('~/.fsurf/credentials')
-
+usage_text = """
+|------------------------------------------------------------------------------
+| Command       | Function        | Required Switches      | Optional Switches
+|---------------|-----------------|------------------------|-------------------
+| submit        | Upload and      | --subject [subject]    | --help
+|               | process scan    |                        | --user [user name]
+|               |                 |                        | --dir [directory]
+|               |                 |                        | --dualcore
+|               |                 |                        | --defaced
+|               |                 |                        | --deidentified
+|---------------|-----------------|------------------------|-------------------
+| list          | List workflows  |                        | --help
+|               |                 |                        | --user [user name]
+|               |                 |                        | --all-workflows
+|---------------|-----------------|------------------------|-------------------
+| status        | Get workflow    | --id [workflow id]     | --help
+|               | status          |                        | --user [user name]
+|---------------|-----------------|------------------------|-------------------
+| output        | Get output from | --id [workflow id]     | --help
+|               | completed       |                        | --user [user name]
+|               | workflow        |                        | --log-only
+|---------------|-----------------|------------------------|-------------------
+| remove        | Remove workflow | --id [workflow id]     | --help
+|               |                 |                        | --user [user name]
+|---------------|-----------------|------------------------|-------------------
+|change-password| Change account  |                        | --help
+|               | password        |                        | --user [user name]
+|------------------------------------------------------------------------------
+"""
 
 def error_message(message):
     """
@@ -95,17 +123,20 @@ def get_user_info(args):
     return username.strip(), password
 
 
-def get_user_response(prompt):
+def get_user_response(prompt, default=None):
     """
     Give a prompt to the user and return a True/False based on user input
 
     :param prompt: Text to present to user
+    :param default: Text to use if user enters a blank response
     :return: True if user said yes, False otherwise
     """
     response = ""
     while response not in ['y', 'n', 'yes', 'no']:
         response = raw_input(prompt)
         response = response.strip().lower()
+        if response == "":
+            response = default
 
     if response in ['y', 'yes']:
         return True
@@ -324,18 +355,18 @@ def submit_workflow(args):
         sys.exit(1)
     if not args.deidentified:
         agree = get_user_response("Has the MRI data been deidentified "
-                                  "(This is required) [y/n]? ")
+                                  "(This is required) (y/n)? ")
         if not agree:
             sys.stdout.write("MRI data must be deidentified, please "
                              "deidentify the data before submitting\n")
             sys.exit(1)
     if not args.defaced:
         agree = get_user_response("Has the MRI data been defaced "
-                                  "(This is recommended) [y/n]? ")
+                                  "(This is recommended) (y/n)? ")
         if not agree:
             sys.stdout.write("We recommend defacing MRI data\n")
             agree = get_user_response("Are you sure you want to submit this "
-                                      "file [y/n]?")
+                                      "file (y/n)?")
             if not agree:
                 sys.stdout.write("Aborting submission on user request\n")
                 sys.exit(1)
@@ -495,7 +526,9 @@ def main():
     :return: True if any errors occurred during DAX generaton
     """
     parser = argparse.ArgumentParser(description="Process and manage "
-                                                 "freesurfer workflows")
+                                                 "freesurfer workflows",
+                                     usage="%(prog)s {list|status|remove|output|change-password|submit}"
+                                           " [options]\n" + usage_text)
     # General arguments
     parser.add_argument('--version', action='version',
                         version='%(prog)s ' + VERSION)
