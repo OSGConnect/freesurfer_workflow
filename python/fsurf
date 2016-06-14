@@ -163,11 +163,11 @@ def get_response(query_parameters, noun, method, endpoint=REST_ENDPOINT):
         conn.request(method, "{0}?{1}".format(parsed.path, parsed.query))
         resp = conn.getresponse()
         return resp.status, resp.read()
-    except IOError, e:  # mainly dns errors
+    except IOError as e:  # mainly dns errors
         response = {'status': 500,
                     'result': str(e)}
         return 500, json.dumps(response)
-    except httplib.HTTPException, e:
+    except httplib.HTTPException as e:
         response = {'status': 400,
                     'result': str(e)}
         return 400, json.dumps(response)
@@ -210,7 +210,7 @@ def download_output(query_parameters, noun, endpoint=REST_ENDPOINT):
         return resp.status, json.dumps({'status': 200,
                                         'result': "output downloaded",
                                         'filename': filename})
-    except httplib.HTTPException, e:
+    except httplib.HTTPException as e:
         response = {'status': 400,
                     'result': str(e)}
         return 400, json.dumps(response)
@@ -236,7 +236,7 @@ def upload_item(query_parameters, noun, body, method, endpoint=REST_ENDPOINT):
         conn.request(method, "{0}?{1}".format(parsed.path, parsed.query), body)
         resp = conn.getresponse()
         return resp.status, resp.read()
-    except httplib.HTTPException, e:
+    except httplib.HTTPException as e:
         response = {'status': 400,
                     'result': str(e)}
         return 400, json.dumps(response)

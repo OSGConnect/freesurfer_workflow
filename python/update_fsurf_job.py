@@ -288,8 +288,8 @@ def process_results(jobid, success=True):
             username = row[4]
         else:
             return
-    except psycopg2.Error, e:
-        logger.error("Got pgsql error: {0}".format(e))
+    except psycopg2.Error as e:
+        logger.exception("Got pgsql error: {0}".format(e))
         return
 
     # pegasus_ts is stored as datetime in the database, convert it to what we have on the fs
@@ -305,8 +305,8 @@ def process_results(jobid, success=True):
                                   'freesurfer',
                                   pegasus_ts)
         stats = calculate_usage(submit_dir)
-    except Exception, e:
-        logger.error("Can't calculate stats, got exception: {0}".format(e))
+    except Exception as e:
+        logger.exception("Can't calculate stats, got exception: {0}".format(e))
         pass
 
     if success:
@@ -327,8 +327,8 @@ def process_results(jobid, success=True):
         sendmail = subprocess.Popen(['/usr/sbin/sendmail', '-t'], stdin=subprocess.PIPE)
         sendmail.communicate(msg.as_string())
         logger.info("Emailing {0} about workflow {1}".format(user_email, jobid))
-    except subprocess.CalledProcessError, e:
-        logger.error("Can't email user, got exception: {0}".format(e))
+    except subprocess.CalledProcessError as e:
+        logger.exception("Can't email user, got exception: {0}".format(e))
         pass
 
     # copy output to the results directory
@@ -377,8 +377,8 @@ def process_results(jobid, success=True):
         cursor.execute(job_update, [jobid])
         conn.commit()
         conn.close()
-    except psycopg2.Error, e:
-        logger.error("Got pgsql error: {0}".format(e))
+    except psycopg2.Error as e:
+        logger.exception("Got pgsql error: {0}".format(e))
         return
 
 

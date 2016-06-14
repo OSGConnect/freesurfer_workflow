@@ -48,7 +48,7 @@ def pegasus_submit(dax, workflow_directory):
                                           dax,
                                           '--submit'],
                                          stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError, err:
+    except subprocess.CalledProcessError as err:
         return err.returncode, err.output
 
     return 0, output
@@ -160,8 +160,8 @@ def submit_workflow(subject_file, user, jobid, multicore=True, workflow='diamond
                         cursor.execute(job_update, [workflow_id, jobid])
                         conn.commit()
                         logger.info("Updated DB")
-                    except psycopg2.Error, e:
-                        logger.info("Got pgsql error: {0}".format(e))
+                    except psycopg2.Error as e:
+                        logger.exception("Got pgsql error: {0}".format(e))
                         pass
 
                 break
@@ -199,8 +199,8 @@ def process_images():
                 cursor.execute(job_update, [row[0]])
                 conn.commit()
                 logger.info("Set workflow {0} status to PROCESSING".format(row[0]))
-    except psycopg2.Error, e:
-        logger.error("Got pgsql error: {0}".format(e))
+    except psycopg2.Error as e:
+        logger.exception("Got pgsql error: {0}".format(e))
         pass
 
 

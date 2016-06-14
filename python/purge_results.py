@@ -29,6 +29,7 @@ def purge_workflow_files(result_dir, log_filename, input_file, output_filename):
     :param output_filename: path to mgz output file for workflow
     :return: True if successfully removed, False otherwise
     """
+    logger = fsurfer.log.get_logger()
     if not os.path.exists(result_dir):
         return True
     try:
@@ -44,7 +45,7 @@ def purge_workflow_files(result_dir, log_filename, input_file, output_filename):
             os.rmdir(input_dir)
         return True
     except OSError, e:
-        log.error("Exception: {0}".format(str(e)))
+        logger.error("Exception: {0}".format(str(e)))
         return False
 
 
@@ -84,6 +85,8 @@ def process_results():
             logger.info("Processing workflow {0} for user {1}".format(row[0],
                                                                       row[1]))
             username = row[1]
+            # pegasus_ts is stored as datetime in the database, convert it to what we have on the fs
+            pegasus_ts = pegasus_ts.strftime('%Y%m%dT%H%M%S%z')
             result_dir = os.path.join(FREESURFER_BASE,
                                       username,
                                       'workflows',
@@ -91,7 +94,7 @@ def process_results():
                                       'fsurf',
                                       'pegasus',
                                       'freesurfer',
-                                      row[4])
+                                      pegasus_ts)
             input_file = os.path.join(FREESURFER_BASE, username, 'input', row[2])
             log_filename = os.path.join(FREESURFER_BASE,
                                         username,
@@ -122,7 +125,7 @@ def process_results():
             logger.info("Setting workflow {0} to DELETED".format(row[0]))
             cursor.execute(job_update, [row[0]])
             conn.commit()
-    except psycopg2.Error, e:
+    except psycopg2.Error as e:
         logger.error("Error: {0}".format(e))
         return 1
     finally:

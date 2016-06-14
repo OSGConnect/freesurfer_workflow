@@ -33,8 +33,8 @@ def remove_inputs(input_file):
         os.rmdir(input_dir)
         logger.info("Removed directory {0}".format(input_dir))
         return True
-    except OSError, e:
-        logger.error("Exception: {0}".format(str(e)))
+    except OSError as e:
+        logger.exception("Exception: {0}".format(str(e)))
         return False
 
 
@@ -93,8 +93,8 @@ def process_inputs():
                 return 1
             conn.commit()
         conn.close()
-    except psycopg2.Error, e:
-        logger.error("Got pgsql error: {0}".format(e))
+    except psycopg2.Error as e:
+        logger.exception("Got pgsql error: {0}".format(e))
         return 1
     return 0
 

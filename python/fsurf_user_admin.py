@@ -98,9 +98,9 @@ def add_user(args):
         conn.commit()
         conn.close()
         return 0
-    except Exception, e:
+    except Exception as e:
         sys.stderr.write("Got exception: {0}".format(e))
-        logger.error("Got exception: {0}".format(e))
+        logger.exception("Got exception: {0}".format(e))
         return 1
 
 
@@ -134,9 +134,9 @@ def disable_user(args):
         logger.info("Disabled user {0}".format(username))
         conn.close()
         return 0
-    except Exception, e:
+    except Exception as e:
         sys.stderr.write("Got exception: {0}\n".format(e))
-        logger.error("Got exception: {0}".format(e))
+        logger.exception("Got exception: {0}".format(e))
         return 1
 
 
@@ -177,9 +177,9 @@ def modify_user(args):
         logger.info("Password updated")
         conn.close()
         return 0
-    except Exception, e:
+    except Exception as e:
         sys.stderr.write("Got exception: {0}\n".format(e))
-        logger.error("Got exception: {0}".format(e))
+        logger.exception("Got exception: {0}".format(e))
         return 1
 
 
@@ -210,9 +210,9 @@ def list_users(args):
         logger.info("Password updated")
         conn.close()
         return 0
-    except Exception, e:
+    except Exception as e:
         sys.stderr.write("Got exception: {0}\n".format(e))
-        logger.error("Got exception: {0}".format(e))
+        logger.exception("Got exception: {0}".format(e))
         return 1
 
 
