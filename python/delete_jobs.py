@@ -21,32 +21,24 @@ FREESURFER_BASE = '/stash2/user/fsurf/'
 VERSION = fsurfer.__version__
 
 
-def purge_workflow_files(result_dir, log_filename, input_file, output_filename):
+def purge_workflow_file(path):
     """
     Remove the results in specified directory
 
-    :param result_dir: path to directory with workflow outputs
-    :param log_filename: path to log file for workflow
-    :param input_file: path to input for workflow
-    :param output_filename: path to mgz output file for workflow
+    :param path: path to directory or file to delete
     :return: True if successfully removed, False otherwise
     """
-    if not os.path.exists(result_dir):
+    logger = fsurfer.log.get_logger()
+    if not os.path.exists(path):
         return True
     try:
-
-        shutil.rmtree(result_dir)
-        if os.path.isfile(log_filename):
-            os.unlink(log_filename)
-        if os.path.isfile(output_filename):
-            os.unlink(output_filename)
-        if os.path.exists(input_file):
-            os.unlink(input_file)
-            input_dir = os.path.dirname(input_file)
-            os.rmdir(input_dir)
+        if os.path.isfile(path):
+            os.unlink(path)
+        elif os.path.isdir(path):
+            os.rmdir(path)
         return True
     except OSError as e:
-        log.exception("Exception: {0}".format(str(e)))
+        logger.exception("Exception: {0}".format(str(e)))
         return False
 
 
@@ -87,6 +79,14 @@ def delete_job():
             username = row[1]
             # pegasus_ts is stored as datetime in the database, convert it to what we have on the fs
             pegasus_ts = row[4].strftime('%Y%m%dT%H%M%S%z')
+            workflow_dir = os.path.join(FREESURFER_BASE,
+                                      username,
+                                      'workflows',
+                                      'output',
+                                      'fsurf',
+                                      'pegasus',
+                                      'freesurfer',
+                                      pegasus_ts)
             result_dir = os.path.join(FREESURFER_BASE,
                                       username,
                                       'workflows',
@@ -101,7 +101,7 @@ def delete_job():
             else:
                 try:
                     output = subprocess.check_output(['/usr/bin/pegasus-remove',
-                                                      result_dir],
+                                                      workflow_dir],
                                                      stderr=subprocess.STDOUT)
                     exit_code = 0
                 except subprocess.CalledProcessError as err:
@@ -131,38 +131,44 @@ def delete_job():
                             if count > 30:
                                 logger.error("Can't remove job, exiting...\n")
                                 break
-                logger.info("Jobs removed, removing workflow directory\n")
+            logger.info("Jobs removed, removing workflow directory\n")
+            try:
+                shutil.rmtree(workflow_dir)
+            except shutil.Error:
+                logger.exception("Can't remove directory at "
+                                 "{0}, exiting...\n".format(workflow_dir))
 
             input_file = os.path.join(FREESURFER_BASE, username, 'input', row[2])
-            log_filename = os.path.join(FREESURFER_BASE,
-                                        username,
-                                        'results',
-                                        'recon_all-{0}.log'.format(row[0]))
-            output_filename = os.path.join(FREESURFER_BASE,
-                                           username,
-                                           'results',
-                                           "{0}_{1}_output.tar.bz2".format(row[0],
-                                                                           row[5]))
-            if args.dry_run:
-                sys.stdout.write("Would delete {0}\n".format(result_dir))
-                sys.stdout.write("Would delete {0}\n".format(input_file))
-                sys.stdout.write("Would delete {0}\n".format(log_filename))
-                sys.stdout.write("Would delete {0}\n".format(output_filename))
-                continue
-            logger.info("Removing {0}, {1}, {2}, {3}".format(result_dir,
-                                                             input_file,
-                                                             log_filename,
-                                                             output_filename))
-            if not purge_workflow_files(result_dir,
-                                        log_filename,
-                                        input_file,
-                                        output_filename):
-                logger.error("Can't remove {0} for job {1}".format(input_file,
-                                                                   row[0]))
-                continue
+            deletion_list = []
+            # remove files in result dir
+            for entry in os.listdir(result_dir):
+                deletion_list.append(os.path.join(result_dir, entry))
+            deletion_list.append(result_dir)
+            # delete output and log copied over after workflow completion
+            # if present
+            deletion_list.append(os.path.join(FREESURFER_BASE,
+                                              username,
+                                              'results',
+                                              'recon_all-{0}.log'.format(row[0])))
+            deletion_list.append(os.path.join(FREESURFER_BASE,
+                                              username,
+                                              'results',
+                                              "{0}_{1}_output.tar.bz2".format(row[0],
+                                                                              row[5])))
+            for entry in deletion_list:
+                if args.dry_run:
+                    sys.stdout.write("Would delete {0}\n".format(entry))
+                else:
+                    logger.info("Removing {0}".format(entry))
+                    if not purge_workflow_file(entry):
+                        logger.error("Can't remove {0} for job {1}".format(entry,
+                                                                           row[0]))
             logger.info("Setting workflow {0} to DELETED".format(row[0]))
             cursor.execute(job_update, [row[0]])
-            conn.commit()
+            if args.dry_run:
+                conn.rollback()
+            else:
+                conn.commit()
     except psycopg2.Error as e:
         logger.exception("Error: {0}".format(e))
         return 1
