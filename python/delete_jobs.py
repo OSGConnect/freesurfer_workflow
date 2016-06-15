@@ -78,15 +78,15 @@ def delete_job():
                                                                     row[1]))
             username = row[1]
             # pegasus_ts is stored as datetime in the database, convert it to what we have on the fs
-            pegasus_ts = row[4].strftime('%Y%m%dT%H%M%S%z')
+            pegasus_ts = row[4]
             workflow_dir = os.path.join(FREESURFER_BASE,
-                                      username,
-                                      'workflows',
-                                      'output',
-                                      'fsurf',
-                                      'pegasus',
-                                      'freesurfer',
-                                      pegasus_ts)
+                                        username,
+                                        'workflows',
+                                        'output',
+                                        'fsurf',
+                                        'pegasus',
+                                        'freesurfer',
+                                        pegasus_ts)
             result_dir = os.path.join(FREESURFER_BASE,
                                       username,
                                       'workflows',
