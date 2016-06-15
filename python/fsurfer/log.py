@@ -40,6 +40,7 @@ def set_debugging():
     :return: None
     """
     logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
     log_file = os.path.abspath(os.path.expanduser(DEBUG_LOG_FILENAME))
     handle = logging.handlers.RotatingFileHandler(log_file,
                                                   mode='a',
