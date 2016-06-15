@@ -9,7 +9,8 @@ import os
 
 
 LOG_FILENAME = '~/logs/fsurf.log'
-LOG_FORMAT = '%(asctime)s %(processName)s: %(message)s'
+DEBUG_LOG_FILENAME = '~/logs/fsurf_debug.log'
+LOG_FORMAT = '%(asctime)s %(name)s: %(message)s'
 MAX_BYTES = 1024*1024*50  # 50 MB
 NUM_BACKUPS = 10  # 10 files
 
@@ -39,7 +40,7 @@ def set_debugging():
     :return: None
     """
     logger = logging.getLogger(__name__)
-    log_file = os.path.abspath(os.path.expanduser('~/logs/fsurf_debug.log'))
+    log_file = os.path.abspath(os.path.expanduser(DEBUG_LOG_FILENAME))
     handle = logging.handlers.RotatingFileHandler(log_file,
                                                   mode='a',
                                                   maxBytes=MAX_BYTES,
