@@ -10,7 +10,7 @@ import os
 
 LOG_FILENAME = '~/logs/fsurf.log'
 DEBUG_LOG_FILENAME = '~/logs/fsurf_debug.log'
-LOG_FORMAT = '%(asctime)s %(name)s: %(message)s'
+LOG_FORMAT = '%(asctime)s %(name)-12s: %(levelname)-8s: %(message)s'
 MAX_BYTES = 1024*1024*50  # 50 MB
 NUM_BACKUPS = 10  # 10 files
 
