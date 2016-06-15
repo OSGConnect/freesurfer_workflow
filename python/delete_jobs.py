@@ -142,9 +142,11 @@ def delete_job():
             # add input file
             deletion_list.append(os.path.join(FREESURFER_BASE, username, 'input', row[2]))
             # remove files in result dir
-            for entry in os.listdir(result_dir):
-                deletion_list.append(os.path.join(result_dir, entry))
-            deletion_list.append(result_dir)
+            if os.path.isdir(result_dir):
+                for entry in os.listdir(result_dir):
+                    deletion_list.append(os.path.join(result_dir, entry))
+            if os.path.exists(result_dir):
+                deletion_list.append(result_dir)
             # delete output and log copied over after workflow completion
             # if present
             deletion_list.append(os.path.join(FREESURFER_BASE,
