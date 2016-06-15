@@ -5,19 +5,16 @@
 import argparse
 import os
 import re
+import shutil
 import subprocess
 import sys
-
 import time
 
-import log
-
 import psycopg2
-import shutil
 
 import fsurfer
-import fsurfer.log
 import fsurfer.helpers
+import fsurfer.log
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
 FREESURFER_BASE = '/stash2/user/fsurf/'
