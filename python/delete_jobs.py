@@ -85,6 +85,17 @@ def delete_job():
             username = row[1]
             # pegasus_ts is stored as datetime in the database, convert it to what we have on the fs
             pegasus_ts = row[4]
+
+            if pegasus_ts is None:
+                # not submitted yet
+                logger.info("Workflow {0} not submitted, updating")
+                cursor.execute(job_update, [row[0]])
+                if args.dry_run:
+                    conn.rollback()
+                else:
+                    conn.commit()
+                continue
+
             workflow_dir = os.path.join(FREESURFER_BASE,
                                         username,
                                         'workflows',
