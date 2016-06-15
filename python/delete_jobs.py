@@ -82,7 +82,6 @@ def delete_job():
             workflow_dir = os.path.join(FREESURFER_BASE,
                                         username,
                                         'workflows',
-                                        'output',
                                         'fsurf',
                                         'pegasus',
                                         'freesurfer',
@@ -133,13 +132,15 @@ def delete_job():
                                 break
             logger.info("Jobs removed, removing workflow directory\n")
             try:
-                shutil.rmtree(workflow_dir)
+                if not args.dry_run:
+                    shutil.rmtree(workflow_dir)
             except shutil.Error:
                 logger.exception("Can't remove directory at "
                                  "{0}, exiting...\n".format(workflow_dir))
 
-            input_file = os.path.join(FREESURFER_BASE, username, 'input', row[2])
             deletion_list = []
+            # add input file
+            deletion_list.append(os.path.join(FREESURFER_BASE, username, 'input', row[2]))
             # remove files in result dir
             for entry in os.listdir(result_dir):
                 deletion_list.append(os.path.join(result_dir, entry))
