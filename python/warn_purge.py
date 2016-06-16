@@ -5,7 +5,6 @@
 import argparse
 import subprocess
 import sys
-import log
 from email.mime.text import MIMEText
 
 import psycopg2
