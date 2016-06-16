@@ -43,7 +43,7 @@ def email_user(workflow_id, email):
         logger.info("Emailed {0} about purge for workflow {1}".format(email,
                                                                       workflow_id))
     except subprocess.CalledProcessError as e:
-        logger.exception("Error emailing {0}".format(email))
+        logger.exception("Error emailing {0}: {1}".format(email, e))
 
 
 def process_results():
