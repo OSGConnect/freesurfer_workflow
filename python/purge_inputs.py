@@ -51,7 +51,8 @@ def process_inputs():
     conn = fsurfer.helpers.get_db_client()
     cursor = conn.cursor()
     job_query = "SELECT id, username, image_filename, state FROM freesurfer_interface.jobs " \
-                "WHERE age(job_date) > '21 days'"
+                "WHERE age(job_date) > '21 days' " \
+                "AND STATE NOT IN ('FAILED', 'DELETED', 'ERROR')"
     job_update = "UPDATE freesurfer_interface.jobs " \
                  "SET state = %s " \
                  "WHERE id = %s;"
