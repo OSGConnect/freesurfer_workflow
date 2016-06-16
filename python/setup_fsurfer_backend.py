@@ -17,6 +17,7 @@ setup(name='fsurfer-backend',
                'purge_inputs.py',
                'purge_results.py',
                'warn_purge.py',
+               'delete_jobs.py',
                'fsurf_user_admin.py'],
       license='Apache 2.0')
 
