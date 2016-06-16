@@ -5,7 +5,6 @@
 import argparse
 import os
 import sys
-import log
 
 import psycopg2
 import shutil
@@ -62,10 +61,16 @@ def process_results():
     # version info
     parser.add_argument('--version', action='version', version='%(prog)s ' + VERSION)
     # Arguments for action
+
     parser.add_argument('--dry-run', dest='dry_run',
                         action='store_true', default=False,
                         help='Mock actions instead of carrying them out')
+    parser.add_argument('--debug', dest='debug',
+                        action='store_true', default=False,
+                        help='Output debug messages')
     args = parser.parse_args(sys.argv[1:])
+    if args.debug:
+        fsurfer.log.set_debugging()
     if args.dry_run:
         sys.stdout.write("Doing a dry run, no changes will be made\n")
 
@@ -86,7 +91,7 @@ def process_results():
                                                                       row[1]))
             username = row[1]
             # pegasus_ts is stored as datetime in the database, convert it to what we have on the fs
-            pegasus_ts = pegasus_ts.strftime('%Y%m%dT%H%M%S%z')
+            pegasus_ts = row[4]
             result_dir = os.path.join(FREESURFER_BASE,
                                       username,
                                       'workflows',

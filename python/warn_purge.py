@@ -60,7 +60,12 @@ def process_results():
     parser.add_argument('--dry-run', dest='dry_run',
                         action='store_true', default=False,
                         help='Mock actions instead of carrying them out')
+    parser.add_argument('--debug', dest='debug',
+                        action='store_true', default=False,
+                        help='Output debug messages')
     args = parser.parse_args(sys.argv[1:])
+    if args.debug:
+        fsurfer.log.set_debugging()
     if args.dry_run:
         sys.stdout.write("Doing a dry run, no changes will be made\n")
 
