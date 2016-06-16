@@ -9,7 +9,7 @@ from email.mime.text import MIMEText
 
 import psycopg2
 
-import helpers
+import fsurfer.helpers
 import fsurfer
 
 
@@ -68,7 +68,7 @@ def process_results():
     if args.dry_run:
         sys.stdout.write("Doing a dry run, no changes will be made\n")
 
-    conn = helpers.get_db_client()
+    conn = fsurfer.helpers.get_db_client()
     cursor = conn.cursor()
     job_query = "SELECT id, username, email, state, pegasus_ts, subject " \
                 "  FROM freesurfer_interface.jobs " \
