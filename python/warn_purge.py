@@ -70,12 +70,19 @@ def process_results():
 
     conn = fsurfer.helpers.get_db_client()
     cursor = conn.cursor()
-    job_query = "SELECT id, username, email, state, pegasus_ts, subject " \
-                "  FROM freesurfer_interface.jobs " \
+    job_query = "SELECT jobs.id, " \
+                "       users.username, " \
+                "       users.email, " \
+                "       jobs.state, " \
+                "       jobs.pegasus_ts, " \
+                "       jobs.subject " \
+                "FROM freesurfer_interface.jobs AS jobs, " \
+                "     freesurfer_interface.users AS users "\
                 "WHERE (state = 'COMPLETED' OR" \
                 "       state = 'ERROR') AND" \
                 "      (age(job_date) >= '22 days' AND " \
-                "       age(job_date) < '23 days') ;"
+                "       age(job_date) < '23 days') AND" \
+                "      jobs.username = users.username"
     try:
         cursor.execute(job_query)
         for row in cursor.fetchall():
