@@ -14,9 +14,11 @@ import re
 import cPickle
 
 REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer"
-VERSION = '1.3.11'
+VERSION = '1.3.12'
 CREDENTIAL_FILE = os.path.expanduser('~/.fsurf/credentials')
 usage_text = """
+%(prog)s {list|status|remove|output|change-password|submit} [options]
+
 |------------------------------------------------------------------------------
 | Command       | Function        | Required Switches      | Optional Switches
 |---------------|-----------------|------------------------|-------------------
@@ -44,7 +46,11 @@ usage_text = """
 |change-password| Change account  |                        | --help
 |               | password        |                        | --user [user name]
 |------------------------------------------------------------------------------
+
+See https://support.opensciencegrid.org/solution/folders/12000002373 for more
+help
 """
+
 
 def error_message(message):
     """
@@ -199,6 +205,11 @@ def download_output(query_parameters, noun, endpoint=REST_ENDPOINT):
             filename = 'fsurf_output.tar.bz2'
         elif content_type == 'text/plain':
             filename = 'recon-all.log'
+        else:
+            response = {'status': 500,
+                        'result': "Unknown content-type: "
+                                  "{0}".format(content_type)}
+            return 500, json.dumps(response)
         match_obj = re.search(r'filename=(.*)', content_disposition)
         if match_obj:
             filename = match_obj.group(1)
@@ -527,8 +538,9 @@ def main():
     """
     parser = argparse.ArgumentParser(description="Process and manage "
                                                  "freesurfer workflows",
-                                     usage="%(prog)s {list|status|remove|output|change-password|submit}"
-                                           " [options]\n" + usage_text)
+                                     usage=usage_text)
+                                     # usage="%(prog)s {list|status|remove|output|change-password|submit}"
+                                     #       " [options]\n" + usage_text)
     # General arguments
     parser.add_argument('--version', action='version',
                         version='%(prog)s ' + VERSION)
