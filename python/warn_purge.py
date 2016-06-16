@@ -75,7 +75,7 @@ def process_results():
                 "WHERE (state = 'COMPLETED' OR" \
                 "       state = 'ERROR') AND" \
                 "      (age(job_date) >= '22 days' AND " \
-                "      (age(job_date) < '23 days') ;"
+                "       age(job_date) < '23 days') ;"
     try:
         cursor.execute(job_query)
         for row in cursor.fetchall():
