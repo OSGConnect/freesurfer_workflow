@@ -26,6 +26,7 @@ def email_user(workflow_id, email):
     :param email: email address for user
     :return: None
     """
+    logger = fsurfer.log.get_logger()
     msg = MIMEText('The results from your freesurfer ' +
                    'workflow {0} '.format(workflow_id) +
                    'will be deleted in 7 days')
@@ -39,8 +40,10 @@ def email_user(workflow_id, email):
     try:
         sendmail = subprocess.Popen(['/usr/sbin/sendmail', '-t'], stdin=subprocess.PIPE)
         sendmail.communicate(msg.as_string())
-    except subprocess.CalledProcessError:
-        pass
+        logger.info("Emailed {0} about purge for workflow {1}".format(email,
+                                                                      workflow_id))
+    except subprocess.CalledProcessError as e:
+        logger.exception("Error emailing {0}".format(email))
 
 
 def process_results():
