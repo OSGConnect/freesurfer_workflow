@@ -60,10 +60,11 @@ def error_message(message):
     :return: None
     """
     sys.stderr.write("{0}\n".format(message))
-    sys.stderr.write("\n\nIf you continue to have problems, please go"
-                     "to http://support.opensciencegrid.org/ and open a \n"
-                     "support ticket with the fsurf version you're using, "
-                     "your username, and a description of the issue\n")
+    sys.stderr.write("\n\nIf you continue to have problems, please go " +
+                     "to http://support.opensciencegrid.org/ and open a \n" +
+                     "support ticket indicating that you're running fsurf " +
+                     "version {0}, give your username, \n".format(VERSION) +
+                     "and a description of the issue.\n")
 
 
 def get_user_credentials():
@@ -539,8 +540,6 @@ def main():
     parser = argparse.ArgumentParser(description="Process and manage "
                                                  "freesurfer workflows",
                                      usage=usage_text)
-                                     # usage="%(prog)s {list|status|remove|output|change-password|submit}"
-                                     #       " [options]\n" + usage_text)
     # General arguments
     parser.add_argument('--version', action='version',
                         version='%(prog)s ' + VERSION)
