@@ -23,6 +23,7 @@ import fsurfer.log
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
 FREESURFER_BASE = '/stash2/user/fsurf/'
 PEGASUSRC_PATH = '/stash2/user/fsurf/pegasusconf/pegasusrc'
+VERSION = fsurfer.__version__
 
 
 def pegasus_submit(dax, workflow_directory):
