@@ -5,12 +5,13 @@
 
 # Process jobs that have been uploaded and create
 # a pegasus workflow and submit
-
+import argparse
 import re
 import sys
 import os
 import time
 import subprocess
+import fcntl
 
 import cStringIO
 import psycopg2
@@ -99,6 +100,7 @@ def submit_workflow(subject_file, user, jobid, multicore=True, workflow='diamond
     else:
         cores = 2
     logger = fsurfer.log.get_logger()
+
     subject_name = os.path.basename(subject_file).replace("_defaced.mgz", "")
     logger.debug("Processing workflow using {0} as input".format(subject_file))
     dax = Pegasus.DAX3.ADAG('freesurfer')
@@ -177,6 +179,29 @@ def process_images():
     """
     fsurfer.log.initialize_logging()
     logger = fsurfer.log.get_logger()
+    parser = argparse.ArgumentParser(description="Process and remove old inputs")
+    # version info
+    parser.add_argument('--version', action='version', version='%(prog)s ' + VERSION)
+    # Arguments for action
+    parser.add_argument('--dry-run', dest='dry_run',
+                        action='store_true', default=False,
+                        help='Mock actions instead of carrying them out')
+    parser.add_argument('--debug', dest='debug',
+                        action='store_true', default=False,
+                        help='Output debug messages')
+
+    args = parser.parse_args(sys.argv[1:])
+    if args.debug:
+        fsurfer.log.set_debugging()
+    if args.dry_run:
+        sys.stdout.write("Doing a dry run, no changes will be made\n")
+    try:
+        x = open('/tmp/fsurf_process.lock', 'w+')
+        fcntl.flock(x, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except IOError:
+        logger.warn('Lock file present, exiting')
+        sys.exit(1)
+
     conn = get_db_client()
     cursor = conn.cursor()
     job_query = "SELECT id, username, image_filename FROM freesurfer_interface.jobs " \
@@ -191,18 +216,31 @@ def process_images():
             input_file = os.path.join(FREESURFER_BASE, row[1], 'input', row[2])
             workflow_directory = os.path.join(FREESURFER_BASE, row[1])
             if not os.path.exists(workflow_directory):
-                os.makedirs(workflow_directory)
+                if args.dry_run:
+                    sys.stdout.write("Would have created {0}".format(workflow_directory))
+                else:
+                    os.makedirs(workflow_directory)
             if not os.path.isfile(input_file):
+                logger.warn("Input file {0} missing, skipping".format(input_file))
                 continue
-            errors = submit_workflow(input_file, workflow_directory, row[0])
-            if not errors:
+            if not args.dry_run:
+                errors = submit_workflow(input_file, workflow_directory, row[0])
+            else:
+                errors = False
+            if not errors and not args.dry_run:
                 cursor.execute(job_update, [row[0]])
                 conn.commit()
                 logger.info("Set workflow {0} status to PROCESSING".format(row[0]))
+            else:
+                conn.rollback()
+                logger.info("Rolled back transaction")
     except psycopg2.Error as e:
         logger.exception("Got pgsql error: {0}".format(e))
         pass
 
+    fcntl.flock(x, fcntl.LOCK_UN)
+    x.close()
+    os.unlink('/tmp/fsurf_process.lock')
 
 if __name__ == '__main__':
     # workaround missing subprocess.check_output
