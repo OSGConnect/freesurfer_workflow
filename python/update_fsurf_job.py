@@ -31,7 +31,7 @@ submitted on {1} has completed {2}.  You can download the output by running
 
 {4}
 
-Please contact support@osgconnect.net if you have any questions.
+Please contact user-support@opensciencegrid.org  if you have any questions.
 '''
 
 
