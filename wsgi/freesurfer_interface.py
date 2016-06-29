@@ -11,6 +11,7 @@ import tempfile
 from wsgiref.simple_server import make_server
 
 import psycopg2
+from flask import Flask
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
 FREESURFER_BASE = '/stash2/user/fsurf/'
@@ -353,6 +354,7 @@ def get_current_jobs(environ):
     return json.dumps(response), status
 
 
+@app.route('/freesurfer/job/status')
 def get_job_status(environ):
     """
     Get status for job specified
@@ -744,5 +746,7 @@ if __name__ == '__main__':
     args = parser.parse_args(sys.argv[1:])
     if args.db_param_file != PARAM_FILE_LOCATION:
         PARAM_FILE_LOCATION = args.db_param_file
+    srv = make_server(args.hostname, 8080, application)
+    app = Flask(__name__)
     srv = make_server(args.hostname, args.port, application)
     srv.serve_forever()
