@@ -665,7 +665,6 @@ def application(environ, start_response):
     response_headers = [('Content-Type', 'text/html'),
                         ('Content-Length', str(len(response_body)))]
     start_response(status, response_headers)
-    print response_body
     return [response_body]
 
 
@@ -673,10 +672,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Parse request and act appropriately')
     parser.add_argument('--host', dest='hostname', default=socket.getfqdn(),
                         help='hostname of server')
+    parser.add_argument('--port', dest='port', default=8080, type=int,
+                        help='hostname of server')
     parser.add_argument('--dbparams', dest='db_param_file', default=PARAM_FILE_LOCATION,
                         help='location of file with database information')
     args = parser.parse_args(sys.argv[1:])
     if args.db_param_file != PARAM_FILE_LOCATION:
         PARAM_FILE_LOCATION = args.db_param_file
-    srv = make_server(args.hostname, 8080, application)
+    srv = make_server(args.hostname, args.port, application)
     srv.serve_forever()
