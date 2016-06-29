@@ -13,7 +13,7 @@ import subprocess
 
 
 REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer"
-VERSION = '1.3.14'
+VERSION = '1.3.15'
 
 
 def get_response(query_parameters, noun, method, endpoint=REST_ENDPOINT):
