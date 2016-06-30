@@ -3,8 +3,8 @@ BEGIN;
 CREATE SCHEMA freesurfer_interface;
 
 CREATE TYPE freesurfer_interface.job_state AS ENUM (
-    'UPLOADED',
-    'PROCESSING',
+    'QUEUED',
+    'RUNNING',
     'FAILED',
     'COMPLETED',
     'DELETE PENDING',
@@ -45,6 +45,18 @@ CREATE TABLE freesurfer_interface.jobs (
     version         freesurfer_interface.job_state NOT NULL DEFAULT '5.3'
 );
 
+CREATE TABLE freesurfer_interface.job_run (
+    id              SERIAL PRIMARY KEY,
+    job_id          INTEGER NOT NULL REFERENCES freesurfer_interface.jobs(id),
+    walltime        INTEGER NOT NULL DEFAULT 0,
+    cputime         INTEGER NOT NULL DEFAULT 0,
+    started         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ended           TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    state           freesurfer_interface.job_state NOT NULL,
+    tasks           INTEGER NOT NULL CHECK ( username <= tasks_completed) DEFAULT 0,
+    tasks_completed INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE freesurfer_interface.input_files (
     id              SERIAL PRIMARY KEY,
     filename        VARCHAR(255) NOT NULL,
@@ -53,6 +65,7 @@ CREATE TABLE freesurfer_interface.input_files (
     purged          BOOLEAN NOT NULL DEFAULT FALSE,
     subject_dir     BOOLEAN NOT NULL DEFAULT FALSE
 );
+
 
 CREATE TABLE freesurfer_interface.verifications (
     id              SERIAL PRIMARY KEY,
