@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
+# arguments
+# $1 - Freesurfer version
+# $2 - subject name
+# $3 - hemisphere to analyze
+# $4 - num of cores to use
 
-module load freesurfer/5.3.0
+
+module load freesurfer/$1
 if [ $? != 0 ];
 then
     source /cvmfs/oasis.opensciencegrid.org/osg/modules/lmod/current/init/bash
-    module load freesurfer/5.3.0
+    module load freesurfer/$1
 fi
 module load xz/5.2.2
 date
@@ -18,18 +24,18 @@ else
     SUBJECTS_DIR=`mktemp -d --tmpdir=$PWD`
 fi
 
-cp $1_recon1_output.tar.xz $SUBJECTS_DIR
+cp $2_recon1_output.tar.xz $SUBJECTS_DIR
 cd $SUBJECTS_DIR
 tar xvaf $1_recon1_output.tar.xz
-rm $1_recon1_output.tar.xz
+rm $2_recon1_output.tar.xz
 recon-all                                                               \
-        -s $1                                                           \
+        -s $2                                                           \
         -autorecon2-perhemi                                             \
-        -hemi $2                                                        \
-        -openmp $3
+        -hemi $3                                                        \
+        -openmp $4
 
 
 cd $SUBJECTS_DIR
-mv $1/scripts/recon-all.log $1/scripts/recon-all-step2-$2.log
-tar cJf $WD/$1_recon2_$2_output.tar.xz *
+mv $2/scripts/recon-all.log $2/scripts/recon-all-step2-$3.log
+tar cJf $WD/$2_recon2_$3_output.tar.xz *
 cd $WD

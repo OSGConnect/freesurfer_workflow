@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
-module load freesurfer/5.3.0
+# arguments
+# $1 - Freesurfer version
+# $2 - subject name
+# $3 - num of cores to use
+# $4 - input files
+
+module load freesurfer/$1
 if [ $? != 0 ];
 then
     source /cvmfs/oasis.opensciencegrid.org/osg/modules/lmod/current/init/bash
-    module load freesurfer/5.3.0
+    module load freesurfer/$1
 fi
 module load xz/5.2.2
 date
@@ -16,11 +22,20 @@ then
 else
     SUBJECTS_DIR=`mktemp -d --tmpdir=$PWD`
 fi
+
+IFS=',' read -r -a input_files <<< "$4"
+$input_args = ""
+for index in "${!input_files[@]}";
+do
+    input_args="$input_args -i ${input_files[index]}"
+done
+
+
 ######################################################################## run all steps
 recon-all                                                               \
         -all                                                            \
-        -s $1                                                           \
-        -i $2                                                           \
+        -s $2                                                           \
+        $input_args                                                     \
         -openmp $3
 
 cd  $SUBJECTS_DIR
