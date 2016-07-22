@@ -24,11 +24,12 @@ else
     SUBJECTS_DIR=`mktemp -d --tmpdir=$PWD`
 fi
 
-IFS=',' read -r -a input_files <<< "$4"
-$input_args = ""
-for index in "${!input_files[@]}";
+shift 4
+input_args=""
+while (( "$#" ));
 do
-    input_args="$input_args -i ${input_files[index]}"
+    input_args="$input_args -i $1"
+    shift
 done
 ######################################################################## 1st stage - serial
 recon-all                                                               \
