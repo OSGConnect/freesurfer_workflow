@@ -78,7 +78,7 @@ def process_inputs():
                    "WHERE id = %s"
     input_select = "SELECT id, path, filename " \
                    "FROM freesurfer_interface.input_files " \
-                   "WHERE state IS NOT 'purged' AND job_id = %s"
+                   "WHERE state IS NOT 'PURGED' AND job_id = %s"
     parser = argparse.ArgumentParser(description="Process and remove old inputs")
     # version info
     parser.add_argument('--version', action='version', version='%(prog)s ' + VERSION)
@@ -120,6 +120,8 @@ def process_inputs():
                     logger.error("Can't remove {0} for job {1}".format(input_file,
                                                                        row[0]))
             if not file_removal_error:
+                cursor3 = conn.cursor()
+                cursor3.execute(input_update, ['PURGED', input_row[0]])
                 if not remove_input_directory(input_directory):
                     logger.error("Can't remove {0} for job {1}".format(input_directory,
                                                                         row[0]))
