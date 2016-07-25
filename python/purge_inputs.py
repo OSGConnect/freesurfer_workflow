@@ -16,9 +16,9 @@ FREESURFER_BASE = '/stash2/user/fsurf/'
 VERSION = fsurfer.__version__
 
 
-def remove_inputs(input_file):
+def remove_input_file(input_file):
     """
-    Remove input file and directory containing it
+    Remove input file
 
     :param input_file: path to input file to remove
     :return: True if successful, False otherwise
@@ -29,7 +29,24 @@ def remove_inputs(input_file):
     try:
         os.unlink(input_file)
         logger.info("Unlinked file")
-        input_dir = os.path.dirname(input_file)
+        return True
+    except OSError as e:
+        logger.exception("Exception: {0}".format(str(e)))
+        return False
+
+
+def remove_input_directory(input_dir):
+    """
+    Remove input dir
+
+    :param input_dir: path to input directory to remove
+    :return: True if successful, False otherwise
+    """
+    logger = fsurfer.log.get_logger()
+    if not os.path.exists(input_dir):
+        return True
+    try:
+        input_dir = os.path.dirname(input_dir)
         os.rmdir(input_dir)
         logger.info("Removed directory {0}".format(input_dir))
         return True
@@ -56,7 +73,12 @@ def process_inputs():
     job_update = "UPDATE freesurfer_interface.jobs " \
                  "SET state = %s " \
                  "WHERE id = %s;"
-
+    input_update = "UPDATE freesurfer_interface.input_files " \
+                   "SET state = %s  " \
+                   "WHERE id = %s"
+    input_select = "SELECT id, path, filename " \
+                   "FROM freesurfer_interface.input_files " \
+                   "WHERE state IS NOT 'purged' AND job_id = %s"
     parser = argparse.ArgumentParser(description="Process and remove old inputs")
     # version info
     parser.add_argument('--version', action='version', version='%(prog)s ' + VERSION)
@@ -79,19 +101,28 @@ def process_inputs():
             logger.info("Processing workflow {0} for user {1} ".format(row[0],
                                                                        row[1])+
                         "in state {0}".format(row[3]))
-
-            input_file = os.path.join(FREESURFER_BASE, row[1], 'input', row[2])
-            logger.info("Deleting file {0}".format(input_file))
-            if args.dry_run:
-                sys.stdout.write("Would delete {0} and directory\n".format(input_file))
-                continue
-            if not os.path.exists(input_file):
-                logger.info("File not present")
-                continue
-            if not remove_inputs(input_file):
-                logger.error("Can't remove {0} for job {1}".format(input_file,
-                                                                   row[0]))
-
+            cursor2 = conn.cursor()
+            cursor2.execute(input_select, [row[0]])
+            file_removal_error = False
+            input_directory = None
+            for input_row in cursor2.fetchall():
+                input_file = os.path.join(input_row[1], input_row[2])
+                input_directory = os.path.dirname(input_file)
+                logger.info("Deleting file {0}".format(input_file))
+                if args.dry_run:
+                    sys.stdout.write("Would delete {0} and directory\n".format(input_file))
+                    continue
+                if not os.path.exists(input_file):
+                    logger.info("File not present")
+                    continue
+                if not remove_input_file(input_file):
+                    file_removal_error = True
+                    logger.error("Can't remove {0} for job {1}".format(input_file,
+                                                                       row[0]))
+            if not file_removal_error:
+                if not remove_input_directory(input_directory):
+                    logger.error("Can't remove {0} for job {1}".format(input_directory,
+                                                                        row[0]))
             if row[3].upper() == 'UPLOADED':
                 cursor.execute(job_update, ['ERROR', row[0]])
                 conn.commit()
@@ -99,6 +130,7 @@ def process_inputs():
                             "to ERROR")
                 return 1
             conn.commit()
+        cursor.close()
         conn.close()
     except psycopg2.Error as e:
         logger.exception("Got pgsql error: {0}".format(e))
