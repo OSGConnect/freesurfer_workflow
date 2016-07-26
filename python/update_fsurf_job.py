@@ -3,10 +3,14 @@ import argparse
 import os
 import subprocess
 import sys
+import shutil
+import xml
+import parser
+import re
+import datetime
 from email.mime.text import MIMEText
 
 import psycopg2
-import shutil
 import fsurfer
 
 VERSION = fsurfer.__version__
@@ -25,12 +29,11 @@ submitted on {1} has completed {2}.  You can download the output by running
 Please contact user-support@opensciencegrid.org  if you have any questions.
 '''
 
-
 # helper class for time delta calculations
-ZERO = timedelta(0)
+ZERO = datetime.timedelta(0)
 
 
-class UTC(tzinfo):
+class UTC(datetime.tzinfo):
     def utcoffset(self, dt):
         return ZERO
 
@@ -41,7 +44,7 @@ class UTC(tzinfo):
         return ZERO
 
 
-def format_seconds(duration, max_comp = 2):
+def format_seconds(duration, max_comp=2):
     """
     Utility for converting time to a readable format
 
@@ -52,7 +55,7 @@ def format_seconds(duration, max_comp = 2):
     comp = 0
     if duration is None:
         return '-'
-    milliseconds = math.modf(duration)[0]
+    #milliseconds = math.modf(duration)[0]
     sec = int(duration)
     formatted_duration = ''
     years = sec / 31536000
@@ -118,9 +121,7 @@ def parse_ks_record(fname):
     :return: a data dicttionary with a small set of keys/values from the record
     """
 
-    data = {}
-    data['duration'] = 0.0
-    data['utime'] = 0.0
+    data = {'duration': 0.0, 'utime': 0.0}
 
     DOMTree = xml.dom.minidom.parse(fname)
     collection = DOMTree.documentElement
@@ -135,7 +136,7 @@ def parse_ks_record(fname):
     # example: 2016-05-18T12:55:23.507-05:00
     dt = parser.parse(data['start'])
     # epoch calculations in Python 2.6 makes me sad
-    td = dt - datetime(1970, 1, 1, tzinfo=UTC())
+    td = dt - datetime.datetime(1970, 1, 1, tzinfo=UTC())
     data['start_ts'] = (td.microseconds + (td.seconds + td.days * 86400) * 10**6) / 10**6 
 
     data['end_ts'] = data['start_ts'] + int(data['duration'])
