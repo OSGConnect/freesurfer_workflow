@@ -17,6 +17,7 @@ CONFIG_FILE_LOCATION = "/etc/fsurf/fsurf-prod.config"
 FREESURFER_BASE = '/stash2/user/fsurf/'
 TIMEZONE = "US/Central"
 
+app = Flask(__name__)
 
 def validate_parameters(parameters):
     """
@@ -697,7 +698,7 @@ if __name__ == '__main__':
                         help='Output debug messages')
     args = parser.parse_args(sys.argv[1:])
 
-    app = Flask(__name__)
+
     if 'FSURF_CONFIG_FILE' in os.environ and os.environ['FSURF_CONFIG_FILE']:
         app.config.from_envvar('FSURF_CONFIG_FILE')
     else:
