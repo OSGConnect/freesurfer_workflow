@@ -42,7 +42,7 @@ CREATE TABLE freesurfer_interface.jobs (
     options         VARCHAR(1024),
     purged          BOOLEAN NOT NULL DEFAULT FALSE,
     num_inputs      INTEGER NOT NULL DEFAULT 0,
-    version         freesurfer_interface.job_state NOT NULL DEFAULT '5.3'
+    version         freesurfer_interface.freesufer_version NOT NULL DEFAULT '5.3'
 );
 
 CREATE TABLE freesurfer_interface.job_run (
@@ -53,7 +53,7 @@ CREATE TABLE freesurfer_interface.job_run (
     started         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ended           TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     state           freesurfer_interface.job_state NOT NULL,
-    tasks           INTEGER NOT NULL CHECK ( username <= tasks_completed) DEFAULT 0,
+    tasks           INTEGER NOT NULL CHECK ( tasks <= tasks_completed) DEFAULT 0,
     tasks_completed INTEGER NOT NULL DEFAULT 0
 );
 
@@ -72,7 +72,7 @@ CREATE TABLE freesurfer_interface.verifications (
     kernel_version  VARCHAR(128) NOT NULL,
     successful      INTEGER DEFAULT 0,
     attempts        INTEGER DEFAULT 0,
-    log_directory   VARCHAR(256) DEFAUlT '',
+    log_directory   VARCHAR(256) DEFAUlT ''
 );
 
 COMMIT;
