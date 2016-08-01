@@ -35,7 +35,6 @@ CREATE TABLE freesurfer_interface.jobs (
     username        VARCHAR(128) NOT NULL REFERENCES freesurfer_interface.users(username),
     subject         VARCHAR(128) NOT NULL,
     multicore       BOOLEAN NOT NULL DEFAULT FALSE,
-    image_filename  VARCHAR(128) NOT NULL,
     pegasus_ts      VARCHAR(128),
     state           freesurfer_interface.job_state NOT NULL,
     job_date        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -19,6 +19,7 @@ TIMEZONE = "US/Central"
 
 app = Flask(__name__)
 
+
 def validate_parameters(parameters):
     """
     Check parameters in request using the parameters specified
@@ -112,7 +113,7 @@ def delete_job(environ):
     if not validate_parameters(parameters):
         return flask_error_response(400, "Invalid or missing parameter")
 
-    userid, token, timestamp = get_user_params(environ)
+    userid, token, timestamp = get_user_params()
     if not validate_user(userid, token, timestamp):
         return flask_error_response(401, "Invalid username or password")
     job_id = flask.request.args['jobid']
@@ -206,7 +207,7 @@ def get_user_salt():
     return flask.jsonify(response)
 
 
-@app.route('/freesurfer/user/password')
+@app.route('/freesurfer/user/password', method=['PUT'])
 def set_user_password(environ):
     """
     Set password for a userid
@@ -214,7 +215,6 @@ def set_user_password(environ):
     :param environ: dictionary with environment variables (See PEP 333)
     :return: a tuple with response_body, status
     """
-    status = '200 OK'
     parameters = {'userid': str,
                   'salt': str,
                   'token': str,
@@ -222,7 +222,7 @@ def set_user_password(environ):
     if not validate_parameters(parameters):
         return flask_error_response(400, "Invalid or missing parameter")
 
-    userid, token, timestamp = get_user_params(environ)
+    userid, token, timestamp = get_user_params()
     if not validate_user(userid, token, timestamp):
         return flask_error_response(401, "Invalid username or password")
     conn = get_db_client()
@@ -293,12 +293,11 @@ def get_current_jobs(environ):
                   'all': bool}
     if not validate_parameters(parameters):
         return flask_error_response(400, "Invalid or missing parameter")
-    userid, secret, timestamp = get_user_params(environ)
+    userid, secret, timestamp = get_user_params()
     if not validate_user(userid, secret, timestamp):
         return flask_error_response(401, "Invalid username or password")
     response = {'status': 200,
                 'jobs': []}
-    status = '200 OK'
     conn = get_db_client()
     cursor = conn.cursor()
     if flask.request.args['all'].lower() == 'true':
@@ -330,14 +329,14 @@ def get_current_jobs(environ):
                                      row[3].strftime("%Y-%m-%d %H:%M:%S"),
                                      row[4]))
     except Exception, e:
-        response = {'status': 500,
-                    'result': str(e)}
-        status = '500 Server Error'
+        return flask_error_response(500,
+                                    "500 Server Error\n"
+                                    "Exception: {0}".format(e))
     finally:
         conn.commit()
         conn.close()
 
-    return json.dumps(response), status
+    return flask.jsonify(response)
 
 
 @app.route('/freesurfer/job/status')
@@ -353,7 +352,7 @@ def get_job_status(environ):
                   'jobid': str}
     if not validate_parameters(parameters):
         return flask_error_response(400, "Invalid or missing parameter")
-    userid, secret, timestamp = get_user_params(environ)
+    userid, secret, timestamp = get_user_params()
     if not validate_user(userid, secret, timestamp):
         return flask_error_response(401, "Invalid username or password")
     response = {'status': 200,
@@ -380,6 +379,7 @@ def get_job_status(environ):
     return flask.jsonify(response)
 
 
+@app.route('/freesurfer/job/input', method=['POST'])
 def get_input(environ):
     """
     Submit an input for a job to be processed
@@ -389,7 +389,6 @@ def get_input(environ):
     """
     response = {"status": 200,
                 "result": "success"}
-    status = '200 OK'
     parameters = {'userid': str,
                   'token': str,
                   'filename': str,
@@ -397,7 +396,7 @@ def get_input(environ):
                   'jobid': int}
     if not validate_parameters(parameters):
         return flask_error_response(400, "Invalid or missing parameter")
-    userid, token, timestamp = get_user_params(environ)
+    userid, token, timestamp = get_user_params()
     if not validate_user(userid, token, timestamp):
         return flask_error_response(401, "Invalid username or password")
     # setup user directories if not present
@@ -413,11 +412,6 @@ def get_input(environ):
         os.mkdir(os.path.join(user_dir, 'output'), 0o770)
     if not os.path.exists(os.path.join(user_dir, 'workflows')):
         os.mkdir(os.path.join(user_dir, 'workflows'), 0o770)
-    # upload
-    temp_dir = tempfile.mkdtemp(dir=output_dir)
-    input_file = os.path.join(temp_dir,
-                              flask.request.args['filename'])
-    save_file(environ, input_file)
     conn = get_db_client()
     cursor = conn.cursor()
     input_insert = "INSERT INTO freesurfer_interface.input_files(filename," \
@@ -426,22 +420,29 @@ def get_input(environ):
                    "                                             subject_dir)" \
                    "VALUES(%s, %s, %s, %s)"
     try:
+        temp_dir = tempfile.mkdtemp(dir=output_dir)
+        input_file = os.path.join(temp_dir,
+                                  flask.request.args['filename'])
+        fh = flask.request.files['file']
+        fh.save(input_file)
         cursor.execute(input_insert,
                        [flask.request.args['filename'],
                         input_file,
                         flask.request.args['jobid'],
                         flask.request.args['subjectdir']])
+
         conn.commit()
     except Exception, e:
-        response = {'status': 500,
-                    'result': str(e)}
-        status = '500 Server Error'
         conn.rollback()
+        return flask_error_response(500,
+                                    "500 Server Error\n"
+                                    "Exception: {0}".format(e))
     finally:
         conn.close()
-    return json.dumps(response), status
+    return flask.jsonify(response)
 
 
+@app.route('/freesurfer/job', method=['POST'])
 def submit_job(environ):
     """
     Submit a job to be processed
@@ -451,15 +452,17 @@ def submit_job(environ):
     """
     response = {"status": 200,
                 "result": "success"}
-    status = '200 OK'
     parameters = {'userid': str,
                   'token': str,
                   'multicore': bool,
+                  'num_inputs':  int,
+                  'options': str,
+                  'version': str,
                   'subject': str,
                   'jobname': str}
     if not validate_parameters(parameters):
         return flask_error_response(400, "Invalid or missing parameter")
-    userid, token, timestamp = get_user_params(environ)
+    userid, token, timestamp = get_user_params()
     if not validate_user(userid, token, timestamp):
         return flask_error_response(401, "Invalid username or password")
     # setup user directories if not present
@@ -475,27 +478,26 @@ def submit_job(environ):
         os.mkdir(os.path.join(user_dir, 'output'), 0o770)
     if not os.path.exists(os.path.join(user_dir, 'workflows')):
         os.mkdir(os.path.join(user_dir, 'workflows'), 0o770)
-    # upload
-    temp_dir = tempfile.mkdtemp(dir=output_dir)
-    input_file = os.path.join(temp_dir,
-                              "{0}_defaced.mgz".format(flask.request.args['subject']))
-    save_file(environ, input_file)
     conn = get_db_client()
     cursor = conn.cursor()
     job_insert = "INSERT INTO freesurfer_interface.jobs(name," \
-                 "                                      image_filename," \
                  "                                      state," \
                  "                                      multicore," \
                  "                                      username," \
+                 "                                      num_inputs," \
+                 "                                      options," \
+                 "                                      version," \
                  "                                      subject)" \
                  "VALUES(%s, %s, 'UPLOADED', %s, %s, %s)" \
                  "RETURNING id"
     try:
         cursor.execute(job_insert,
                        [flask.request.args['jobname'],
-                        input_file,
                         flask.request.args['multicore'],
                         userid,
+                        flask.request.args['num_inputs'],
+                        flask.request.args['options'],
+                        flask.request.args['version'],
                         flask.request.args['subject']])
         job_id = cursor.fetchone()[0]
         response['job_id'] = job_id
@@ -505,12 +507,12 @@ def submit_job(environ):
         return flask_error_response(500,
                                     "500 Server Error\n"
                                     "Exception: {0}".format(e))
-
     finally:
         conn.close()
-    return json.dumps(response), status
+    return flask.jsonify(response)
 
 
+@app.route('/freesurfer/job/output')
 def get_job_output(environ):
     """
     Return the output from a job
@@ -520,13 +522,12 @@ def get_job_output(environ):
     """
     response = {"status": 200,
                 "result": "success"}
-    status = '200 OK'
     parameters = {'userid': str,
                   'token': str,
                   'jobid': str}
     if not validate_parameters(parameters):
         return flask_error_response(400, "Invalid or missing parameter")
-    userid, token, timestamp = get_user_params(environ)
+    userid, token, timestamp = get_user_params()
     if not validate_user(userid, token, timestamp):
         return flask_error_response(401, "Invalid username or password")
     output_dir = os.path.join(FREESURFER_BASE, userid, 'results')
@@ -539,30 +540,34 @@ def get_job_output(environ):
         cursor.execute(job_query, [flask.request.args['jobid'], userid])
         row = cursor.fetchone()
         if cursor.rowcount == 0:
-            response['status'] = 404
-            response["result"] = "Workflow not found"
-            status = "404 Not Found"
+            return flask_error_response(404,
+                                        "Workflow not found")
         elif row[2] != 'COMPLETED':
-            response['status'] = 404
-            response["result"] = "Workflow does not have any output to download"
-            status = "404 Not Found"
+            return flask_error_response(404,
+                                        "Workflow does not have any output to "
+                                        "download")
+
         else:
             output_filename = os.path.join(output_dir,
                                            "{0}_{1}_output.tar.bz2".format(row[0],
                                                                            row[1]))
             if os.path.isfile(output_filename):
-                response['result'] = "Output found"
-                response['filename'] = output_filename
+                filename = str(os.path.basename(output_filename))
+                return flask.send_file(output_filename,
+                                       mimetype="application/octet-stream",
+                                       as_attachment=True,
+                                       attachment_filename=filename)
     except Exception, e:
-        response = {'status': 500,
-                    'result': str(e)}
-        status = '500 Server Error'
+        return flask_error_response(500,
+                                    "500 Server Error\n"
+                                    "Exception: {0}".format(e))
     finally:
         conn.commit()
         conn.close()
-    return json.dumps(response), status
+    return flask.jsonify(response)
 
 
+@app.route('/freesurfer/job/log')
 def get_job_log(environ):
     """
     Return the logs from a job
@@ -572,13 +577,12 @@ def get_job_log(environ):
     """
     response = {"status": 200,
                 "result": "success"}
-    status = '200 OK'
     parameters = {'userid': str,
                   'token': str,
                   'jobid': str}
     if not validate_parameters(parameters):
         return flask_error_response(400, "Invalid or missing parameter")
-    userid, token, timestamp = get_user_params(environ)
+    userid, token, timestamp = get_user_params()
     if not validate_user(userid, token, timestamp):
         return flask_error_response(401, "Invalid username or password")
     output_dir = os.path.join(FREESURFER_BASE, userid, 'results')
@@ -591,19 +595,21 @@ def get_job_log(environ):
         cursor.execute(job_query, [flask.request.args['jobid'], userid])
         row = cursor.fetchone()
         if cursor.rowcount == 0:
-            response['status'] = 404
-            response["result"] = "Workflow not found"
-            status = "404 Not Found"
+            return flask_error_response(404,
+                                        "Workflow not found")
         elif row[2] != 'COMPLETED':
-            response['status'] = 404
-            response["result"] = "Workflow does not have any logs to download"
-            status = "404 Not Found"
+            return flask_error_response(404,
+                                        "Workflow does not have any logs to "
+                                        "download")
         else:
             output_filename = os.path.join(output_dir,
                                            "recon_all-{0}.log".format(row[0]))
             if os.path.isfile(output_filename):
-                response['result'] = "Output found"
-                response['filename'] = output_filename
+                filename = str(os.path.basename(output_filename))
+                return flask.send_file(output_filename,
+                                       mimetype="application/octet-stream",
+                                       as_attachment=True,
+                                       attachment_filename=filename)
     except Exception as e:
         return flask_error_response(500,
                                     "500 Server Error\n"
@@ -611,7 +617,7 @@ def get_job_log(environ):
     finally:
         conn.commit()
         conn.close()
-    return json.dumps(response), status
+    return flask.jsonify(response)
 
 
 def application(environ, start_response):
@@ -697,7 +703,6 @@ if __name__ == '__main__':
                         action='store_true', default=False,
                         help='Output debug messages')
     args = parser.parse_args(sys.argv[1:])
-
 
     if 'FSURF_CONFIG_FILE' in os.environ and os.environ['FSURF_CONFIG_FILE']:
         app.config.from_envvar('FSURF_CONFIG_FILE')
