@@ -391,54 +391,36 @@ def submit_workflow(args):
             if not agree:
                 sys.stdout.write("Aborting submission on user request\n")
                 sys.exit(1)
-    subject_file = os.path.join(args.input_directory,
-                                "{0}_defaced.mgz".format(args.subject))
-    subject_file = os.path.abspath(subject_file)
-    if not os.path.isfile(subject_file):
-        error_message("{0} is not present ".format(subject_file) +
-                      "and is needed, exiting")
-        sys.exit(1)
-    with open(subject_file, 'rb') as f:
-        body = f.read()
-    query_params = {}
     username, password = get_user_info(args)
     timestamp, token = get_token(username, password)
-    if token is None:
-        sys.exit(1)
-    # verify inputs are present before trying to create workflow
-    for input_file in args.input_file:
-
-        input_path = os.path.join(args.input_directory, input_file)
-        input_path = os.path.abspath(input_path)
-        if not os.path.isfile(input_path):
-            sys.stderr.write("{0} is not present and is needed, "
-                             "exiting\n".format(input_path))
-            sys.exit(1)
-
+    num_inputs = len(args.input_file)
     query_params = {'userid': username,
                     'timestamp': timestamp,
                     'token': token,
                     'multicore': not bool(args.dualcore),
                     'subject': args.subject,
-                    'numinputs': len(args.input_file),
+                    'num_inputs': num_inputs,
+                    'options': args.options,
+                    'version': args.options,
                     'jobname': "{0}_{1}".format(args.subject, timestamp)}
     sys.stdout.write("Creating and submitting workflow\n")
     status, response = get_response(query_params, 'job', 'POST')
     if status != 200:
         response_obj = json.loads(response)
-        error_message("Error while uploading workflow:\n" +
+        error_message("Error while creating workflow:\n" +
                       response_obj['result'])
         sys.exit(1)
     response_obj = json.loads(response)
     job_id = response_obj['job_id']
     sys.stdout.write("Workflow {0} created\n".format(job_id))
-    total_inputs = len(args.input_file)
+
+    sys.stdout.write("Uploading input files\n")
     file_num = 0
     for input_file in args.input_file:
         attempts = 1
         sys.stdout.write("Uploading {0} (file {1}/{2})\n".format(input_file,
                                                                  file_num,
-                                                                 total_inputs))
+                                                                 num_inputs))
         while attempts < 6:
             query_params = {'userid': username,
                             'timestamp': timestamp,

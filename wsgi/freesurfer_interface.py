@@ -4,7 +4,6 @@ import argparse
 import json
 import socket
 import sys
-import urlparse
 import hashlib
 import os
 import tempfile
@@ -98,11 +97,10 @@ def get_db_client():
 
 
 @app.route('/freesurfer/job', methods=['DELETE'])
-def delete_job(environ):
+def delete_job():
     """
     Remove a job from being processed
 
-    :param environ: dictionary with environment variables (See PEP 333)
     :return: a tuple with response_body, status
     """
     response = {"status": 200,
@@ -208,11 +206,10 @@ def get_user_salt():
 
 
 @app.route('/freesurfer/user/password', method=['PUT'])
-def set_user_password(environ):
+def set_user_password():
     """
     Set password for a userid
 
-    :param environ: dictionary with environment variables (See PEP 333)
     :return: a tuple with response_body, status
     """
     parameters = {'userid': str,
@@ -281,11 +278,10 @@ def validate_user(userid, token, timestamp):
 
 
 @app.route('/freesurfer/job', methods=['GET'])
-def get_current_jobs(environ):
+def get_current_jobs():
     """
     Get status for all jobs submitted by user in last week
 
-    :param environ: dictionary with environment variables (See PEP 333)
     :return: a tuple with response_body, status
     """
     parameters = {'userid': str,
@@ -340,11 +336,10 @@ def get_current_jobs(environ):
 
 
 @app.route('/freesurfer/job/status')
-def get_job_status(environ):
+def get_job_status():
     """
     Get status for job specified
 
-    :param environ: dictionary with environment variables (See PEP 333)
     :return: a tuple with response_body, status
     """
     parameters = {'userid': str,
@@ -380,11 +375,10 @@ def get_job_status(environ):
 
 
 @app.route('/freesurfer/job/input', method=['POST'])
-def get_input(environ):
+def get_input():
     """
     Submit an input for a job to be processed
 
-    :param environ: dictionary with environment variables (See PEP 333)
     :return: a tuple with response_body, status
     """
     response = {"status": 200,
@@ -443,11 +437,10 @@ def get_input(environ):
 
 
 @app.route('/freesurfer/job', method=['POST'])
-def submit_job(environ):
+def submit_job():
     """
     Submit a job to be processed
 
-    :param environ: dictionary with environment variables (See PEP 333)
     :return: a tuple with response_body, status
     """
     response = {"status": 200,
@@ -513,11 +506,10 @@ def submit_job(environ):
 
 
 @app.route('/freesurfer/job/output')
-def get_job_output(environ):
+def get_job_output():
     """
     Return the output from a job
 
-    :param environ: dictionary with environment variables (See PEP 333)
     :return: a tuple with response_body, status
     """
     response = {"status": 200,
@@ -568,11 +560,10 @@ def get_job_output(environ):
 
 
 @app.route('/freesurfer/job/log')
-def get_job_log(environ):
+def get_job_log():
     """
     Return the logs from a job
 
-    :param environ: dictionary with environment variables (See PEP 333)
     :return: a tuple with response_body, status
     """
     response = {"status": 200,
@@ -618,77 +609,6 @@ def get_job_log(environ):
         conn.commit()
         conn.close()
     return flask.jsonify(response)
-
-
-def application(environ, start_response):
-    """
-    Get parameters from GET request and publish to redis channel
-
-    :param environ: dictionary with environment variables (See PEP 333)
-    :param start_response: callable function to handle responses (see PEP 333)
-    :return: a flask response object
-    """
-
-    if environ['PATH_INFO'] == '/freesurfer/job':
-        if environ['REQUEST_METHOD'] == 'GET':
-            response = get_current_jobs(environ)
-        elif environ['REQUEST_METHOD'] == 'POST':
-            response = submit_job(environ)
-        elif environ['REQUEST_METHOD'] == 'DELETE':
-            response = delete_job(environ)
-        else:
-            response = flask_error_response(400, 'Bad Request')
-    elif environ['PATH_INFO'] == '/freesurfer/job/output':
-        # need to do something a bit special because
-        # we're returning a file
-        response_body, status = get_job_output(environ)
-        response_obj = json.loads(response_body)
-        if response_obj['result'] == 'Output found':
-            filename = response_obj['filename']
-            response_headers = [('Content-Type', 'application/x-bzip2'),
-                                ('Content-length', str(os.path.getsize(filename))),
-                                ('Content-Disposition',
-                                 'attachment; filename=' + str(os.path.basename(filename)))]
-            try:
-                fh = open(filename, 'rb')
-                start_response(status, response_headers)
-                if 'wsgi.file_wrapper' in environ:
-                    return environ['wsgi.file_wrapper'](fh, 4096)
-                else:
-                    return iter(lambda: fh.read(4096), '')
-            except IOError:
-                response = flask_error_response(500,
-                                                'Could not read output file')
-    elif environ['PATH_INFO'] == '/freesurfer/job/status':
-        response = get_job_status(environ)
-    elif environ['PATH_INFO'] == '/freesurfer/job/log':
-        # need to do something a bit special because
-        # we're returning a file
-        response_body, status = get_job_log(environ)
-        response_obj = json.loads(response_body)
-        if response_obj['result'] == 'Output found':
-            filename = response_obj['filename']
-            response_headers = [('Content-Type', 'application/octet-stream'),
-                                ('Content-length', str(os.path.getsize(filename))),
-                                ('Content-Disposition',
-                                 'attachment; filename=' + str(os.path.basename(filename)))]
-            try:
-                fh = open(filename, 'rb')
-                start_response(status, response_headers)
-                if 'wsgi.file_wrapper' in environ:
-                    return environ['wsgi.file_wrapper'](fh, 4096)
-                else:
-                    return iter(lambda: fh.read(4096), '')
-            except IOError:
-                response = flask_error_response(500,
-                                                'Could not read output file')
-    elif environ['PATH_INFO'] == '/freesurfer/user/salt':
-        response = get_user_salt(environ)
-    elif environ['PATH_INFO'] == '/freesurfer/user/password':
-        response = set_user_password(environ)
-    else:
-        response = flask_error_response(400, 'Bad action')
-    return response
 
 
 if __name__ == '__main__':
