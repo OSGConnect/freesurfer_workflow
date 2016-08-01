@@ -229,6 +229,8 @@ def main():
                                        description='actions that can be taken')
     parser.add_argument('--version', action='version',
                         version='%(prog)s ' + VERSION)
+    parser.add_argument('--config', dest='config_file', default=PARAM_FILE_LOCATION,
+                        help='location of file with configuration')
     # create subparser for list action
     list_parser = subparsers.add_parser('list',
                                         help='List users')
@@ -253,9 +255,9 @@ def main():
 
     # create subparser for disable action
     disable_parser = subparsers.add_parser('disable',
-                                      help='Disable specified user')
+                                           help='Disable specified user')
     disable_parser.add_argument('--username', dest='username', default=None,
-                               help='Username to disable')
+                                help='Username to disable')
     disable_parser.set_defaults(func=disable_user)
 
     # create subparser for modify action
