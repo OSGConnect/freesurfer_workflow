@@ -83,15 +83,19 @@ def get_db_client():
     return psycopg2.connect(database=db, user=user, host=host, password=password)
 
 
-def submit_workflow(subject_file, user, jobid, multicore=True, workflow='diamond'):
+def submit_workflow(subject_files, subject_name, user, jobid,
+                    multicore=True, options=None, workflow='diamond'):
     """
     Submit a workflow to OSG for processing
 
-    :param subject_file:  path to file with MRI data in mgz format
+    :param subject_files:  lists with paths to files with MRI
+                           data (mgz or subject dir)
+    :param subject_name:   name of subject being processed
     :param user:          freesurfer user that workflow is being run for
     :param jobid:         job id for the workflow
     :param multicore:     boolean indicating whether to use a multicore
                           workflow or not
+    :param options:       Options to pass to FreeSurfer
     :param workflow:      string indicating type of workflow to run (serial,
                           diamond, single)
     :return:              0 on success, 1 on error
@@ -102,33 +106,35 @@ def submit_workflow(subject_file, user, jobid, multicore=True, workflow='diamond
         cores = 2
     logger = fsurfer.log.get_logger()
 
-    subject_name = os.path.basename(subject_file).replace("_defaced.mgz", "")
-    logger.debug("Processing workflow using {0} as input".format(subject_file))
+    logger.debug("Processing workflow using {0} as input".format(subject_files))
     dax = Pegasus.DAX3.ADAG('freesurfer')
-    dax_subject_file = Pegasus.DAX3.File("{0}_defaced.mgz".format(subject_name))
-    dax_subject_file.addPFN(Pegasus.DAX3.PFN("file://{0}".format(subject_file),
-                                             "local"))
-    dax.addFile(dax_subject_file)
+    dax_subject_files = []
+    for input_file in subject_files:
+        dax_subject_file = Pegasus.DAX3.File(input_file)
+        dax_subject_file.addPFN(Pegasus.DAX3.PFN("file://{0}".format(input_file),
+                                                 "local"))
+        dax_subject_files.append(dax_subject_file)
+        dax.addFile(dax_subject_file)
     workflow_directory = os.path.join(FREESURFER_BASE, user, 'workflows')
     if workflow == 'serial':
         errors = fsurfer.create_serial_workflow(dax,
                                                 cores,
-                                                dax_subject_file,
+                                                dax_subject_files,
                                                 subject_name)
     elif workflow == 'diamond':
         errors = fsurfer.create_diamond_workflow(dax,
                                                  cores,
-                                                 dax_subject_file,
+                                                 dax_subject_files,
                                                  subject_name)
     elif workflow == 'single':
         errors = fsurfer.create_single_workflow(dax,
                                                 cores,
-                                                dax_subject_file,
+                                                dax_subject_files,
                                                 subject_name)
     else:
         errors = fsurfer.create_serial_workflow(dax,
                                                 cores,
-                                                dax_subject_file,
+                                                dax_subject_files,
                                                 subject_name)
     if not errors:
         curr_date = time.strftime("%Y%m%d_%H%M%S", time.gmtime(time.time()))
@@ -180,7 +186,8 @@ def process_images():
     """
     fsurfer.log.initialize_logging()
     logger = fsurfer.log.get_logger()
-    parser = argparse.ArgumentParser(description="Process and remove old inputs")
+    parser = argparse.ArgumentParser(description="Generate and submit "
+                                                 "workflows to process jobs")
     # version info
     parser.add_argument('--version', action='version', version='%(prog)s ' + VERSION)
     # Arguments for action
@@ -205,29 +212,66 @@ def process_images():
 
     conn = get_db_client()
     cursor = conn.cursor()
-    job_query = "SELECT id, username, num_inputs  FROM freesurfer_interface.jobs " \
+    job_query = "SELECT id, username, num_inputs, subject, options " \
+                "FROM freesurfer_interface.jobs " \
                 "WHERE state = 'UPLOADED'"
+    input_file_query = "SELECT filename, path, subject_dir" \
+                       "FROM freesurfer_interface.input_files" \
+                       "WHERE job_id = %s AND status NOT 'PURGED'"
     job_update = "UPDATE freesurfer_interface.jobs " \
                  "SET state = 'PROCESSING' " \
                  "WHERE id = %s;"
-    job_query = "SELECT id, username  FROM freesurfer_interface.jobs " \
-                "WHERE state = 'UPLOADED'"
+    job_error = "UPDATE freesurfer_interface.jobs " \
+                "SET state = 'ERROR' " \
+                "WHERE id = %s;"
     try:
         cursor.execute(job_query)
         for row in cursor.fetchall():
             logger.info("Processing workflow {0} for user {1}".format(row[0], row[1]))
-            input_file = os.path.join(FREESURFER_BASE, row[1], 'input', row[2])
+
             workflow_directory = os.path.join(FREESURFER_BASE, row[1])
             if not os.path.exists(workflow_directory):
                 if args.dry_run:
                     sys.stdout.write("Would have created {0}".format(workflow_directory))
                 else:
                     os.makedirs(workflow_directory)
-            if not os.path.isfile(input_file):
-                logger.warn("Input file {0} missing, skipping".format(input_file))
+            cursor2 = conn.cursor()
+            cursor2.execute(input_file_query, [row[0]])
+            input_files = []
+            custom_workflow = False
+            for input_info in cursor2.fetchall():
+                input_file = os.path.join(FREESURFER_BASE, input_info[0], input_info[1])
+                if not os.path.isfile(input_file):
+                    logger.warn("Input file {0} missing, skipping".format(input_file))
+                    custom_workflow = True
+                    break
+                elif bool(row[2]):
+                    # input file is a subject dir
+                    if cursor2.rowcount() != 1:
+                        # can't give multiple subject dirs at one time
+                        logger.error("Subject dir combined with multiple inputs, skipping!")
+                        cursor3 = conn.cursor()
+                        if args.dry_run:
+                            sys.stdout.write("Would have changed workflow "
+                                             "{0} to ERROR state\n".format(row[0]))
+                        else:
+                            logger.error("Changed {0} to ERROR state".format(row[0]))
+                            cursor3.execute(job_error, [row[0]])
+                            break
+                    input_files.append(input_file)
+                else:
+                    input_files.append(input_file)
+            if custom_workflow:
                 continue
             if not args.dry_run:
-                errors = submit_workflow(input_file, workflow_directory, row[0])
+                if custom_workflow:
+                    errors = submit_workflow(input_files, row[3],
+                                             workflow_directory, row[0],
+                                             options=row[4],
+                                             workflow='custom')
+                else:
+                    errors = submit_workflow(input_files, row[3],
+                                             workflow_directory, row[0])
             else:
                 errors = False
             if not errors and not args.dry_run:

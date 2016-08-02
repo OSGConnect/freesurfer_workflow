@@ -16,6 +16,9 @@ import cPickle
 REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer"
 VERSION = '1.3.15'
 CREDENTIAL_FILE = os.path.expanduser('~/.fsurf/credentials')
+# supported versions of FreeSurfer
+FREESURFER_VERSIONS = ['5.3']
+
 usage_text = """
 %(prog)s {list|status|remove|output|change-password|submit} [options]
 
@@ -311,14 +314,17 @@ def list_workflows(args):
         elif status != 200:
             error_message("Error getting workflow information")
             sys.exit(1)
-        sys.stdout.write("Current workflows\n")
+        if args.all_workflows:
+            sys.stdout.write("All workflows\n")
+        else:
+            sys.stdout.write("Workflows submitted in last month\n")
         response_object = json.loads(response)
         sys.stdout.write("{0:10} {1:20} {2:27} ".format('Subject',
                                                         'Workflow',
                                                         'Submit time (Central Time)'))
         sys.stdout.write("{0:10} {1:10}\n".format('Cores', 'Status'))
         if len(response_object['jobs']) == 0:
-            sys.stdout.write("No workflows in system\n")
+            sys.stdout.write("\nNo workflows present\n")
         for workflow in response_object['jobs']:
             job_id = workflow[0]
             subject = workflow[1]
@@ -394,6 +400,11 @@ def submit_workflow(args):
     username, password = get_user_info(args)
     timestamp, token = get_token(username, password)
     num_inputs = len(args.input_file)
+    if args.version not in FREESURFER_VERSIONS:
+        sys.stderr.write("FreeSurfer version requested is not available!\n")
+        sys.stderr.write("You requested {0}\n".format(args.version))
+        sys.stderr.write("Available versions: {0}\n".format(",".join(FREESURFER_VERSIONS)))
+        sys.exit(1)
     query_params = {'userid': username,
                     'timestamp': timestamp,
                     'token': token,
@@ -401,7 +412,7 @@ def submit_workflow(args):
                     'subject': args.subject,
                     'num_inputs': num_inputs,
                     'options': args.options,
-                    'version': args.options,
+                    'version': args.version,
                     'jobname': "{0}_{1}".format(args.subject, timestamp)}
     sys.stdout.write("Creating and submitting workflow\n")
     status, response = get_response(query_params, 'job', 'POST')
@@ -657,10 +668,6 @@ def main():
                                dest='subject',
                                default=None,
                                help='Subject id to process ')
-    submit_parser.add_argument('--dir',
-                               dest='input_directory',
-                               default='.',
-                               help='directory containing input file')
     submit_parser.add_argument('--dualcore',
                                dest='dualcore',
                                action='store_false',
@@ -678,13 +685,21 @@ def main():
                                dest='input_file',
                                action='append',
                                default='.',
-                               help='name of input file(s), this can be used '
+                               help='path to input file(s), this can be used '
                                     'multiple times')
     submit_parser.add_argument('--subject-dir',
                                dest='subject_dir',
                                default='.',
                                help='name of zip file with subject directory '
                                     'to use')
+    submit_parser.add_argument('--options',
+                               dest='options',
+                               default=None,
+                               help='options to pass to FreeSurfer')
+    submit_parser.add_argument('--version',
+                               dest='version',
+                               default='5.3',
+                               help='version of FreeSurfer to use')
     submit_parser.set_defaults(func=submit_workflow)
 
     args = parser.parse_args(sys.argv[1:])
