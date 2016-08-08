@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import argparse
-import json
 import socket
 import sys
 import hashlib
@@ -60,10 +59,14 @@ def get_db_parameters():
     :return: a tuple of (database_name, user, password, hostname)
     """
     parameters = {}
-    with open(CONFIG_FILE_LOCATION) as param_file:
-        for line in param_file:
-            key, val = line.strip().split('=')
-            parameters[key.strip()] = val.strip()
+    # with open(CONFIG_FILE_LOCATION) as param_file:
+    #     for line in param_file:
+    #         key, val = line.strip().split('=')
+    #         parameters[key.strip()] = val.strip()
+    parameters['database'] = app.config['DB_NAME']
+    parameters['user'] = app.config['DB_USER']
+    parameters['password'] = app.config['DB_PASSWD']
+    parameters['hostname'] = app.config['DB_HOST']
     return (parameters['database'],
             parameters['user'],
             parameters['password'],
