@@ -205,7 +205,7 @@ def get_user_salt():
     return flask.jsonify(response)
 
 
-@app.route('/freesurfer/user/password', method=['PUT'])
+@app.route('/freesurfer/user/password', methods=['PUT'])
 def set_user_password():
     """
     Set password for a userid
@@ -374,7 +374,7 @@ def get_job_status():
     return flask.jsonify(response)
 
 
-@app.route('/freesurfer/job/input', method=['POST'])
+@app.route('/freesurfer/job/input', methods=['POST'])
 def get_input():
     """
     Submit an input for a job to be processed
@@ -436,7 +436,7 @@ def get_input():
     return flask.jsonify(response)
 
 
-@app.route('/freesurfer/job', method=['POST'])
+@app.route('/freesurfer/job', methods=['POST'])
 def submit_job():
     """
     Submit a job to be processed
