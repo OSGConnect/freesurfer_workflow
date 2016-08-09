@@ -14,6 +14,7 @@ import flask
 CONFIG_FILE_LOCATION = "/etc/fsurf/fsurf-prod.config"
 FREESURFER_BASE = '/stash2/user/fsurf/'
 TIMEZONE = "US/Central"
+URL_PREFIX = "/freesurfer"
 
 app = Flask(__name__)
 
@@ -99,7 +100,7 @@ def get_db_client():
     return psycopg2.connect(database=db, user=user, host=host, password=password)
 
 
-@app.route('/job', methods=['DELETE'])
+@app.route(URL_PREFIX + '/job', methods=['DELETE'])
 def delete_job():
     """
     Remove a job from being processed
@@ -174,7 +175,7 @@ def get_user_params():
     return user_id, token, timestamp
 
 
-@app.route('/user/salt')
+@app.route(URL_PREFIX + '/user/salt')
 def get_user_salt():
     """
     Get salt for a userid and return it
@@ -208,7 +209,7 @@ def get_user_salt():
     return flask.jsonify(response)
 
 
-@app.route('/user/password', methods=['PUT'])
+@app.route(URL_PREFIX + '/user/password', methods=['PUT'])
 def set_user_password():
     """
     Set password for a userid
@@ -251,7 +252,7 @@ def set_user_password():
     return flask.jsonify(response)
 
 
-@app.route('/user/validate')
+@app.route(URL_PREFIX + '/user/validate')
 def validate_user(userid, token, timestamp):
     """
     Given an userid and security token, validate this against database
@@ -280,7 +281,7 @@ def validate_user(userid, token, timestamp):
         conn.close()
 
 
-@app.route('/job', methods=['GET'])
+@app.route(URL_PREFIX + '/job', methods=['GET'])
 def get_current_jobs():
     """
     Get status for all jobs submitted by user in last week
@@ -338,7 +339,7 @@ def get_current_jobs():
     return flask.jsonify(response)
 
 
-@app.route('/job/status')
+@app.route(URL_PREFIX + '/job/status')
 def get_job_status():
     """
     Get status for job specified
@@ -377,7 +378,7 @@ def get_job_status():
     return flask.jsonify(response)
 
 
-@app.route('/job/input', methods=['POST'])
+@app.route(URL_PREFIX + '/job/input', methods=['POST'])
 def get_input():
     """
     Submit an input for a job to be processed
@@ -439,7 +440,7 @@ def get_input():
     return flask.jsonify(response)
 
 
-@app.route('/job', methods=['POST'])
+@app.route(URL_PREFIX + '/job', methods=['POST'])
 def submit_job():
     """
     Submit a job to be processed
@@ -508,7 +509,7 @@ def submit_job():
     return flask.jsonify(response)
 
 
-@app.route('/job/output')
+@app.route(URL_PREFIX + '/job/output')
 def get_job_output():
     """
     Return the output from a job
@@ -562,7 +563,7 @@ def get_job_output():
     return flask.jsonify(response)
 
 
-@app.route('/job/log')
+@app.route(URL_PREFIX + '/job/log')
 def get_job_log():
     """
     Return the logs from a job
