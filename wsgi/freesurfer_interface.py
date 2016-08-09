@@ -99,7 +99,7 @@ def get_db_client():
     return psycopg2.connect(database=db, user=user, host=host, password=password)
 
 
-@app.route('/freesurfer/job', methods=['DELETE'])
+@app.route('/job', methods=['DELETE'])
 def delete_job():
     """
     Remove a job from being processed
@@ -174,7 +174,7 @@ def get_user_params():
     return user_id, token, timestamp
 
 
-@app.route('/freesurfer/user/salt')
+@app.route('/user/salt')
 def get_user_salt():
     """
     Get salt for a userid and return it
@@ -208,7 +208,7 @@ def get_user_salt():
     return flask.jsonify(response)
 
 
-@app.route('/freesurfer/user/password', methods=['PUT'])
+@app.route('/user/password', methods=['PUT'])
 def set_user_password():
     """
     Set password for a userid
@@ -251,7 +251,7 @@ def set_user_password():
     return flask.jsonify(response)
 
 
-@app.route('/freesurfer/user/validate')
+@app.route('/user/validate')
 def validate_user(userid, token, timestamp):
     """
     Given an userid and security token, validate this against database
@@ -280,7 +280,7 @@ def validate_user(userid, token, timestamp):
         conn.close()
 
 
-@app.route('/freesurfer/job', methods=['GET'])
+@app.route('/job', methods=['GET'])
 def get_current_jobs():
     """
     Get status for all jobs submitted by user in last week
@@ -338,7 +338,7 @@ def get_current_jobs():
     return flask.jsonify(response)
 
 
-@app.route('/freesurfer/job/status')
+@app.route('/job/status')
 def get_job_status():
     """
     Get status for job specified
@@ -377,7 +377,7 @@ def get_job_status():
     return flask.jsonify(response)
 
 
-@app.route('/freesurfer/job/input', methods=['POST'])
+@app.route('/job/input', methods=['POST'])
 def get_input():
     """
     Submit an input for a job to be processed
@@ -439,7 +439,7 @@ def get_input():
     return flask.jsonify(response)
 
 
-@app.route('/freesurfer/job', methods=['POST'])
+@app.route('/job', methods=['POST'])
 def submit_job():
     """
     Submit a job to be processed
@@ -508,7 +508,7 @@ def submit_job():
     return flask.jsonify(response)
 
 
-@app.route('/freesurfer/job/output')
+@app.route('/job/output')
 def get_job_output():
     """
     Return the output from a job
@@ -562,7 +562,7 @@ def get_job_output():
     return flask.jsonify(response)
 
 
-@app.route('/freesurfer/job/log')
+@app.route('/job/log')
 def get_job_log():
     """
     Return the logs from a job
