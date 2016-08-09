@@ -632,4 +632,7 @@ if __name__ == '__main__':
         app.config.from_envvar('FSURF_CONFIG_FILE')
     else:
         app.config.from_pyfile(args.config_file)
+    if app.config['TESTING']:
+        global URL_PREFIX
+        URL_PREFIX += "_testing"
     app.run(args.hostname, args.port, args.debug)
