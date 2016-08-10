@@ -53,18 +53,6 @@ def save_file(environ, file_name):
     uploaded_file.close()
 
 
-def get_db_parameters():
-    """
-    Read database parameters from a file and return it
-
-    :return: a tuple of (database_name, user, password, hostname)
-    """
-    return {'database': app.config['DB_NAME'],
-            'user': app.config['DB_USER'],
-            'password': app.config['DB_PASSWD'],
-            'hostname': app.config['DB_HOST']}
-
-
 def flask_error_response(status, message):
     """
     Generate and return a flask error response
@@ -86,8 +74,10 @@ def get_db_client():
 
     :return: a redis client instance or None if failure occurs
     """
-    db, user, password, host = get_db_parameters()
-    return psycopg2.connect(database=db, user=user, host=host, password=password)
+    return psycopg2.connect(database=app.config['DB_NAME'],
+                            user=app.config['DB_USER'],
+                            host=app.config['DB_HOST'],
+                            password=app.config['DB_PASSWD'])
 
 
 @app.route(URL_PREFIX + '/job', methods=['DELETE'])
