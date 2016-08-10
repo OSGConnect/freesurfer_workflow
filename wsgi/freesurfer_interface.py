@@ -59,19 +59,10 @@ def get_db_parameters():
 
     :return: a tuple of (database_name, user, password, hostname)
     """
-    parameters = {}
-    # with open(CONFIG_FILE_LOCATION) as param_file:
-    #     for line in param_file:
-    #         key, val = line.strip().split('=')
-    #         parameters[key.strip()] = val.strip()
-    parameters['database'] = app.config['DB_NAME']
-    parameters['user'] = app.config['DB_USER']
-    parameters['password'] = app.config['DB_PASSWD']
-    parameters['hostname'] = app.config['DB_HOST']
-    return (parameters['database'],
-            parameters['user'],
-            parameters['password'],
-            parameters['hostname'])
+    return {'database': app.config['DB_NAME'],
+            'user': app.config['DB_USER'],
+            'password': app.config['DB_PASSWD'],
+            'hostname': app.config['DB_HOST']}
 
 
 def flask_error_response(status, message):
@@ -86,7 +77,6 @@ def flask_error_response(status, message):
     response = flask.jsonify({'status': status,
                               'result': message.lower()})
     response.status_code = status
-    response.status = message
     return response
 
 
@@ -183,6 +173,10 @@ def get_user_salt():
     :return: a tuple with response_body, status
     """
     userid, _, _ = get_user_params()
+    parameters = {'userid': str}
+    if not validate_parameters(parameters):
+        return flask_error_response(400, "Invalid or missing parameter")
+
     conn = get_db_client()
     cursor = conn.cursor()
     salt_query = "SELECT salt " \
