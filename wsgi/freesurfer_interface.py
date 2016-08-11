@@ -473,7 +473,7 @@ def submit_job():
                  "                                      options," \
                  "                                      version," \
                  "                                      subject)" \
-                 "VALUES(%s, %s, 'UPLOADED', %s, %s, %s)" \
+                 "VALUES(%s, 'UPLOADED', %s, %s, %s, %s, %s, %s)" \
                  "RETURNING id"
     try:
         cursor.execute(job_insert,
