@@ -17,6 +17,10 @@ TIMEZONE = "US/Central"
 URL_PREFIX = "/freesurfer"
 
 app = Flask(__name__)
+if 'FSURF_CONFIG_FILE' in os.environ and os.environ['FSURF_CONFIG_FILE']:
+    app.config.from_envvar('FSURF_CONFIG_FILE')
+else:
+    app.config.from_pyfile(CONFIG_FILE_LOCATION)
 
 
 def validate_parameters(parameters):
@@ -611,9 +615,9 @@ if __name__ == '__main__':
                         action='store_true', default=False,
                         help='Output debug messages')
     args = parser.parse_args(sys.argv[1:])
-
     if 'FSURF_CONFIG_FILE' in os.environ and os.environ['FSURF_CONFIG_FILE']:
         app.config.from_envvar('FSURF_CONFIG_FILE')
     else:
         app.config.from_pyfile(args.config_file)
+
     app.run(args.hostname, args.port, args.debug)
