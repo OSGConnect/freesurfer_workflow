@@ -13,7 +13,7 @@ import re
 
 import cPickle
 
-REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer"
+REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer_test"
 VERSION = '1.3.15'
 CREDENTIAL_FILE = os.path.expanduser('~/.fsurf/credentials')
 # supported versions of FreeSurfer
@@ -231,13 +231,37 @@ def download_output(query_parameters, noun, endpoint=REST_ENDPOINT):
         return 400, json.dumps(response)
 
 
-def upload_item(query_parameters, noun, body, method, endpoint=REST_ENDPOINT):
+def encode_file(body, filename):
+    """
+    Encode a file in a binary form and return a mime content type
+    and encoded binary data
+
+    :param body: binary data to encode
+    :return: content_type, body
+    """
+    boundary = '--------------MIME_Content_Boundary---------------'
+    lines = []
+    lines.append('--' + boundary)
+    lines.append('Content-Disposition: form-data; name="input_file"; '
+                 'filename="{0}"'.format(filename))
+    lines.append('Content-Type: application/octet-stream' )
+    lines.append('')
+    lines.append(body)
+    lines.append('--' + boundary + '--')
+    lines.append('')
+    encoded = "\r\n".join(lines)
+    content_type = 'multipart/form-data; boundary=%s' % boundary
+    return content_type, encoded
+
+
+def upload_item(query_parameters, noun, filename, body, method, endpoint=REST_ENDPOINT):
     """
     Issue a POST request to given endpoint
 
     :param endpoint: url to REST endpoint
     :param query_parameters: a dictionary with key, values parameters
     :param noun: object being worked on
+    :param filename: name of file being transferred
     :param body:  data to be sent in the body
     :param method:  HTTP method that should be used (POST, PUT)
     :return: (status code, response from query)
@@ -248,7 +272,13 @@ def upload_item(query_parameters, noun, body, method, endpoint=REST_ENDPOINT):
     parsed = urlparse.urlparse(url)
     try:
         conn = httplib.HTTPConnection(parsed.hostname)
-        conn.request(method, "{0}?{1}".format(parsed.path, parsed.query), body)
+        content_type, body = encode_file(body, filename)
+        headers = {'content-type': content_type,
+                   'Accept': 'text/plain'}
+        conn.request(method,
+                     "{0}?{1}".format(parsed.path, parsed.query),
+                     body,
+                     headers)
         resp = conn.getresponse()
         if resp.status == 401:
             # invalid password
@@ -406,13 +436,13 @@ def submit_workflow(args):
         sys.stderr.write("Available versions: {0}\n".format(",".join(FREESURFER_VERSIONS)))
         sys.exit(1)
     query_params = {'userid': username,
-                    'timestamp': timestamp,
                     'token': token,
                     'multicore': not bool(args.dualcore),
-                    'subject': args.subject,
                     'num_inputs': num_inputs,
                     'options': args.options,
                     'version': args.version,
+                    'subject': args.subject,
+                    'timestamp': timestamp,
                     'jobname': "{0}_{1}".format(args.subject, timestamp)}
     sys.stdout.write("Creating and submitting workflow\n")
     status, response = get_response(query_params, 'job', 'POST')
@@ -430,17 +460,16 @@ def submit_workflow(args):
     for input_file in args.input_file:
         attempts = 1
         sys.stdout.write("Uploading {0} (file {1}/{2})\n".format(input_file,
-                                                                 file_num,
+                                                                 file_num + 1,
                                                                  num_inputs))
         while attempts < 6:
             query_params = {'userid': username,
                             'timestamp': timestamp,
                             'token': token,
-                            'job_id': job_id,
-                            'filename': input_file}
-            input_path = os.path.join(args.input_directory,
-                                      input_file)
-            input_path = os.path.abspath(input_path)
+                            'jobid': job_id,
+                            'filename': os.path.basename(input_file),
+                            'subjectdir': False}
+            input_path = os.path.abspath(input_file)
             if not os.path.isfile(input_path):
                 sys.stderr.write("{0} is not present and is needed, "
                                  "exiting\n".format(input_path))
@@ -448,7 +477,11 @@ def submit_workflow(args):
             with open(input_path, 'rb') as f:
                 body = f.read()
 
-            status, response = upload_item(query_params, 'job/input', body, 'POST')
+            status, response = upload_item(query_params,
+                                           'job/input',
+                                           os.path.basename(input_file),
+                                           body,
+                                           'POST')
             if status == 200:
                 sys.stdout.write("Uploaded {0} successfully\n".format(input_file))
                 break
@@ -559,7 +592,7 @@ def change_password(args):
                     'pw_hash': pw_hash}
     status, response = get_response(query_params,
                                     'user/password',
-                                    'GET')
+                                    'PUT')
     response_obj = json.loads(response)
     if status == 401:
         sys.stdout.write("Invalid username or password\n")
@@ -591,6 +624,8 @@ def main():
                         version='%(prog)s ' + VERSION)
     parser.add_argument('--user', dest='user', default=None,
                         help='Username to use to login')
+    parser.add_argument('--test', dest='test', action='store_true',
+                        help=argparse.SUPPRESS)
 
     subparsers = parser.add_subparsers(title='subcommands',
                                        description='valid actions that can be taken',
@@ -684,7 +719,7 @@ def main():
     submit_parser.add_argument('--input-file',
                                dest='input_file',
                                action='append',
-                               default='.',
+                               default=[],
                                help='path to input file(s), this can be used '
                                     'multiple times')
     submit_parser.add_argument('--subject-dir',
@@ -703,6 +738,9 @@ def main():
     submit_parser.set_defaults(func=submit_workflow)
 
     args = parser.parse_args(sys.argv[1:])
+    if args.test:
+        global REST_ENDPOINT
+        REST_ENDPOINT += "_test"
     args.func(args)
 
 if __name__ == '__main__':

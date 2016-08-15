@@ -22,6 +22,9 @@ if 'FSURF_CONFIG_FILE' in os.environ and os.environ['FSURF_CONFIG_FILE']:
 else:
     app.config.from_pyfile(CONFIG_FILE_LOCATION)
 
+if 'URL_PREFIX' in app.config and app.config['URL_PREFIX']:
+    URL_PREFIX = app.config['URL_PREFIX']
+
 
 def validate_parameters(parameters):
     """
@@ -42,19 +45,6 @@ def validate_parameters(parameters):
             if flask.request.args[key].lower() not in ('true', 'false'):
                 return False
     return True
-
-
-def save_file(environ, file_name):
-    """
-    Save a file that's uploaded using POST
-
-    :param environ: wsgi environment dictionary
-    :param file_name: name of file to save to
-    :return: nothing
-    """
-    uploaded_file = open(file_name, 'wb')
-    uploaded_file.write(environ['wsgi.input'].read())
-    uploaded_file.close()
 
 
 def flask_error_response(status, message):
@@ -409,7 +399,7 @@ def get_input():
         temp_dir = tempfile.mkdtemp(dir=output_dir)
         input_file = os.path.join(temp_dir,
                                   flask.request.args['filename'])
-        fh = flask.request.files['file']
+        fh = flask.request.files['input_file']
         fh.save(input_file)
         cursor.execute(input_insert,
                        [flask.request.args['filename'],
@@ -473,7 +463,7 @@ def submit_job():
                  "                                      options," \
                  "                                      version," \
                  "                                      subject)" \
-                 "VALUES(%s, 'UPLOADED', %s, %s, %s, %s, %s, %s)" \
+                 "VALUES(%s, 'QUEUED', %s, %s, %s, %s, %s, %s)" \
                  "RETURNING id"
     try:
         cursor.execute(job_insert,
