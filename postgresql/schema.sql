@@ -13,7 +13,7 @@ CREATE TYPE freesurfer_interface.job_state AS ENUM (
 );
 
 CREATE TYPE freesurfer_interface.freesufer_version AS ENUM (
-    '5.3',
+    '5.3.0',
     '6.0'
 );
 
@@ -41,7 +41,7 @@ CREATE TABLE freesurfer_interface.jobs (
     options         VARCHAR(1024),
     purged          BOOLEAN NOT NULL DEFAULT FALSE,
     num_inputs      INTEGER NOT NULL DEFAULT 0,
-    version         freesurfer_interface.freesufer_version NOT NULL DEFAULT '5.3'
+    version         freesurfer_interface.freesufer_version NOT NULL DEFAULT '5.3.0'
 );
 
 CREATE TABLE freesurfer_interface.job_run (

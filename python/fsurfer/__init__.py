@@ -22,6 +22,7 @@ __all__ = ['create_single_job',
            'create_serial_workflow',
            'create_diamond_workflow',
            'create_single_workflow',
+           'create_custom_workflow',
            'get_db_client',
            'get_db_parameters']
 

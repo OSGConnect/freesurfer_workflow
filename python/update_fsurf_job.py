@@ -55,7 +55,7 @@ def format_seconds(duration, max_comp=2):
     comp = 0
     if duration is None:
         return '-'
-    #milliseconds = math.modf(duration)[0]
+    # milliseconds = math.modf(duration)[0]
     sec = int(duration)
     formatted_duration = ''
     years = sec / 31536000
@@ -154,19 +154,17 @@ def parse_submit_file(fname):
 
     ad = {}
     ad['request_cpus'] = 1
-
-    f = open(fname)
-    for line in f:
-        line = line.strip()
-        if line == '' or line[0] == '#':
-            continue
-        if line.find('=') == -1:
-            continue
-        key, value = line.split('=', 1)
-        key = key.strip().lower()
-        value = value.strip()
-        ad[key] = value
-    f.close()
+    with open(fname) as f:
+        for line in f:
+            line = line.strip()
+            if line == '' or line[0] == '#':
+                continue
+            if line.find('=') == -1:
+                continue
+            key, value = line.split('=', 1)
+            key = key.strip().lower()
+            value = value.strip()
+            ad[key] = value
     return ad
 
 
@@ -175,21 +173,20 @@ def calculate_usage(submit_dir):
     walks a Pegasus workflow directory and calculates the walltime and cpu usage
 
     :param submit_dir: the Pegasus workflow submit dir
-    :return: a string summarizing the usage
+    :return: a tuple with [walltime, cputime] used in seconds
     """
-
     start_ts = float('inf')
     end_ts = -float('inf')
     total_core_time = 0.0
-    
+
     for f in os.listdir(submit_dir):
-    
+
         # only consider
         if not re.search('\.out\.[0-9]+$', f):
             continue
-    
+
         full_name = os.path.join(submit_dir, f)
-    
+
         # parse the kickstart record, if available
         try:
             ks = parse_ks_record(full_name)
@@ -198,21 +195,39 @@ def calculate_usage(submit_dir):
         except xml.parsers.expat.ExpatError as e:
             # not a valid xml file
             continue
-    
+
         cores = int(submit['request_cpus'])
         total_core_time += cores * ks['duration']
-    
+
         if ks['start_ts'] < start_ts:
             start_ts = ks['start_ts']
         if ks['end_ts'] > end_ts:
             end_ts = ks['end_ts']
-  
-    # only return data if it is valid 
+
+    # only return data if it is valid
     msg = ""
     if end_ts - start_ts > 0 and total_core_time > 0:
-        msg = '\nThe workflow was active for ' + format_seconds(end_ts - start_ts) \
+        return [format_seconds(end_ts - start_ts),
+                format_seconds(total_core_time)]
+
+    return [None, None]
+
+
+def usage_msg(walltime, cputime):
+    """
+    Return a message summarizing usage
+
+    :param walltime: walltime used by workflow
+    :param cputime:  cputime used by workflow
+    :return: a string summarizing the usage
+    """
+
+    msg = ""
+    if walltime and cputime:
+        # only return message if it is valid
+        msg = '\nThe workflow was active for ' + walltime \
             + ' and used a total CPU time of ' \
-            + format_seconds(total_core_time) + ' on the Open Science Grid.' \
+            + cputime + ' on the Open Science Grid.' \
             + ' Please note that the CPU time' \
             + ' might be larger than the active time due to multi-threading.\n'
 
@@ -288,6 +303,8 @@ def process_results(jobid, success=True):
     pegasus_ts = pegasus_ts.strftime('%Y%m%dT%H%M%S%z')
 
     stats = ""
+    walltime = 0
+    cputime = 0
     try:
         submit_dir = os.path.join(FREESURFER_BASE,
                                   username,
@@ -296,7 +313,8 @@ def process_results(jobid, success=True):
                                   'pegasus',
                                   'freesurfer',
                                   pegasus_ts)
-        stats = calculate_usage(submit_dir)
+        walltime, cputime = calculate_usage(submit_dir)
+        stats = usage_msg(walltime, cputime)
     except Exception as e:
         logger.exception("Can't calculate stats, got exception: {0}".format(e))
         pass
@@ -357,16 +375,28 @@ def process_results(jobid, success=True):
     logger.info("Copied {0} to {1}".format(result_logfile, log_filename))
     try:
         if success:
-            job_update = "UPDATE freesurfer_interface.jobs  " \
-                         "SET state = 'COMPLETED'" \
-                         "WHERE id = %s;"
+            state = 'COMPLETED'
             logger.info("Updating workflow {0} to COMPLETED".format(jobid))
         else:
-            job_update = "UPDATE freesurfer_interface.jobs  " \
-                         "SET state = 'FAILED'" \
-                         "WHERE id = %s;"
-        logger.info("Updating workflow {0} to FAILED".format(jobid))
-        cursor.execute(job_update, [jobid])
+            state = 'FAILED'
+            logger.warning("Updating workflow {0} to FAILED".format(jobid))
+
+        job_update = "UPDATE freesurfer_interface.jobs  " \
+                     "SET state = %s" \
+                     "WHERE id = %s;"
+        cursor.execute(job_update, [state, jobid])
+        accounting_update = "UPDATE freesurfer_interface.job_run " \
+                            "SET walltime = %s, " \
+                            "    cputime = %s, " \
+                            "    state = %s, " \
+                            "    ended = CURRENT_TIMESTAMP," \
+                            "    tasks = tasks_completed " \
+                            "WHERE job_id = %s"
+        cursor.execute(accounting_update, [walltime,
+                                           cputime,
+                                           state,
+                                           jobid])
+
         conn.commit()
         conn.close()
     except psycopg2.Error as e:

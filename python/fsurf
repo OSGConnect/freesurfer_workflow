@@ -17,7 +17,7 @@ REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer_test"
 VERSION = '1.3.15'
 CREDENTIAL_FILE = os.path.expanduser('~/.fsurf/credentials')
 # supported versions of FreeSurfer
-FREESURFER_VERSIONS = ['5.3']
+FREESURFER_VERSIONS = ['5.3.0']
 
 usage_text = """
 %(prog)s {list|status|remove|output|change-password|submit} [options]
@@ -435,6 +435,15 @@ def submit_workflow(args):
         sys.stderr.write("You requested {0}\n".format(args.version))
         sys.stderr.write("Available versions: {0}\n".format(",".join(FREESURFER_VERSIONS)))
         sys.exit(1)
+    if args.options and not args.subject_dir:
+        sys.stderr.write("You must provide a subject directory file if "
+                         "using custom options!\n")
+        sys.exit(1)
+    if args.subject_dir and args.input_file:
+        sys.stderr.write("You can not provide a subject directory file and "
+                         "input files at the same time!\n")
+        sys.exit(1)
+
     query_params = {'userid': username,
                     'token': token,
                     'multicore': not bool(args.dualcore),
@@ -495,6 +504,42 @@ def submit_workflow(args):
             sys.stdout.write("Exiting...\n")
 
         file_num += 1
+    if args.subject_dir:
+        attempts = 1
+        input_file = args.subject_dir
+        sys.stdout.write("Uploading {0}\n".format(input_file))
+        while attempts < 6:
+            query_params = {'userid': username,
+                            'timestamp': timestamp,
+                            'token': token,
+                            'jobid': job_id,
+                            'filename': os.path.basename(input_file),
+                            'subjectdir': True}
+            input_path = os.path.abspath(args.subject_dir)
+            if not os.path.isfile(input_path):
+                sys.stderr.write("{0} is not present and is needed, "
+                                 "exiting\n".format(input_path))
+                sys.exit(1)
+            with open(input_path, 'rb') as f:
+                body = f.read()
+
+            status, response = upload_item(query_params,
+                                           'job/input',
+                                           os.path.basename(input_file),
+                                           body,
+                                           'POST')
+            if status == 200:
+                sys.stdout.write("Uploaded {0} successfully\n".format(input_file))
+                break
+            response_obj = json.loads(response)
+            sys.stdout.write("Error while uploading {0}\n".format(input_file))
+            sys.stdout.write("Error: {0}\n".format(response_obj['result']))
+            sys.stdout.write("Retrying upload, attempt {0}/5\n".format(attempts))
+            attempts += 1
+        if attempts == 6:
+            sys.stdout.write("Could not upload {0}\n".format(input_file))
+            sys.stdout.write("Exiting...\n")
+
     sys.exit(0)
 
 
@@ -724,7 +769,7 @@ def main():
                                     'multiple times')
     submit_parser.add_argument('--subject-dir',
                                dest='subject_dir',
-                               default='.',
+                               default=None,
                                help='name of zip file with subject directory '
                                     'to use')
     submit_parser.add_argument('--options',
@@ -733,7 +778,7 @@ def main():
                                help='options to pass to FreeSurfer')
     submit_parser.add_argument('--version',
                                dest='version',
-                               default='5.3',
+                               default='5.3.0',
                                help='version of FreeSurfer to use')
     submit_parser.set_defaults(func=submit_workflow)
 

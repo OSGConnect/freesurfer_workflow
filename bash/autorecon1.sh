@@ -15,6 +15,8 @@ fi
 module load xz/5.2.2
 date
 start=`date +%s`
+subject=$2
+cores=$3
 WD=$PWD
 if [ "$OSG_WN_TMP" != "" ];
 then
@@ -24,7 +26,7 @@ else
     SUBJECTS_DIR=`mktemp -d --tmpdir=$PWD`
 fi
 
-shift 4
+shift 3
 input_args=""
 while (( "$#" ));
 do
@@ -33,17 +35,17 @@ do
 done
 ######################################################################## 1st stage - serial
 recon-all                                                               \
-        -s $2                                                           \
+        -s $subject                                                     \
         $input_args                                                     \
         -autorecon1                                                     \
-        -openmp $3
+        -openmp $cores
 
 ######################################################################## 2nd stage - serial
 SW="autorecon2-volonly"
 recon-all                                                               \
-        -s $1                                                           \
+        -s $subject                                                     \
         -autorecon2-volonly                                             \
-        -openmp $3
+        -openmp $cores
 
 cd ${SUBJECTS_DIR}
 mv $1/scripts/recon-all.log $1/scripts/recon-all-step1.log

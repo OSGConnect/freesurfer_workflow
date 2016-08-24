@@ -83,13 +83,14 @@ def get_db_client():
     return psycopg2.connect(database=db, user=user, host=host, password=password)
 
 
-def submit_workflow(subject_files, subject_name, user, jobid,
+def submit_workflow(subject_files, version, subject_name, user, jobid,
                     multicore=True, options=None, workflow='diamond'):
     """
     Submit a workflow to OSG for processing
 
     :param subject_files:  lists with paths to files with MRI
                            data (mgz or subject dir)
+    :param version:        FreeSurfer version to use
     :param subject_name:   name of subject being processed
     :param user:          freesurfer user that workflow is being run for
     :param jobid:         job id for the workflow
@@ -110,33 +111,44 @@ def submit_workflow(subject_files, subject_name, user, jobid,
     dax = Pegasus.DAX3.ADAG('freesurfer')
     dax_subject_files = []
     for input_file in subject_files:
-        dax_subject_file = Pegasus.DAX3.File(input_file)
+        dax_subject_file = Pegasus.DAX3.File(os.path.basename(input_file))
         dax_subject_file.addPFN(Pegasus.DAX3.PFN("file://{0}".format(input_file),
                                                  "local"))
         dax_subject_files.append(dax_subject_file)
         dax.addFile(dax_subject_file)
     workflow_directory = os.path.join(FREESURFER_BASE, user, 'workflows')
     if workflow == 'serial':
-        errors = fsurfer.create_serial_workflow(dax,
-                                                cores,
-                                                dax_subject_files,
-                                                subject_name)
-    elif workflow == 'diamond':
-        errors = fsurfer.create_diamond_workflow(dax,
+        created = fsurfer.create_serial_workflow(dax,
+                                                 version,
                                                  cores,
                                                  dax_subject_files,
                                                  subject_name)
+    elif workflow == 'diamond':
+        created = fsurfer.create_diamond_workflow(dax,
+                                                  version,
+                                                  cores,
+                                                  dax_subject_files,
+                                                  subject_name)
     elif workflow == 'single':
-        errors = fsurfer.create_single_workflow(dax,
-                                                cores,
-                                                dax_subject_files,
-                                                subject_name)
+        created = fsurfer.create_single_workflow(dax,
+                                                 version,
+                                                 cores,
+                                                 dax_subject_files,
+                                                 subject_name)
+    elif workflow == 'custom':
+        created = fsurfer.create_custom_workflow(dax,
+                                                 version,
+                                                 cores,
+                                                 dax_subject_files,
+                                                 subject_name,
+                                                 options)
     else:
-        errors = fsurfer.create_serial_workflow(dax,
-                                                cores,
-                                                dax_subject_files,
-                                                subject_name)
-    if not errors:
+        created = fsurfer.create_serial_workflow(dax,
+                                                 version,
+                                                 cores,
+                                                 dax_subject_files,
+                                                 subject_name)
+    if created:
         curr_date = time.strftime("%Y%m%d_%H%M%S", time.gmtime(time.time()))
         dax.invoke('on_success', "/usr/bin/update_fsurf_job.py --success --id {0}".format(jobid))
         dax.invoke('on_error', "/usr/bin/update_fsurf_job.py --failure --id {0}".format(jobid))
@@ -169,13 +181,14 @@ def submit_workflow(subject_files, subject_name, user, jobid,
                         cursor.execute(job_update, [workflow_id, jobid])
                         conn.commit()
                         logger.info("Updated DB")
+                        return 0
                     except psycopg2.Error as e:
                         logger.exception("Got pgsql error: {0}".format(e))
                         pass
 
                 break
 
-    return errors
+    return 1
 
 
 def process_images():
@@ -212,18 +225,22 @@ def process_images():
 
     conn = get_db_client()
     cursor = conn.cursor()
-    job_query = "SELECT id, username, num_inputs, subject, options " \
+    job_query = "SELECT id, username, num_inputs, subject, options, version " \
                 "FROM freesurfer_interface.jobs " \
-                "WHERE state = 'UPLOADED'"
-    input_file_query = "SELECT filename, path, subject_dir" \
-                       "FROM freesurfer_interface.input_files" \
-                       "WHERE job_id = %s AND status NOT 'PURGED'"
+                "WHERE state = 'QUEUED'"
+    input_file_query = "SELECT filename, path, subject_dir " \
+                       "FROM freesurfer_interface.input_files " \
+                       "WHERE job_id = %s AND NOT purged"
     job_update = "UPDATE freesurfer_interface.jobs " \
                  "SET state = 'PROCESSING' " \
                  "WHERE id = %s;"
     job_error = "UPDATE freesurfer_interface.jobs " \
                 "SET state = 'ERROR' " \
                 "WHERE id = %s;"
+    account_start = "INSERT INTO freesurfer_interface.job_run(job_id, " \
+                    "                                         state, " \
+                    "                                         tasks) " \
+                    "VALUES(%s, 'QUEUED', %s)"
     try:
         cursor.execute(job_query)
         for row in cursor.fetchall():
@@ -239,15 +256,18 @@ def process_images():
             cursor2.execute(input_file_query, [row[0]])
             input_files = []
             custom_workflow = False
+            if cursor2.rowcount < 1:
+                logger.error("No input files, skipping workflow {0}".format(row[0]))
+                continue
             for input_info in cursor2.fetchall():
                 input_file = os.path.join(FREESURFER_BASE, input_info[0], input_info[1])
                 if not os.path.isfile(input_file):
                     logger.warn("Input file {0} missing, skipping".format(input_file))
                     custom_workflow = True
                     break
-                elif bool(row[2]):
+                elif bool(input_info[2]):
                     # input file is a subject dir
-                    if cursor2.rowcount() != 1:
+                    if cursor2.rowcount != 1:
                         # can't give multiple subject dirs at one time
                         logger.error("Subject dir combined with multiple inputs, skipping!")
                         cursor3 = conn.cursor()
@@ -263,19 +283,23 @@ def process_images():
                     input_files.append(input_file)
             if custom_workflow:
                 continue
+            num_tasks = 0
             if not args.dry_run:
                 if custom_workflow:
-                    errors = submit_workflow(input_files, row[3],
+                    errors = submit_workflow(input_files, row[5], row[3],
                                              workflow_directory, row[0],
                                              options=row[4],
                                              workflow='custom')
+                    num_tasks = 1
                 else:
-                    errors = submit_workflow(input_files, row[3],
+                    errors = submit_workflow(input_files, row[5], row[3],
                                              workflow_directory, row[0])
+                    num_tasks = 4
             else:
                 errors = False
             if not errors and not args.dry_run:
                 cursor.execute(job_update, [row[0]])
+                cursor.execute(account_start, [row[0], num_tasks])
                 conn.commit()
                 logger.info("Set workflow {0} status to PROCESSING".format(row[0]))
             else:

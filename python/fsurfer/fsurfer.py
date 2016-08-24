@@ -41,7 +41,7 @@ def create_single_job(dax, version, cores, subject_files, subject):
     return errors
 
 
-def create_custom_job(dax, version, cores, subject_file, subject, options):
+def create_custom_job(dax, version, cores, subject_dir, subject, options):
     """
     Create a workflow with a single job that runs freesurfer workflow
     with custom options
@@ -49,7 +49,7 @@ def create_custom_job(dax, version, cores, subject_file, subject, options):
     :param dax: Pegasus ADAG
     :param version: version of Freesurfer to use
     :param cores: number of cores to use
-    :param subject_file: pegasus File object pointing tarball containing
+    :param subject_dir: pegasus File object pointing tarball containing
                          subject dir
     :param subject: name of subject being processed
     :param options: options to FreeSurfer
@@ -65,8 +65,8 @@ def create_custom_job(dax, version, cores, subject_file, subject, options):
     if not dax.hasExecutable(freesurfer):
         dax.addExecutable(freesurfer)
     custom_job = Pegasus.DAX3.Job(name="freesurfer_process.sh".format(subject))
-    custom_job.addArguments(version, subject, subject_file, str(cores), options)
-    custom_job.uses(subject_file, link=Pegasus.DAX3.Link.INPUT)
+    custom_job.addArguments(version, subject, subject_dir, str(cores), options)
+    custom_job.uses(subject_dir, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_output.tar.gz".format(subject))
     custom_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=True)
     custom_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
@@ -276,16 +276,16 @@ def create_diamond_workflow(dax, version, cores, subject_files, subject,
     return True
 
 
-def create_custom_workflow(dax, version, cores, subject_file, subject, options):
+def create_custom_workflow(dax, version, cores, subject_dir, subject, options):
     """
     Create a workflow that processes MRI images using custom options to
     FreeSurfer
     :param dax: Pegasus ADAG
     :param version: String with the version of FreeSurfer to use
     :param cores: number of cores to use
-    :param subject_file: pegasus File object pointing to the subject dir
+    :param subject_dir: pegasus File object pointing to the subject dir
     :param subject: name of subject being processed
     :param options: Options to use in the workflow
     :return: False if errors occurred, True otherwise
     """
-    return create_custom_job(dax, version, cores, subject_file, subject, cores, options)
+    return create_custom_job(dax, version, cores, subject_dir, subject, cores, options)
