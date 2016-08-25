@@ -6,6 +6,7 @@ from fsurfer import create_final_job
 from fsurfer import create_serial_workflow
 from fsurfer import create_diamond_workflow
 from fsurfer import create_single_workflow
+from fsurfer import create_custom_workflow
 from helpers import get_db_client
 from helpers import get_db_parameters
 from log import get_logger

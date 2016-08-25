@@ -288,4 +288,4 @@ def create_custom_workflow(dax, version, cores, subject_dir, subject, options):
     :param options: Options to use in the workflow
     :return: False if errors occurred, True otherwise
     """
-    return create_custom_job(dax, version, cores, subject_dir, subject, cores, options)
+    return create_custom_job(dax, version, cores, subject_dir, subject, options)
