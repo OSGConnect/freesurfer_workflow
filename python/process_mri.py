@@ -139,7 +139,7 @@ def submit_workflow(subject_files, version, subject_name, user, jobid,
         created = fsurfer.create_custom_workflow(dax,
                                                  version,
                                                  cores,
-                                                 dax_subject_files,
+                                                 dax_subject_files[0],
                                                  subject_name,
                                                  options)
     else:
@@ -263,10 +263,10 @@ def process_images():
                 input_file = os.path.join(FREESURFER_BASE, input_info[0], input_info[1])
                 if not os.path.isfile(input_file):
                     logger.warn("Input file {0} missing, skipping".format(input_file))
-                    custom_workflow = True
                     break
                 elif bool(input_info[2]):
                     # input file is a subject dir
+                    custom_workflow = True
                     if cursor2.rowcount != 1:
                         # can't give multiple subject dirs at one time
                         logger.error("Subject dir combined with multiple inputs, skipping!")
@@ -281,8 +281,6 @@ def process_images():
                     input_files.append(input_file)
                 else:
                     input_files.append(input_file)
-            if custom_workflow:
-                continue
             num_tasks = 0
             if not args.dry_run:
                 if custom_workflow:
