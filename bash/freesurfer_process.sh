@@ -2,8 +2,9 @@
 # arguments
 # $1 - Freesurfer version
 # $2 - subject name
-# $3 - num of cores to use
-# $4 - options
+# $3 - file with subject dir
+# $4 - num of cores to use
+# $5 - options
 
 module load freesurfer/$1
 if [ $? != 0 ];
@@ -14,6 +15,9 @@ fi
 module load xz/5.2.2
 date
 start=`date +%s`
+subject=$2
+subject_file=$3
+cores=$4
 WD=$PWD
 if [ "$OSG_WN_TMP" != "" ];
 then
@@ -22,17 +26,19 @@ then
 else
     SUBJECTS_DIR=`mktemp -d --tmpdir=$PWD`
 fi
-cp $2 $SUBJECTS_DIR
+cp $subject_file $SUBJECTS_DIR
 cd $SUBJECTS_DIR
-tar xvaf $2
-rm $2
+unzip $subject_file
+rm $subject_file
+shift 4
 ######################################################################## run all steps
 recon-all                                                           \
-        $4                                                          \
-        -openmp $3
+        $@                                                          \
+        -subjid $subject                                            \
+        -openmp $cores
 
 cd  $SUBJECTS_DIR
-tar czf $WD/$2_output.tar.gz *
+tar czf $WD/${subject}_output.tar.gz *
 cd $WD
 
 
