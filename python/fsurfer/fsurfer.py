@@ -56,15 +56,15 @@ def create_custom_job(dax, version, cores, subject_dir, subject, options):
     :return: exit code (0 for success, 1 for failure)
     :return: False if errors occurred, True otherwise
     """
-    freesurfer = Pegasus.DAX3.Executable(name="freesurfer_process.sh",
+    freesurfer = Pegasus.DAX3.Executable(name="freesurfer-process.sh",
                                          arch="x86_64",
                                          installed=False)
     freesurfer.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR,
-                                                                        "freesurfer_process.sh")),
+                                                                        "freesurfer-process.sh")),
                                        "local"))
     if not dax.hasExecutable(freesurfer):
         dax.addExecutable(freesurfer)
-    custom_job = Pegasus.DAX3.Job(name="freesurfer_process.sh".format(subject))
+    custom_job = Pegasus.DAX3.Job(name="freesurfer-process.sh".format(subject))
     custom_job.addArguments(version, subject, subject_dir, str(cores), options)
     custom_job.uses(subject_dir, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_output.tar.gz".format(subject))

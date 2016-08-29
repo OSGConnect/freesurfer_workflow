@@ -27,10 +27,12 @@ usage_text = """
 |---------------|-----------------|------------------------|-------------------
 | submit        | Upload and      | --subject [subject]    | --help
 |               | process scan    |                        | --user [user name]
-|               |                 |                        | --dir [directory]
+|               |                 |                        | --input-file [path]
 |               |                 |                        | --dualcore
 |               |                 |                        | --defaced
 |               |                 |                        | --deidentified
+|               |                 |                        | --subject-dir [dir]
+|               |                 |                        | --options [options]
 |---------------|-----------------|------------------------|-------------------
 | list          | List workflows  |                        | --help
 |               |                 |                        | --user [user name]
