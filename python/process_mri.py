@@ -232,7 +232,7 @@ def process_images():
                        "FROM freesurfer_interface.input_files " \
                        "WHERE job_id = %s AND NOT purged"
     job_update = "UPDATE freesurfer_interface.jobs " \
-                 "SET state = 'PROCESSING' " \
+                 "SET state = 'RUNNING' " \
                  "WHERE id = %s;"
     job_error = "UPDATE freesurfer_interface.jobs " \
                 "SET state = 'ERROR' " \
@@ -299,7 +299,7 @@ def process_images():
                 cursor.execute(job_update, [row[0]])
                 cursor.execute(account_start, [row[0], num_tasks])
                 conn.commit()
-                logger.info("Set workflow {0} status to PROCESSING".format(row[0]))
+                logger.info("Set workflow {0} status to RUNNING".format(row[0]))
             else:
                 conn.rollback()
                 logger.info("Rolled back transaction")
