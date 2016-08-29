@@ -9,7 +9,7 @@ import fsurfer
 
 
 setup(name='fsurfer-libs',
-      version=fsurfer.__version__,
+      version='1.3.15',
       description='Python module to help create freesurfer workflows',
       author='Suchandra Thapa',
       author_email='sthapa@ci.uchicago.edu',
@@ -19,5 +19,6 @@ setup(name='fsurfer-libs',
                                                   "bash/autorecon2.sh",
                                                   "bash/autorecon2-whole.sh",
                                                   "bash/autorecon3.sh",
-                                                  "bash/autorecon-all.sh"])],
+                                                  "bash/autorecon-all.sh",
+                                                  "bash/freesurfer-process.sh"])],
       license='Apache 2.0')

@@ -9,7 +9,7 @@ import fsurfer
 
 
 setup(name='fsurf',
-      version=fsurfer.__version__,
+      version='1.3.15',
       description='Command line tool to submit freesurfer workflows',
       author='Suchandra Thapa',
       author_email='sthapa@ci.uchicago.edu',

@@ -7,7 +7,7 @@ from distutils.core import setup
 import fsurfer
 
 setup(name='fsurfer-backend',
-      version=fsurfer.__version__,
+      version='1.3.15',
       description='Scripts to handle background freesurfer processing',
       author='Suchandra Thapa',
       author_email='sthapa@ci.uchicago.edu',
