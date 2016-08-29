@@ -4,10 +4,9 @@
 # Available under Apache 2.0 License
 # setup for fsurf on OSG Connect login
 from distutils.core import setup
-import fsurfer
 
 setup(name='fsurfer-backend',
-      version='1.3.15',
+      version='1.3.16',
       description='Scripts to handle background freesurfer processing',
       author='Suchandra Thapa',
       author_email='sthapa@ci.uchicago.edu',

@@ -5,11 +5,8 @@
 # setup for fsurfer-libs
 from distutils.core import setup
 
-import fsurfer
-
-
 setup(name='fsurfer-libs',
-      version='1.3.15',
+      version='1.3.16',
       description='Python module to help create freesurfer workflows',
       author='Suchandra Thapa',
       author_email='sthapa@ci.uchicago.edu',
