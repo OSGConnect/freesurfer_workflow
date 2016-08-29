@@ -6,7 +6,7 @@ cur_dir=$PWD
 echo "Scratch dir: $work_dir"
 cp -a * $work_dir
 cp -a ../bash $work_dir
-"Generating package"
+echo "Generating package"
 cd $work_dir
 rm MANIFEST
 python setup_fsurfer.py bdist_rpm
@@ -19,7 +19,7 @@ work_dir=`mktemp -d`
 echo "Scratch dir: $work_dir"
 cp -a * $work_dir
 cp -a ../bash $work_dir
-"Generating package"
+echo "Generating package"
 cd $work_dir
 rm MANIFEST
 mv fsurf-osgconnect fsurf
@@ -33,7 +33,7 @@ work_dir=`mktemp -d`
 echo "Scratch dir: $work_dir"
 cp -a * $work_dir
 cp -a ../bash $work_dir
-"Generating package"
+echo "Generating package"
 cd $work_dir
 rm MANIFEST
 mv fsurf-osgconnect fsurf
