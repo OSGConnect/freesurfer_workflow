@@ -52,7 +52,7 @@ CREATE TABLE freesurfer_interface.job_run (
     started         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ended           TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     state           freesurfer_interface.job_state NOT NULL,
-    tasks           INTEGER NOT NULL CHECK ( tasks <= tasks_completed) DEFAULT 0,
+    tasks           INTEGER NOT NULL CHECK ( tasks >= tasks_completed) DEFAULT 0,
     tasks_completed INTEGER NOT NULL DEFAULT 0
 );
 
