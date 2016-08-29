@@ -71,7 +71,7 @@ def delete_job():
 
     conn = fsurfer.helpers.get_db_client()
     cursor = conn.cursor()
-    job_query = "SELECT id, username, image_filename, state, pegasus_ts, subject " \
+    job_query = "SELECT id, username, state, pegasus_ts, subject " \
                 "FROM freesurfer_interface.jobs " \
                 "WHERE state = 'DELETE PENDING'"
     job_update = "UPDATE freesurfer_interface.jobs " \
