@@ -46,7 +46,7 @@ CREATE TABLE freesurfer_interface.jobs (
 
 CREATE TABLE freesurfer_interface.job_run (
     id              SERIAL PRIMARY KEY,
-    job_id          INTEGER NOT NULL REFERENCES freesurfer_interface.jobs(id),
+    job_id          INTEGER NOT NULL REFERENCES freesurfer_interface.jobs(id) UNIQUE,
     walltime        INTEGER NOT NULL DEFAULT 0,
     cputime         INTEGER NOT NULL DEFAULT 0,
     started         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
