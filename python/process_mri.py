@@ -138,7 +138,7 @@ def submit_workflow(subject_files, version, subject_name, user, jobid,
     elif workflow == 'custom':
         created = fsurfer.create_custom_workflow(dax,
                                                  version,
-                                                 cores,
+                                                 2, # custom workflows get 2 cores
                                                  dax_subject_files[0],
                                                  subject_name,
                                                  options)
