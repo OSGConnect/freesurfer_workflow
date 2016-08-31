@@ -106,7 +106,7 @@ def delete_job():
             state = row[0]
         else:
             state = 'None'
-        if state not in ['PROCESSING', 'UPLOADED', 'FAILED', 'COMPLETED']:
+        if state not in ['RUNNING', 'QUEUED', 'FAILED', 'COMPLETED']:
             return flask_error_response(400,
                                         "Workflow has already been marked for "
                                         "deletion or has been deleted")
