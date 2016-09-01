@@ -39,6 +39,7 @@ recon-all                                                               \
         -openmp $3
 
 cd  $SUBJECTS_DIR
+cp $2/scripts/recon-all.log $WD
 tar cjf $WD/$1_output.tar.bz2 *
 cd $WD
 
