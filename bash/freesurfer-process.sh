@@ -38,7 +38,7 @@ recon-all                                                           \
         -openmp $cores
 
 cd  $SUBJECTS_DIR
-tar czf $WD/${subject}_output.tar.gz *
+tar cjf $WD/${subject}_output.tar.bz2 *
 cd $WD
 
 

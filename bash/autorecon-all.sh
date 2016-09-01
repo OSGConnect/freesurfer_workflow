@@ -39,7 +39,7 @@ recon-all                                                               \
         -openmp $3
 
 cd  $SUBJECTS_DIR
-tar cJf $WD/$1_output.tar.xz *
+tar cjf $WD/$1_output.tar.bz2 *
 cd $WD
 
 

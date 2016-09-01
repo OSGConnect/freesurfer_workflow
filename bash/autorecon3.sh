@@ -42,6 +42,6 @@ cd $SUBJECTS_DIR
 mv $2/scripts/recon-all.log $2/scripts/recon-all-step3.log
 cat $2/scripts/recon-all-step1.log $2/scripts/recon-all-step2*.log $2/scripts/recon-all-step3.log > $2/scripts/recon-all.log
 rm fsaverage lh.EC_average rh.EC_average
-tar cvjf $WD/$2_output.tar.bz2 *
+tar cjf $WD/$2_output.tar.bz2 *
 cp $2/scripts/recon-all.log $WD
 cd $WD
