@@ -13,7 +13,7 @@ from log import get_logger
 from log import initialize_logging
 from log import set_debugging
 
-__version__ = '1.3.17'
+__version__ = '1.3.18'
 
 __all__ = ['create_single_job',
            'create_recon2_job',

@@ -241,9 +241,8 @@ def process_images():
                 "SET state = 'ERROR' " \
                 "WHERE id = %s;"
     account_start = "INSERT INTO freesurfer_interface.job_run(job_id, " \
-                    "                                         state, " \
                     "                                         tasks) " \
-                    "VALUES(%s, 'QUEUED', %s)"
+                    "VALUES(%s, %s)"
     try:
         cursor.execute(job_query)
         for row in cursor.fetchall():
