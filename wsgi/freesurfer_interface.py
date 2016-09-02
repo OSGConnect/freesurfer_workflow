@@ -6,6 +6,7 @@ import sys
 import hashlib
 import os
 import tempfile
+import time
 
 import psycopg2
 from flask import Flask
@@ -278,6 +279,9 @@ def get_current_jobs():
                 'jobs': []}
     conn = get_db_client()
     cursor = conn.cursor()
+    accounting_query = "SELECT tasks_completed, tasks " \
+                       "FROM  freesurfer_interface.job_run  " \
+                       "WHERE job_id = %s"
     if flask.request.args['all'].lower() == 'true':
         job_query = "SELECT id, " \
                     "       subject, " \
@@ -301,11 +305,19 @@ def get_current_jobs():
     try:
         cursor.execute(job_query, [userid])
         for row in cursor.fetchall():
+            cursor2 = conn.cursor()
+            cursor2.execute(accounting_query, [row[0]])
+            result = cursor2.fetchone()
+            if result is None:
+                completion = 'N/A'
+            else:
+                completion = '{0}/{1}'.format(result[0], result[1])
             response['jobs'].append((row[0],
                                      row[1],
                                      row[2],
-                                     row[3].strftime("%Y-%m-%d %H:%M:%S"),
-                                     row[4]))
+                                     time.mktime(row[3].timetuple()),
+                                     row[4],
+                                     completion))
     except Exception, e:
         return flask_error_response(500,
                                     "500 Server Error\n"
@@ -332,13 +344,20 @@ def get_job_status():
     userid, secret, timestamp = get_user_params()
     if not validate_user(userid, secret, timestamp):
         return flask_error_response(401, "Invalid username or password")
-    response = {'status': 200,
-                'job': []}
+    response = {'status': 200}
     conn = get_db_client()
     cursor = conn.cursor()
     job_query = "SELECT state " \
                 "FROM freesurfer_interface.jobs " \
                 "WHERE id = %s AND username = %s;"
+    accounting_query = "SELECT walltime, " \
+                       "       cputime, " \
+                       "       started," \
+                       "       ended, " \
+                       "       tasks, " \
+                       "       tasks_completed " \
+                       "FROM  freesurfer_interface.job_run  " \
+                       "WHERE job_id = %s"
     try:
         cursor.execute(job_query, [flask.request.args['jobid'], userid])
         row = cursor.fetchone()
@@ -346,6 +365,17 @@ def get_job_status():
             return flask_error_response(404, "Invalid workflow id")
         else:
             response['job_status'] = row[0]
+        cursor.execute(accounting_query, [flask.request.args['jobid']])
+        row = cursor.fetchone()
+        if row is None:
+            pass
+        else:
+            response['walltime'] = row[0]
+            response['cputime'] = row[1]
+            response['started'] = time.mktime(row[2].timetuple())
+            response['ended'] = time.mktime(row[3].timetuple())
+            response['tasks'] = row[4]
+            response['tasks_completed'] = row[5]
     except Exception as e:
         return flask_error_response(500,
                                     "500 Server Error\n"

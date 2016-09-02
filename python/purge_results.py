@@ -18,13 +18,12 @@ FREESURFER_BASE = '/stash2/user/fsurf/'
 VERSION = fsurfer.__version__
 
 
-def purge_workflow_files(result_dir, log_filename, input_file, output_filename):
+def purge_workflow_files(result_dir, log_filename, output_filename):
     """
     Remove the results in specified directory
 
     :param result_dir: path to directory with workflow outputs
     :param log_filename: path to log file for workflow
-    :param input_file: path to input for workflow
     :param output_filename: path to mgz output file for workflow
     :return: True if successfully removed, False otherwise
     """
@@ -38,13 +37,48 @@ def purge_workflow_files(result_dir, log_filename, input_file, output_filename):
             os.unlink(log_filename)
         if os.path.isfile(output_filename):
             os.unlink(output_filename)
-        if os.path.exists(input_file):
-            os.unlink(input_file)
-            input_dir = os.path.dirname(input_file)
-            os.rmdir(input_dir)
         return True
     except OSError, e:
         logger.error("Exception: {0}".format(str(e)))
+        return False
+
+
+def remove_input_file(input_file):
+    """
+    Remove input file
+
+    :param input_file: path to input file to remove
+    :return: True if successful, False otherwise
+    """
+    logger = fsurfer.log.get_logger()
+    if not os.path.exists(input_file):
+        return True
+    try:
+        os.unlink(input_file)
+        logger.info("Unlinked file")
+        return True
+    except OSError as e:
+        logger.exception("Exception: {0}".format(str(e)))
+        return False
+
+
+def remove_input_directory(input_dir):
+    """
+    Remove input dir
+
+    :param input_dir: path to input directory to remove
+    :return: True if successful, False otherwise
+    """
+    logger = fsurfer.log.get_logger()
+    if not os.path.exists(input_dir):
+        return True
+    try:
+        input_dir = os.path.dirname(input_dir)
+        os.rmdir(input_dir)
+        logger.info("Removed directory {0}".format(input_dir))
+        return True
+    except OSError as e:
+        logger.exception("Exception: {0}".format(str(e)))
         return False
 
 
@@ -84,6 +118,12 @@ def process_results():
     job_update = "UPDATE freesurfer_interface.jobs " \
                  "SET state = 'DELETED' " \
                  "WHERE id = %s;"
+    input_update = "UPDATE freesurfer_interface.input_files " \
+                   "SET purged = TRUE  " \
+                   "WHERE id = %s"
+    input_select = "SELECT id, path, filename " \
+                   "FROM freesurfer_interface.input_files " \
+                   "WHERE NOT purged AND job_id = %s"
     try:
         cursor.execute(job_query)
         for row in cursor.fetchall():
@@ -100,7 +140,6 @@ def process_results():
                                       'pegasus',
                                       'freesurfer',
                                       pegasus_ts)
-            input_file = os.path.join(FREESURFER_BASE, username, 'input', row[2])
             log_filename = os.path.join(FREESURFER_BASE,
                                         username,
                                         'results',
@@ -109,23 +148,47 @@ def process_results():
                                            username,
                                            'results',
                                            "{0}_{1}_output.tar.bz2".format(row[0],
-                                                                           row[5]))
+                                                                           row[4]))
+            cursor2 = conn.cursor()
+            cursor2.execute(input_select, [row[0]])
+            file_removal_error = False
+            input_directory = None
+            for input_row in cursor2.fetchall():
+                input_file = input_row[1]
+                input_directory = os.path.dirname(input_file)
+                logger.info("Deleting file {0}".format(input_file))
+                if args.dry_run:
+                    sys.stdout.write("Would delete {0}\n".format(input_file))
+                    continue
+                if not os.path.exists(input_file):
+                    logger.info("File not present")
+                    continue
+                if not remove_input_file(input_file):
+                    file_removal_error = True
+                    logger.error("Can't remove {0} for job {1}".format(input_file,
+                                                                       row[0]))
+                cursor3 = conn.cursor()
+                cursor3.execute(input_update, [input_row[0]])
+
+            if not file_removal_error and input_directory:
+                if args.dry_run:
+                    sys.stdout.write("Would delete directory {0}\n".format(input_directory))
+                if not remove_input_directory(input_directory):
+                    logger.error("Can't remove {0} for job {1}".format(input_directory,
+                                                                        row[0]))
+
             if args.dry_run:
                 sys.stdout.write("Would delete {0}\n".format(result_dir))
-                sys.stdout.write("Would delete {0}\n".format(input_file))
                 sys.stdout.write("Would delete {0}\n".format(log_filename))
                 sys.stdout.write("Would delete {0}\n".format(output_filename))
                 continue
-            logger.info("Removing {0}, {1}, {2}, {3}".format(result_dir,
-                                                             input_file,
+            logger.info("Removing {0}, {1}, {2}".format(result_dir,
                                                              log_filename,
                                                              output_filename))
             if not purge_workflow_files(result_dir,
                                         log_filename,
-                                        input_file,
                                         output_filename):
-                logger.error("Can't remove {0} for job {1}".format(input_file,
-                                                                   row[0]))
+                logger.error("Can't remove files for job {1}".format(row[0]))
                 continue
             logger.info("Setting workflow {0} to DELETED".format(row[0]))
             cursor.execute(job_update, [row[0]])

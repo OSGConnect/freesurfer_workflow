@@ -84,7 +84,7 @@ def delete_job():
                                                                     row[1]))
             username = row[1]
             # pegasus_ts is stored as datetime in the database, convert it to what we have on the fs
-            pegasus_ts = row[4]
+            pegasus_ts = row[3]
 
             if pegasus_ts is None:
                 # not submitted yet
@@ -174,7 +174,7 @@ def delete_job():
                                               username,
                                               'results',
                                               "{0}_{1}_output.tar.bz2".format(row[0],
-                                                                              row[5])))
+                                                                              row[4])))
             for entry in deletion_list:
                 if args.dry_run:
                     sys.stdout.write("Would delete {0}\n".format(entry))

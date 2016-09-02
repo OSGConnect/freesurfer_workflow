@@ -190,7 +190,7 @@ def create_final_job(dax, version, subject, serial_job=False):
 
 
 def create_serial_workflow(dax, version, cores, subject_file, subject,
-                           skip_recon=False):
+                           skip_recon=False, invoke_cmd=None):
     """
     Create a workflow that processes MRI images using a serial workflow
     E.g. autorecon1 -> autorecon2 -> autorecon3
@@ -201,6 +201,7 @@ def create_serial_workflow(dax, version, cores, subject_file, subject,
     :param subject_file: pegasus File object pointing to the subject mri file
     :param subject: name of subject being processed
     :param skip_recon: True to skip initial recon1 step
+    :param invoke_cmd: If not None, cmd to run when each job completes
     :return: True if errors occurred, False otherwise
     """
     # setup autorecon1 run
@@ -208,10 +209,14 @@ def create_serial_workflow(dax, version, cores, subject_file, subject,
         initial_job = create_initial_job(dax, version, subject_file, subject)
         if initial_job is True:
             return True
+        if invoke_cmd:
+            initial_job.invoke(invoke_cmd)
         dax.addJob(initial_job)
     recon2_job = create_recon2_job(dax, version, cores, subject)
     if recon2_job is True:
         return True
+    if invoke_cmd:
+        recon2_job.invoke(invoke_cmd)
     dax.addJob(recon2_job)
     dax.addDependency(Pegasus.DAX3.Dependency(parent=initial_job, child=recon2_job))
     final_job = create_final_job(dax, version, subject, serial_job=True)
@@ -238,7 +243,7 @@ def create_single_workflow(dax, version, cores, subject_files, subject):
 
 
 def create_diamond_workflow(dax, version, cores, subject_files, subject,
-                            skip_recon=False):
+                            skip_recon=False, invoke_cmd=None):
     """
     Create a workflow that processes MRI images using a diamond workflow
     E.g. autorecon1 -->   autorecon2-lh --> autorecon3
@@ -249,6 +254,7 @@ def create_diamond_workflow(dax, version, cores, subject_files, subject,
     :param subject_files: list of pegasus File object pointing to the subject mri files
     :param subject: name of subject being processed
     :param skip_recon: True to skip initial recon1 step
+    :param invoke_cmd: If not None, cmd to run when each job completes
     :return: False if errors occurred, True otherwise
     """
     # setup autorecon1 run
@@ -256,15 +262,21 @@ def create_diamond_workflow(dax, version, cores, subject_files, subject,
         initial_job = create_initial_job(dax, version, subject_files, subject)
         if not initial_job:
             return False
+        if invoke_cmd:
+            initial_job.invoke(invoke_cmd)
         dax.addJob(initial_job)
     recon2_rh_job = create_hemi_job(dax, version, cores, 'rh', subject)
     if not recon2_rh_job:
         return False
+    if invoke_cmd:
+        recon2_rh_job.invoke(invoke_cmd)
     dax.addJob(recon2_rh_job)
     dax.addDependency(Pegasus.DAX3.Dependency(parent=initial_job, child=recon2_rh_job))
     recon2_lh_job = create_hemi_job(dax, version, cores, 'lh', subject)
     if not recon2_lh_job:
         return False
+    if invoke_cmd:
+        recon2_lh_job.invoke(invoke_cmd)
     dax.addJob(recon2_lh_job)
     dax.addDependency(Pegasus.DAX3.Dependency(parent=initial_job, child=recon2_lh_job))
     final_job = create_final_job(dax, version, subject)

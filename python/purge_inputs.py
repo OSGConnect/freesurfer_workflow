@@ -74,11 +74,11 @@ def process_inputs():
                  "SET state = %s " \
                  "WHERE id = %s;"
     input_update = "UPDATE freesurfer_interface.input_files " \
-                   "SET state = %s  " \
+                   "SET purged = TRUE  " \
                    "WHERE id = %s"
     input_select = "SELECT id, path, filename " \
                    "FROM freesurfer_interface.input_files " \
-                   "WHERE state IS NOT 'PURGED' AND job_id = %s"
+                   "WHERE NOT purged AND job_id = %s"
     parser = argparse.ArgumentParser(description="Process and remove old inputs")
     # version info
     parser.add_argument('--version', action='version', version='%(prog)s ' + VERSION)
@@ -98,19 +98,19 @@ def process_inputs():
     try:
         cursor.execute(job_query)
         for row in cursor.fetchall():
-            logger.info("Processing workflow {0} for user {1} ".format(row[0],
-                                                                       row[1])+
-                        "in state {0}".format(row[3]))
+            logger.info("Processing workflow {0} ".format(row[0]) +
+                        "for user {0} ".format(row[1]) +
+                        "in state {0}".format(row[2]))
             cursor2 = conn.cursor()
             cursor2.execute(input_select, [row[0]])
             file_removal_error = False
             input_directory = None
             for input_row in cursor2.fetchall():
-                input_file = os.path.join(input_row[1], input_row[2])
+                input_file = input_row[1]
                 input_directory = os.path.dirname(input_file)
                 logger.info("Deleting file {0}".format(input_file))
                 if args.dry_run:
-                    sys.stdout.write("Would delete {0} and directory\n".format(input_file))
+                    sys.stdout.write("Would delete {0}\n".format(input_file))
                     continue
                 if not os.path.exists(input_file):
                     logger.info("File not present")
@@ -119,13 +119,16 @@ def process_inputs():
                     file_removal_error = True
                     logger.error("Can't remove {0} for job {1}".format(input_file,
                                                                        row[0]))
-            if not file_removal_error:
                 cursor3 = conn.cursor()
-                cursor3.execute(input_update, ['PURGED', input_row[0]])
+                cursor3.execute(input_update, [input_row[0]])
+
+            if not file_removal_error and input_directory:
+                if args.dry_run:
+                    sys.stdout.write("Would delete directory {0}\n".format(input_directory))
                 if not remove_input_directory(input_directory):
                     logger.error("Can't remove {0} for job {1}".format(input_directory,
                                                                         row[0]))
-            if row[3].upper() == 'UPLOADED':
+            if row[2].upper() == 'UPLOADED':
                 cursor.execute(job_update, ['ERROR', row[0]])
                 conn.commit()
                 logger.info("Changed workflow {0} status ".format(row[0]) +

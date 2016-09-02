@@ -5,9 +5,11 @@ import subprocess
 import sys
 import shutil
 import xml
-import parser
+import xml.parsers.expat
+import xml.dom.minidom
 import re
 import datetime
+import dateutil.parser
 from email.mime.text import MIMEText
 
 import psycopg2
@@ -134,7 +136,7 @@ def parse_ks_record(fname):
 
     # convert start date to unix ts
     # example: 2016-05-18T12:55:23.507-05:00
-    dt = parser.parse(data['start'])
+    dt = dateutil.parser.parse(data['start'])
     # epoch calculations in Python 2.6 makes me sad
     td = dt - datetime.datetime(1970, 1, 1, tzinfo=UTC())
     data['start_ts'] = (td.microseconds + (td.seconds + td.days * 86400) * 10**6) / 10**6 
@@ -175,13 +177,16 @@ def calculate_usage(submit_dir):
     :param submit_dir: the Pegasus workflow submit dir
     :return: a tuple with [walltime, cputime] used in seconds
     """
+    fsurfer.log.initialize_logging()
+    logger = fsurfer.log.get_logger()
+
     start_ts = float('inf')
     end_ts = -float('inf')
     total_core_time = 0.0
 
     for f in os.listdir(submit_dir):
 
-        # only consider
+        # only consider files with out and numbers in them
         if not re.search('\.out\.[0-9]+$', f):
             continue
 
@@ -194,6 +199,10 @@ def calculate_usage(submit_dir):
             submit = parse_submit_file(submit_file)
         except xml.parsers.expat.ExpatError as e:
             # not a valid xml file
+            # expect this since some of the files we
+            # look at are not XML
+            logger.info("Got exception while parsing {1}:\n{0}".format(full_name,
+                                                                       e))
             continue
 
         cores = int(submit['request_cpus'])
@@ -205,10 +214,9 @@ def calculate_usage(submit_dir):
             end_ts = ks['end_ts']
 
     # only return data if it is valid
-    msg = ""
     if end_ts - start_ts > 0 and total_core_time > 0:
-        return [format_seconds(end_ts - start_ts),
-                format_seconds(total_core_time)]
+        return [end_ts - start_ts,
+                total_core_time]
 
     return [None, None]
 
@@ -225,9 +233,9 @@ def usage_msg(walltime, cputime):
     msg = ""
     if walltime and cputime:
         # only return message if it is valid
-        msg = '\nThe workflow was active for ' + walltime \
+        msg = '\nThe workflow was active for ' + format_seconds(walltime) \
             + ' and used a total CPU time of ' \
-            + cputime + ' on the Open Science Grid.' \
+            + format_seconds(cputime) + ' on the Open Science Grid.' \
             + ' Please note that the CPU time' \
             + ' might be larger than the active time due to multi-threading.\n'
 
@@ -388,13 +396,11 @@ def process_results(jobid, success=True):
         accounting_update = "UPDATE freesurfer_interface.job_run " \
                             "SET walltime = %s, " \
                             "    cputime = %s, " \
-                            "    state = %s, " \
                             "    ended = CURRENT_TIMESTAMP," \
-                            "    tasks = tasks_completed " \
+                            "    tasks_completed = tasks " \
                             "WHERE job_id = %s"
         cursor.execute(accounting_update, [walltime,
                                            cputime,
-                                           state,
                                            jobid])
 
         conn.commit()

@@ -117,18 +117,21 @@ def submit_workflow(subject_files, version, subject_name, user, jobid,
         dax_subject_files.append(dax_subject_file)
         dax.addFile(dax_subject_file)
     workflow_directory = os.path.join(FREESURFER_BASE, user, 'workflows')
+    job_invoke_cmd = "/usr/bin/task_completed.py --id {0}".format(jobid)
     if workflow == 'serial':
         created = fsurfer.create_serial_workflow(dax,
                                                  version,
                                                  cores,
                                                  dax_subject_files,
-                                                 subject_name)
+                                                 subject_name,
+                                                 invoke_cmd=job_invoke_cmd)
     elif workflow == 'diamond':
         created = fsurfer.create_diamond_workflow(dax,
                                                   version,
                                                   cores,
                                                   dax_subject_files,
-                                                  subject_name)
+                                                  subject_name,
+                                                  invoke_cmd=job_invoke_cmd)
     elif workflow == 'single':
         created = fsurfer.create_single_workflow(dax,
                                                  version,
