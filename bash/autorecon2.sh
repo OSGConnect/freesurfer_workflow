@@ -26,7 +26,7 @@ fi
 
 cp $2_recon1_output.tar.xz $SUBJECTS_DIR
 cd $SUBJECTS_DIR
-tar xvaf $1_recon1_output.tar.xz
+tar xvaf $2 _recon1_output.tar.xz
 rm $2_recon1_output.tar.xz
 recon-all                                                               \
         -s $2                                                           \
