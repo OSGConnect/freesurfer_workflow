@@ -67,7 +67,7 @@ def create_custom_job(dax, version, cores, subject_dir, subject, options):
     custom_job = Pegasus.DAX3.Job(name="freesurfer-process.sh".format(subject))
     custom_job.addArguments(version, subject, subject_dir, str(cores), options)
     custom_job.uses(subject_dir, link=Pegasus.DAX3.Link.INPUT)
-    output = Pegasus.DAX3.File("{0}_output.tar.gz".format(subject))
+    output = Pegasus.DAX3.File("{0}_output.tar.bz2".format(subject))
     custom_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=True)
     custom_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
     custom_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cpus", cores))
