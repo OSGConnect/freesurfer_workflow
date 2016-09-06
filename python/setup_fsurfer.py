@@ -6,7 +6,7 @@
 from distutils.core import setup
 
 setup(name='fsurfer-libs',
-      version='1.3.18',
+      version='PKG_VERSION',
       description='Python module to help create freesurfer workflows',
       author='Suchandra Thapa',
       author_email='sthapa@ci.uchicago.edu',

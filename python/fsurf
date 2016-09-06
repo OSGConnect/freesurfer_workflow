@@ -406,6 +406,27 @@ def remove_workflow(args):
     return 0
 
 
+def validate_inputs(subject_files=None, subject_dir=None):
+    """
+    Validate input files or subject dir and make sure that they are present
+    and valid files
+
+    :param subject_files: a list of paths to files to use as input
+    :param subject_dir:   path to a zipfile with a subject directory
+    :return:              True if inputs are valid, False otherwise
+    """
+    if (subject_files == [] or subject_files is None) and subject_dir is None:
+        return False
+    if subject_files:
+        for f in subject_files:
+            if not os.path.isfile(f):
+                return False
+    if subject_dir:
+        if not os.path.isfile(subject_dir):
+            return False
+    return True
+
+
 def submit_workflow(args):
     """
     Submit a workflow to OSG for processing
@@ -449,7 +470,9 @@ def submit_workflow(args):
         sys.stderr.write("You can not provide a subject directory file and "
                          "input files at the same time!\n")
         sys.exit(1)
-
+    if not validate_inputs(args.input_file, args.subject_dir):
+        sys.stderr.write("You must provide either an input file or a subject directory\n")
+        sys.exit(1)
     query_params = {'userid': username,
                     'token': token,
                     'multicore': not bool(args.dualcore),

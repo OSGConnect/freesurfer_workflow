@@ -7,7 +7,7 @@ from distutils.core import setup
 
 
 setup(name='fsurf',
-      version='1.3.18',
+      version='PKG_VERSION',
       description='Command line tool to submit freesurfer workflows',
       author='Suchandra Thapa',
       author_email='sthapa@ci.uchicago.edu',
