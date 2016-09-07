@@ -610,7 +610,7 @@ def get_job_log():
             if os.path.isfile(output_filename):
                 filename = str(os.path.basename(output_filename))
                 return flask.send_file(output_filename,
-                                       mimetype="application/x-bzip2",
+                                       mimetype="text/plain",
                                        as_attachment=True,
                                        attachment_filename=filename)
     except Exception as e:
