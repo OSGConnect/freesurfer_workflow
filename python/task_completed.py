@@ -62,7 +62,7 @@ def update_completed_tasks(jobid):
         logger.info("Incrementing tasks completd for workflow {0}".format(jobid))
 
         run_update = "UPDATE freesurfer_interface.job_run  " \
-                     "SET tasks_completed = tasks_completed + 1" \
+                     "SET tasks_completed = tasks_completed + 1 " \
                      "WHERE job_id = %s;"
         cursor.execute(run_update, [jobid])
         conn.commit()
