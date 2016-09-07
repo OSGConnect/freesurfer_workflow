@@ -364,7 +364,10 @@ def process_results(jobid, success=True):
                                    'freesurfer',
                                    pegasus_ts,
                                    '{0}_output.tar.bz2'.format(subject_name))
-    shutil.copyfile(result_filename, output_filename)
+    try:
+        shutil.copyfile(result_filename, output_filename)
+    except shutil.Error as e:
+        logger.exception("Exception while copying file: {0}".format(e))
     logger.info("Copied {0} to {1}".format(result_filename, output_filename))
     result_logfile = os.path.join(FREESURFER_BASE,
                                   username,
@@ -379,7 +382,10 @@ def process_results(jobid, success=True):
                                 username,
                                 'results',
                                 'recon_all-{0}.log'.format(jobid))
-    shutil.copyfile(result_logfile, log_filename)
+    try:
+        shutil.copyfile(result_logfile, log_filename)
+    except shutil.Error as e:
+        logger.exception("Exception while copying file: {0}".format(e))
     logger.info("Copied {0} to {1}".format(result_logfile, log_filename))
     try:
         if success:
@@ -390,7 +396,7 @@ def process_results(jobid, success=True):
             logger.warning("Updating workflow {0} to FAILED".format(jobid))
 
         job_update = "UPDATE freesurfer_interface.jobs  " \
-                     "SET state = %s" \
+                     "SET state = %s " \
                      "WHERE id = %s;"
         cursor.execute(job_update, [state, jobid])
         accounting_update = "UPDATE freesurfer_interface.job_run " \
