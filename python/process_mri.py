@@ -167,6 +167,7 @@ def submit_workflow(subject_files, version, subject_name, user, jobid,
             return 1
         os.unlink(dax_name)
         capture_id = False
+        conn = get_db_client()
         for line in cStringIO.StringIO(output).readlines():
             if 'Your workflow has been started' in line:
                 capture_id = True
@@ -175,16 +176,15 @@ def submit_workflow(subject_files, version, subject_name, user, jobid,
                                      line)
                 if id_match is not None:
                     workflow_id = id_match.group(1)
-                    job_update = "UPDATE freesurfer_interface.jobs  " \
-                                 "SET pegasus_ts = %s" \
+                    job_update = "UPDATE freesurfer_interface.jobs " \
+                                 "SET pegasus_ts = %s " \
                                  "WHERE id = %s;"
                     try:
-                        conn = get_db_client()
-                        cursor = conn.cursor()
-                        cursor.execute(job_update, [workflow_id, jobid])
-                        conn.commit()
-                        logger.info("Updated DB")
-                        return 0
+                        with conn:
+                            with conn.cursor() as cursor:
+                                cursor.execute(job_update, [workflow_id, jobid])
+                                logger.info("Updated DB")
+                                return 0
                     except psycopg2.Error as e:
                         logger.exception("Got pgsql error: {0}".format(e))
                         pass
