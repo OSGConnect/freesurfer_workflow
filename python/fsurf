@@ -203,13 +203,13 @@ def download_output(query_parameters, noun, endpoint=REST_ENDPOINT):
         conn.request('GET', "{0}?{1}".format(parsed.path, parsed.query))
         resp = conn.getresponse()
         content_type = resp.getheader('content-type')
-        if content_type != 'application/x-bzip2' and \
-           content_type != 'text/plain':
+        if content_type.startswith('application/x-bzip2') and \
+           content_type.startswith('text/plain'):
             return resp.status, resp.read()
         content_disposition = resp.getheader('content-disposition')
-        if content_type == 'application/x-bzip2':
+        if content_type.startswith('application/x-bzip2'):
             filename = 'fsurf_output.tar.bz2'
-        elif content_type == 'text/plain':
+        elif content_type.startswith('text/plain'):
             filename = 'recon-all.log'
         else:
             response = {'status': 500,
