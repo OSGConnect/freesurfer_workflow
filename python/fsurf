@@ -14,7 +14,7 @@ import re
 import cPickle
 
 REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer_test"
-VERSION = '1.3.23'
+VERSION = '1.3.24'
 CREDENTIAL_FILE = os.path.expanduser('~/.fsurf/credentials')
 # supported versions of FreeSurfer
 FREESURFER_VERSIONS = ['5.3.0']
