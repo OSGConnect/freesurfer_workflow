@@ -49,6 +49,6 @@ recon-all                                                               \
 
 cd ${SUBJECTS_DIR}
 mv $subject/scripts/recon-all.log $subject/scripts/recon-all-step1.log
-tar cJf ${WD}/$2_recon1_output.tar.xz *
+tar cJf ${WD}/$subject_recon1_output.tar.xz *
 cd ${WD}
 
