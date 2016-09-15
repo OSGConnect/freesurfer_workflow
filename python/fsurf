@@ -239,6 +239,7 @@ def encode_file(body, filename):
     and encoded binary data
 
     :param body: binary data to encode
+    :param filename: name of file with data to encode
     :return: content_type, body
     """
     boundary = '--------------MIME_Content_Boundary---------------'
@@ -246,7 +247,7 @@ def encode_file(body, filename):
     lines.append('--' + boundary)
     lines.append('Content-Disposition: form-data; name="input_file"; '
                  'filename="{0}"'.format(filename))
-    lines.append('Content-Type: application/octet-stream' )
+    lines.append('Content-Type: application/octet-stream')
     lines.append('')
     lines.append(body)
     lines.append('--' + boundary + '--')
@@ -482,6 +483,8 @@ def submit_workflow(args):
                     'subject': args.subject,
                     'timestamp': timestamp,
                     'jobname': "{0}_{1}".format(args.subject, timestamp)}
+    if args.subject_dir:
+        query_params['multicore'] = False
     sys.stdout.write("Creating and submitting workflow\n")
     status, response = get_response(query_params, 'job', 'POST')
     if status != 200:
@@ -794,7 +797,7 @@ def main():
     submit_parser.add_argument('--dualcore',
                                dest='dualcore',
                                action='store_false',
-                               default=True,
+                               default=False,
                                help='Use 2 cores to process all steps')
     submit_parser.add_argument('--deidentified',
                                dest="deidentified",
