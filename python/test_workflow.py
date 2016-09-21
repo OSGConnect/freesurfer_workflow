@@ -12,13 +12,23 @@ import re
 import subprocess
 
 
-REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer"
+REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer_test"
 VERSION = 'PKG_VERSION'
+
+
+def error_message(message):
+    """
+    Print an error message with default message
+
+    :param message: error message to write
+    :return: None
+    """
+    sys.stderr.write("{0}\n".format(message))
 
 
 def get_response(query_parameters, noun, method, endpoint=REST_ENDPOINT):
     """
-    Query rest endpoint with given string and return results
+    Query rest endpoint with given  string and return results
 
     :param endpoint: url to REST endpoint
     :param query_parameters: a dictionary with key, values parameters
@@ -35,11 +45,11 @@ def get_response(query_parameters, noun, method, endpoint=REST_ENDPOINT):
         conn.request(method, "{0}?{1}".format(parsed.path, parsed.query))
         resp = conn.getresponse()
         return resp.status, resp.read()
-    except IOError, e:  # mainly dns errors
+    except IOError as e:  # mainly dns errors
         response = {'status': 500,
                     'result': str(e)}
         return 500, json.dumps(response)
-    except httplib.HTTPException, e:
+    except httplib.HTTPException as e:
         response = {'status': 400,
                     'result': str(e)}
         return 400, json.dumps(response)
@@ -63,14 +73,19 @@ def download_output(query_parameters, noun, endpoint=REST_ENDPOINT):
         conn.request('GET', "{0}?{1}".format(parsed.path, parsed.query))
         resp = conn.getresponse()
         content_type = resp.getheader('content-type')
-        if content_type != 'application/x-bzip2' and \
-           content_type != 'text/plain':
+        if content_type.startswith('application/x-bzip2') and \
+           content_type.startswith('text/plain'):
             return resp.status, resp.read()
         content_disposition = resp.getheader('content-disposition')
-        if content_type == 'application/x-bzip2':
+        if content_type.startswith('application/x-bzip2'):
             filename = 'fsurf_output.tar.bz2'
-        elif content_type == 'text/plain':
+        elif content_type.startswith('text/plain'):
             filename = 'recon-all.log'
+        else:
+            response = {'status': 500,
+                        'result': "Unknown content-type: "
+                                  "{0}".format(content_type)}
+            return 500, json.dumps(response)
         match_obj = re.search(r'filename=(.*)', content_disposition)
         if match_obj:
             filename = match_obj.group(1)
@@ -82,19 +97,44 @@ def download_output(query_parameters, noun, endpoint=REST_ENDPOINT):
         return resp.status, json.dumps({'status': 200,
                                         'result': "output downloaded",
                                         'filename': filename})
-    except httplib.HTTPException, e:
+    except httplib.HTTPException as e:
         response = {'status': 400,
                     'result': str(e)}
         return 400, json.dumps(response)
 
 
-def upload_item(query_parameters, noun, body, method, endpoint=REST_ENDPOINT):
+def encode_file(body, filename):
+    """
+    Encode a file in a binary form and return a mime content type
+    and encoded binary data
+
+    :param body: binary data to encode
+    :param filename: name of file with data to encode
+    :return: content_type, body
+    """
+    boundary = '--------------MIME_Content_Boundary---------------'
+    lines = []
+    lines.append('--' + boundary)
+    lines.append('Content-Disposition: form-data; name="input_file"; '
+                 'filename="{0}"'.format(filename))
+    lines.append('Content-Type: application/octet-stream')
+    lines.append('')
+    lines.append(body)
+    lines.append('--' + boundary + '--')
+    lines.append('')
+    encoded = "\r\n".join(lines)
+    content_type = 'multipart/form-data; boundary=%s' % boundary
+    return content_type, encoded
+
+
+def upload_item(query_parameters, noun, filename, body, method, endpoint=REST_ENDPOINT):
     """
     Issue a POST request to given endpoint
 
     :param endpoint: url to REST endpoint
     :param query_parameters: a dictionary with key, values parameters
     :param noun: object being worked on
+    :param filename: name of file being transferred
     :param body:  data to be sent in the body
     :param method:  HTTP method that should be used (POST, PUT)
     :return: (status code, response from query)
@@ -105,10 +145,27 @@ def upload_item(query_parameters, noun, body, method, endpoint=REST_ENDPOINT):
     parsed = urlparse.urlparse(url)
     try:
         conn = httplib.HTTPConnection(parsed.hostname)
-        conn.request(method, "{0}?{1}".format(parsed.path, parsed.query), body)
+        content_type, body = encode_file(body, filename)
+        headers = {'content-type': content_type,
+                   'Accept': 'text/plain'}
+        conn.request(method,
+                     "{0}?{1}".format(parsed.path, parsed.query),
+                     body,
+                     headers)
         resp = conn.getresponse()
+        if resp.status == 401:
+            # invalid password
+            response = {'status': resp.status,
+                        'result': 'Invalid username/password'}
+            return resp.status, json.dumps(response)
+        elif resp.status == 400:
+            # invalid password
+            response = {'status': resp.status,
+                        'result': 'Invalid parameter'}
+            return resp.status, json.dumps(response)
+
         return resp.status, resp.read()
-    except httplib.HTTPException, e:
+    except httplib.HTTPException as e:
         response = {'status': 400,
                     'result': str(e)}
         return 400, json.dumps(response)
@@ -123,8 +180,11 @@ def get_token(userid, password):
     """
     parameters = {'userid': userid}
     code, response = get_response(parameters, 'user/salt', 'GET', REST_ENDPOINT)
-    if code != 200:
-        sys.stdout.write("Can't get authentication token\n")
+    if code == 401:
+        error_message("User account disabled\n")
+        return None, None
+    elif code == 400:
+        error_message("Userid not found\n")
         return None, None
     timestamp = time.time()
     response_obj = json.loads(response)
@@ -141,67 +201,182 @@ def remove_workflow(workflow_id, username, password):
     :param workflow_id: pegasus id for workflow
     :param username: username to use when authenticating
     :param password: password to user when authenticating
-    :return: 'Success' or 'Error'
+    :return: exits with 0 on success, 1 on error
     """
-    query_params = {}
     timestamp, token = get_token(username, password)
     if token is None:
-        return 'Error'
-    query_params['userid'] = username
-    query_params['timestamp'] = timestamp
-    query_params['token'] = token
-    query_params['jobid'] = workflow_id
+        return 1
+    query_params = {'userid': username,
+                    'timestamp': timestamp,
+                    'token': token,
+                    'jobid': workflow_id}
     status, response = get_response(query_params, 'job', 'DELETE')
     resp_dict = json.loads(response)
     if status != 200:
-        sys.stdout.write("Error deleting "
-                         "workflow:\n{0}\n".format(resp_dict['result']))
-        return 'Error'
+        error_message("Error deleting workflow:\n" +
+                      resp_dict['result'])
+        return 1
     sys.stdout.write("Workflow removed\n")
-    return 'Success'
+    return 0
 
 
-def submit_workflow(username, password, input_directory, subject_name):
+def submit_standard_workflow(username,
+                             password,
+                             version,
+                             subject,
+                             input_files,
+                             multicore):
+    """
+    Submit a workflow to OSG for processing
+
+    :param username:    username to use when authenticating
+    :param password:    password to user when authenticating
+    :param version:     version of FreeSurfer to use
+    :param input_files: list with path to files with MRI data in mgz format
+    :param subject:     name of subject in the file
+    :param multicore:   boolean indicating whether to use a multicore workflow
+    :return:            job_id on success, None on error
+    """
+
+    timestamp, token = get_token(username, password)
+    num_inputs = len(input_files)
+    query_params = {'userid': username,
+                    'token': token,
+                    'multicore': multicore,
+                    'num_inputs': 1,
+                    'options': "",
+                    'version': version,
+                    'subject': subject,
+                    'timestamp': timestamp,
+                    'jobname': "validation_{0}_{1}".format(subject, timestamp)}
+    sys.stdout.write("Creating and submitting workflow\n")
+    status, response = get_response(query_params, 'job', 'POST')
+    if status != 200:
+        response_obj = json.loads(response)
+        error_message("Error while creating workflow:\n" +
+                      response_obj['result'])
+        sys.exit(1)
+    response_obj = json.loads(response)
+    job_id = response_obj['job_id']
+    sys.stdout.write("Workflow {0} created\n".format(job_id))
+
+    sys.stdout.write("Uploading input file\n")
+    file_num = 0
+    for input_file in input_files:
+        attempts = 1
+        sys.stdout.write("Uploading {0} (file {1}/{2})\n".format(input_file,
+                                                                 file_num + 1,
+                                                                 num_inputs))
+        while attempts < 6:
+            query_params = {'userid': username,
+                            'timestamp': timestamp,
+                            'token': token,
+                            'jobid': job_id,
+                            'filename': os.path.basename(input_file),
+                            'subjectdir': False}
+            input_path = os.path.abspath(input_file)
+            if not os.path.isfile(input_path):
+                sys.stderr.write("{0} is not present and is needed, "
+                                 "exiting\n".format(input_path))
+                sys.exit(1)
+            with open(input_path, 'rb') as f:
+                body = f.read()
+
+            status, response = upload_item(query_params,
+                                           'job/input',
+                                           os.path.basename(input_file),
+                                           body,
+                                           'POST')
+            if status == 200:
+                sys.stdout.write("Uploaded {0} successfully\n".format(input_file))
+                break
+            response_obj = json.loads(response)
+            sys.stdout.write("Error while uploading {0}\n".format(input_file))
+            sys.stdout.write("Error: {0}\n".format(response_obj['result']))
+            sys.stdout.write("Retrying upload, attempt {0}/5\n".format(attempts))
+            attempts += 1
+        if attempts == 6:
+            sys.stdout.write("Could not upload {0}\n".format(input_file))
+            sys.stdout.write("Exiting...\n")
+            return None
+        file_num += 1
+    return job_id
+
+
+def submit_custom_workflow(username, password, version, subject, subject_dir, options):
     """
     Submit a workflow to OSG for processing
 
     :param username: username to use when authenticating
     :param password: password to user when authenticating
-    :param input_directory:    path to file with MRI data in mgz format
-    :param subject_name:  name of subject in the file
-    :param multicore:     boolean indicating whether to use a multicore workflow or not
-    :return:              job_id on success, None on error
+    :param subject_dir:  path to file with FreeSurfer subject dir in a zip file
+    :param subject:  name of subject in the file
+    :param multicore: boolean indicating whether to use a multicore workflow
+    :return: job_id on success, None on error
     """
-    if subject_name is None:
-        sys.stdout.write("Subject name is missing, exiting...\n")
-        return None
-    subject_file = os.path.join(input_directory,
-                                "{0}_defaced.mgz".format(subject_name))
-    subject_file = os.path.abspath(subject_file)
-    if not os.path.isfile(subject_file):
-        sys.stderr.write("{0} is not present and is needed, exiting\n".format(subject_file))
-        return None
-    with open(subject_file, 'rb') as f:
-        body = f.read()
-    query_params = {}
+
     timestamp, token = get_token(username, password)
-    if token is None:
-        return None
-    query_params['userid'] = username
-    query_params['timestamp'] = timestamp
-    query_params['token'] = token
-    query_params['multicore'] = True
-    query_params['subject'] = subject_name
-    query_params['jobname'] = "{0}_{1}".format(subject_name, timestamp)
-    query_params['filename'] = "{0}_defaced.mgz".format(subject_name)
+    if options and not subject_dir:
+        sys.stderr.write("You must provide a subject directory file if "
+                         "using custom options!\n")
+        sys.exit(1)
+    query_params = {'userid': username,
+                    'token': token,
+                    'multicore': False,
+                    'num_inputs': 1,
+                    'options': options,
+                    'version': version,
+                    'subject': subject,
+                    'timestamp': timestamp,
+                    'jobname': "validation_{0}_{1}".format(subject, timestamp)}
     sys.stdout.write("Creating and submitting workflow\n")
-    status, response = upload_item(query_params, 'job', body, 'POST')
+    status, response = get_response(query_params, 'job', 'POST')
     if status != 200:
-        sys.stdout.write("Error while submitting workflow\n")
-        return None
+        response_obj = json.loads(response)
+        error_message("Error while creating workflow:\n" +
+                      response_obj['result'])
+        sys.exit(1)
     response_obj = json.loads(response)
     job_id = response_obj['job_id']
-    sys.stdout.write("Workflow {0} submitted for processing\n".format(job_id))
+    sys.stdout.write("Workflow {0} created\n".format(job_id))
+
+    sys.stdout.write("Uploading input files\n")
+    if subject_dir:
+        attempts = 1
+        sys.stdout.write("Uploading {0}\n".format(subject_dir))
+        while attempts < 6:
+            query_params = {'userid': username,
+                            'timestamp': timestamp,
+                            'token': token,
+                            'jobid': job_id,
+                            'filename': os.path.basename(subject_dir),
+                            'subjectdir': True}
+            input_path = os.path.abspath(subject_dir)
+            if not os.path.isfile(input_path):
+                sys.stderr.write("{0} is not present and is needed, "
+                                 "exiting\n".format(input_path))
+                sys.exit(1)
+            with open(input_path, 'rb') as f:
+                body = f.read()
+
+            status, response = upload_item(query_params,
+                                           'job/input',
+                                           os.path.basename(subject_dir),
+                                           body,
+                                           'POST')
+            if status == 200:
+                sys.stdout.write("Uploaded {0} successfully\n".format(subject_dir))
+                break
+            response_obj = json.loads(response)
+            sys.stdout.write("Error while uploading {0}\n".format(subject_dir))
+            sys.stdout.write("Error: {0}\n".format(response_obj['result']))
+            sys.stdout.write("Retrying upload, attempt {0}/5\n".format(attempts))
+            attempts += 1
+        if attempts == 6:
+            sys.stdout.write("Could not upload {0}\n".format(subject_dir))
+            sys.stdout.write("Exiting...\n")
+            return None
+
     return job_id
 
 
@@ -277,12 +452,25 @@ def main():
     parser = argparse.ArgumentParser(description="Process freesurfer information")
     # version info
     parser.add_argument('--version', action='version', version='%(prog)s ' + VERSION)
-    parser.add_argument('--reference', dest='reference',
-                        choices=['MRN_3', 'MRN_1'], help='reference image to process')
-    parser.add_argument('--dir', dest='input_directory',
-                        default='.', help='directory containing input file')
-    parser.add_argument('--reference_output', dest='check_file',
-                        default=None, help='path to reference output to compare to')
+    parser.add_argument('--subject', dest='subject',
+                        help='subject name')
+    parser.add_argument('--subject-dir', dest='subject_dir',
+                        help='subject directory file')
+    parser.add_argument('--input-file',
+                        dest='input_file',
+                        action='append',
+                        default=[],
+                        help='path to input file(s), this can be used '
+                             'multiple times')
+    parser.add_argument('--workflow', dest='workflow',
+                        choices=['standard', 'multiple', 'custom'],
+                        help='Type of workflow to run')
+    parser.add_argument('--freesurfer-version',
+                        dest='freesurfer_version',
+                        choices=['5.3.0'],
+                        default='5.3.0',
+                        help='version of FreeSurfer to use')
+
     parser.add_argument('--dualcore', dest='multicore',
                         action='store_false', default=True,
                         help='Use 2 cores to process certain steps')
@@ -294,10 +482,21 @@ def main():
 
     args = parser.parse_args(sys.argv[1:])
 
-    job_id = submit_workflow(args.user,
-                             args.password,
-                             args.input_directory,
-                             args.reference)
+    if args.workflow in ('standard', 'multiple'):
+        job_id = submit_standard_workflow(args.user,
+                                          args.password,
+                                          args.freesurfer_version,
+                                          args.subject,
+                                          args.input_files)
+    elif args.workflow == 'custom':
+        job_id = submit_custom_workflow(args.user,
+                                        args.password,
+                                        args.freesurfer_version,
+                                        args.subject_dir,
+                                        args.option)
+    else:
+        sys.stderr.write("Invalid workflow type!\n")
+        sys.exit(1)
     if job_id is None:
         sys.exit(1)
     running = True
@@ -322,12 +521,27 @@ def main():
         sys.exit(1)
     output_file = response['filename']
     remove_workflow(job_id, args.user, args.password)
-    if args.reference == 'MRN_3':
-        reference_output = "../MRN_3_reference.tbz"
-    elif args.reference == 'MRN_1':
-        reference_output = "../MRN_1_reference.tbz"
+
+    compare_app = ''
+    if args.workflow == 'standard':
+        compare_app = './compare_mri.py'
+        if args.subject == 'MRN_3':
+            reference_output = "../MRN_3_reference.tbz"
+        elif args.subject == 'MRN_1':
+            reference_output = "../MRN_1_reference.tbz"
+    elif args.workflow == 'multiple':
+        compare_app = './compare_mri.py'
+        if args.subject == '175':
+            reference_output = '../175_multiple_reference.tbz'
+    elif args.workflow == 'custom':
+        compare_app = './compare_recon1.py'
+        if args.subject == 'MRN_1':
+            reference_output = '../MRN_1_autorecon1_reference.tbz'
+    else:
+        sys.stderr.write("Invalid reference/workflow combination\n")
+        sys.exit(1)
     try:
-        subprocess.check_call(["./compare_mri.py",
+        subprocess.check_call([compare_app,
                                output_file,
                                reference_output])
     except subprocess.CalledProcessError:
