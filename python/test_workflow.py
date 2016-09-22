@@ -504,7 +504,7 @@ def main():
     error = False
     while running:
         status = get_status(job_id, args.user, args.password)
-        if (status != 'PROCESSING') and (status != 'UPLOADED'):
+        if (status != 'QUEUED') and (status != 'RUNNING'):
             break
 
         if (time.time() - start_time) > (86400 * 2):
@@ -522,7 +522,6 @@ def main():
     output_file = response['filename']
     remove_workflow(job_id, args.user, args.password)
 
-    compare_app = ''
     if args.workflow == 'standard':
         compare_app = './compare_mri.py'
         if args.subject == 'MRN_3':
