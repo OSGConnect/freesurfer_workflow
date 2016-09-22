@@ -225,7 +225,7 @@ def submit_standard_workflow(username,
                              version,
                              subject,
                              input_files,
-                             multicore):
+                             multicore=True):
     """
     Submit a workflow to OSG for processing
 
