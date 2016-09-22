@@ -457,7 +457,7 @@ def main():
     parser.add_argument('--subject-dir', dest='subject_dir',
                         help='subject directory file')
     parser.add_argument('--input-file',
-                        dest='input_file',
+                        dest='input_files',
                         action='append',
                         default=[],
                         help='path to input file(s), this can be used '
