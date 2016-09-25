@@ -296,7 +296,7 @@ def compare_labels(subject1_dir, subject2_dir):
     :return: True if files have different labels, False otherwise
     """
     differences = False
-    sys.stdout.write("Comparing annotations\n")
+    sys.stdout.write("Comparing labels\n")
     for directory in LABEL_DIRS:
         dir_entry_1 = os.path.join(subject1_dir, directory)
         dir_entry_2 = os.path.join(subject2_dir, directory)
@@ -334,7 +334,7 @@ def compare_annotations(subject1_dir, subject2_dir):
     :return: True if files have different annotations, False otherwise
     """
     differences = False
-    sys.stdout.write("Comparing labels\n")
+    sys.stdout.write("Comparing annotations\n")
     for directory in LABEL_DIRS:
         dir_entry_1 = os.path.join(subject1_dir, directory)
         dir_entry_2 = os.path.join(subject2_dir, directory)
