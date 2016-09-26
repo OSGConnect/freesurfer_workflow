@@ -462,6 +462,10 @@ def main():
                         default=[],
                         help='path to input file(s), this can be used '
                              'multiple times')
+    parser.add_argument('--options',
+                        dest='options',
+                        default=None,
+                        help='options to pass to FreeSurfer')
     parser.add_argument('--workflow', dest='workflow',
                         choices=['standard', 'multiple', 'custom'],
                         help='Type of workflow to run')
@@ -492,8 +496,9 @@ def main():
         job_id = submit_custom_workflow(args.user,
                                         args.password,
                                         args.freesurfer_version,
+                                        args.subject,
                                         args.subject_dir,
-                                        args.option)
+                                        args.options)
     else:
         sys.stderr.write("Invalid workflow type!\n")
         sys.exit(1)
