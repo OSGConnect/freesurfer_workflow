@@ -16,6 +16,19 @@ REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer_test"
 VERSION = 'PKG_VERSION'
 
 
+def check_freesurfer():
+    """
+    Check to make sure freesurfer binaries are in path
+
+    :return: True if FreeSurfer is available, false otherwise
+    """
+    success = False
+    for path in os.environ['PATH'].split(':'):
+        if os.path.isfile(os.path.join(path, 'recon-all')):
+            success = True
+    return success
+
+
 def error_message(message):
     """
     Print an error message with default message
@@ -309,9 +322,10 @@ def submit_custom_workflow(username, password, version, subject, subject_dir, op
 
     :param username: username to use when authenticating
     :param password: password to user when authenticating
-    :param subject_dir:  path to file with FreeSurfer subject dir in a zip file
+    :param version: version of freesurfer to use
     :param subject:  name of subject in the file
-    :param multicore: boolean indicating whether to use a multicore workflow
+    :param subject_dir:  path to file with FreeSurfer subject dir in a zip file
+    :param options:  options to use when running workflow
     :return: job_id on success, None on error
     """
 
@@ -485,6 +499,9 @@ def main():
                         default=None, help='Password used to login')
 
     args = parser.parse_args(sys.argv[1:])
+    if not check_freesurfer():
+        sys.stderr.write("FreeSurfer binaries not in path, exiting\n")
+        sys.exit(1)
 
     if args.workflow in ('standard', 'multiple'):
         job_id = submit_standard_workflow(args.user,
