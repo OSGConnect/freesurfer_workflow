@@ -14,7 +14,7 @@ import re
 import cPickle
 
 REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer_test"
-VERSION = '2.0.0'
+VERSION = '2.0.1'
 CREDENTIAL_FILE = os.path.expanduser('~/.fsurf/credentials')
 # supported versions of FreeSurfer
 FREESURFER_VERSIONS = ['5.3.0']
@@ -172,7 +172,13 @@ def get_response(query_parameters, noun, method, endpoint=REST_ENDPOINT):
     parsed = urlparse.urlparse(url)
     try:
         conn = httplib.HTTPConnection(parsed.netloc)
-        conn.request(method, "{0}?{1}".format(parsed.path, parsed.query))
+        if method == 'PUT':
+            conn.request(method,
+                         "{0}?{1}".format(parsed.path, parsed.query),
+                         body=None,
+                         headers={'Content-Length': 0})
+        else:
+            conn.request(method, "{0}?{1}".format(parsed.path, parsed.query))
         resp = conn.getresponse()
         return resp.status, resp.read()
     except IOError as e:  # mainly dns errors
