@@ -347,7 +347,12 @@ def get_job_status():
     response = {'status': 200}
     conn = get_db_client()
     cursor = conn.cursor()
-    job_query = "SELECT state " \
+    job_query = "SELECT state, " \
+                "       options," \
+                "       num_inputs," \
+                "       subject," \
+                "       job_date," \
+                "       purged " \
                 "FROM freesurfer_interface.jobs " \
                 "WHERE id = %s AND username = %s;"
     accounting_query = "SELECT walltime, " \
@@ -365,6 +370,11 @@ def get_job_status():
             return flask_error_response(404, "Invalid workflow id")
         else:
             response['job_status'] = row[0]
+            response['options'] = row[1]
+            response['num_inputs'] = row[2]
+            response['subject'] = row[3]
+            response['started'] = row[4]
+            response['purged'] = row[5]
         cursor.execute(accounting_query, [flask.request.args['jobid']])
         row = cursor.fetchone()
         if row is None:
