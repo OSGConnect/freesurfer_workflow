@@ -15,7 +15,7 @@ import zipfile
 import tempfile
 
 REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer_test"
-VERSION = '2.0.3'
+VERSION = '2.0.4'
 CREDENTIAL_FILE = os.path.expanduser('~/.fsurf/credentials')
 # supported versions of FreeSurfer
 FREESURFER_VERSIONS = ['5.3.0']
@@ -71,6 +71,74 @@ def error_message(message):
                      "support ticket indicating that you're running fsurf " +
                      "version {0}, give your username, \n".format(VERSION) +
                      "and a description of the issue.\n")
+
+def format_seconds(duration, max_comp=2):
+    """
+    Utility for converting time to a readable format
+
+    :param duration: time in seconds and miliseconds
+    :param max_comp: number of components of the returned time
+    :return: time in n component format
+    """
+    comp = 0
+    if duration is None:
+        return '-'
+    # milliseconds = math.modf(duration)[0]
+    sec = int(duration)
+    formatted_duration = ''
+    years = sec / 31536000
+    sec -= 31536000 * years
+    days = sec / 86400
+    sec -= 86400 * days
+    hrs = sec / 3600
+    sec -= 3600 * hrs
+    mins = sec / 60
+    sec -= 60 * mins
+
+    # years
+    if comp < max_comp and (years >= 1 or comp > 0):
+        comp += 1
+        if days == 1:
+            formatted_duration += str(years) + ' year, '
+        else:
+            formatted_duration += str(years) + ' years, '
+
+    # days
+    if comp < max_comp and (days >= 1 or comp > 0):
+        comp += 1
+        if days == 1:
+            formatted_duration += str(days) + ' day, '
+        else:
+            formatted_duration += str(days) + ' days, '
+
+    # hours
+    if comp < max_comp and (hrs >= 1 or comp > 0):
+        comp += 1
+        if hrs == 1:
+            formatted_duration += str(hrs) + ' hr, '
+        else:
+            formatted_duration += str(hrs) + ' hrs, '
+
+    # mins
+    if comp < max_comp and (mins >= 1 or comp > 0):
+        comp += 1
+        if mins == 1:
+            formatted_duration += str(mins) + ' min, '
+        else:
+            formatted_duration += str(mins) + ' mins, '
+
+    # seconds
+    if comp < max_comp and (sec >= 1 or comp > 0):
+        comp += 1
+        if sec == 1:
+            formatted_duration += str(sec) + " sec, "
+        else:
+            formatted_duration += str(sec) + " secs, "
+
+    if formatted_duration[-2:] == ", ":
+        formatted_duration = formatted_duration[:-2]
+
+    return formatted_duration
 
 
 def get_user_credentials():
@@ -596,7 +664,8 @@ def submit_workflow(args):
             body = zip_file.read()
             zip_file.close()
         elif os.path.isfile(args.subject_dir):
-            with open(os.path.abspath(args.subject_dir), 'rb') as f:
+            input_file = os.path.abspath(args.subject_dir)
+            with open(input_file, 'rb') as f:
                 body = f.read()
         else:
             sys.stderr.write("{0} is not present and is needed, "
@@ -696,15 +765,28 @@ def get_status(args):
         sys.exit(1)
 
     sys.stdout.write("Workflow {0} Summary\n".format(args.workflow_id))
+    if response_obj['num_inputs'] > 1:
+        workflow_type = 'Multiple Input'
+    elif response_obj['options']:
+        workflow_type = 'Custom Workflow'
+    else:
+        workflow_type = 'Standard'
+
+    sys.stdout.write("Workflow Type: {0}\n".format(workflow_type))
+    sys.stdout.write("Subject: {0}\n".format(response_obj['subject']))
+    if workflow_type == 'Custom Workflow':
+        sys.stdout.write("Options: {0}\n".format(response_obj['options']))
     sys.stdout.write("Status: {0}\n".format(response_obj['job_status']))
-    if len(response_obj.keys()) == 2:
+    start_time = time.ctime(response_obj['started'])
+    if response_obj['job_status'] in ['RUNNING', 'QUEUED', 'ERROR']:
+        sys.stdout.write("Started: {0:<20}\n".format(start_time))
         sys.exit(0)
     start_time = time.ctime(response_obj['started'])
     end_time = time.ctime(response_obj['ended'])
     sys.stdout.write("Started: {0:<20}\n".format(start_time))
     sys.stdout.write("Ended: {0:<20}\n".format(end_time))
-    cputime = "{0}s".format(response_obj['cputime'])
-    walltime = "{0}s".format(response_obj['walltime'])
+    cputime = format_seconds(response_obj['cputime'])
+    walltime = format_seconds(response_obj['walltime'])
     sys.stdout.write("CPU Time used: {0:<20} ".format(cputime))
     sys.stdout.write("Active for: {0:<20}\n".format(walltime))
     sys.stdout.write("Completed: {0}/{1} tasks\n".format(response_obj['tasks_completed'],
@@ -874,7 +956,7 @@ def main():
                                default=None,
                                help='name of zip file with subject directory '
                                     'to use')
-    submit_parser.add_argument('--options',
+    submit_parser.add_argument('--freesurfer-options',
                                dest='options',
                                default=None,
                                help='options to pass to FreeSurfer')
