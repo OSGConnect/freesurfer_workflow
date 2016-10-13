@@ -14,12 +14,7 @@ VOLUMES = ['rawavg.mgz',
            'orig.mgz',
            'nu.mgz',
            'T1.mgz',
-           'brainmask.mgz',
-           'norm.mgz',
-           'aseg.mgz',
-           'brain.mgz',
-           'wm.mgz',
-           'filled.mgz']
+           'brainmask.mgz']
 APARCS = ['aparc.a2009s', 'aparc']
 STATS_FILES = ['aseg.stats']
 
@@ -104,18 +99,6 @@ def compare_volumes(subject1_dir, subject2_dir):
                 sys.stdout.write("Files differ, "
                                  "exit code: {0}\n".format(exit_code))
     sys.stdout.write("Comparing seg overlap... ")
-    cmd = "mri_compute_seg_overlap {0}/mri/aseg.mgz ".format(subject1_dir)
-    cmd += "{0}/mri/aseg.mgz".format(subject2_dir)
-    signal, exit_code = run_command(cmd)
-    if signal != 0:
-        differences = True
-        sys.stdout.write("Signal {0} occurred\n".format(signal))
-    if exit_code == 0:
-        sys.stdout.write("OK\n")
-    else:
-        differences = True
-        sys.stdout.write("Files differ, "
-                         "exit code: {0}\n".format(exit_code))
     return differences
 
 
