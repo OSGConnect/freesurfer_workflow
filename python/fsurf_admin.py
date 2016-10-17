@@ -110,7 +110,7 @@ def list_workflows(args):
                     "       multicore " \
                     "FROM freesurfer_interface.jobs " \
                     "WHERE purged IS NOT TRUE AND " \
-                    "      age(job_date) < '1 week' " \
+                    "      age(job_date) < '1 week' "
         if args.username:
             job_query += " AND username = %s"
         job_query += "ORDER BY job_date DESC;"
