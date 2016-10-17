@@ -127,7 +127,7 @@ def list_workflows(args):
         sys.stdout.write("{0:10} {1:10} {2:27} ".format('Subject',
                                                         'Workflow',
                                                         'Submit time (Central Time)'))
-        sys.stdout.write("{0:10} {1:15} {2:10} {2:10}\n".format('Cores',
+        sys.stdout.write("{0:10} {1:15} {2:10} {3:10}\n".format('Cores',
                                                                 'Status',
                                                                 'Tasks completed',
                                                                 'Username'))
@@ -142,10 +142,10 @@ def list_workflows(args):
             sys.stdout.write("{0:10} {1:<10} {2:<27} ".format(row[1],
                                                               row[0],
                                                               str(row[3])))
-            sys.stdout.write("{0:<10} {1:<15} {2:<10}\n".format(8 if row[4] else 2,
-                                                                row[2],
-                                                                completion,
-                                                                row[5]))
+            sys.stdout.write("{0:<10} {1:<15} {2:<10} {3:<10}\n".format(8 if row[4] else 2,
+                                                                        row[2],
+                                                                        completion,
+                                                                        row[5]))
     except Exception, e:
         sys.stderr.write("Exception caught: {0}".format(e))
         return 1
