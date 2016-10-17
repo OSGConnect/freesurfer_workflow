@@ -96,7 +96,8 @@ def list_workflows(args):
                     "       subject, " \
                     "       state, " \
                     "       date_trunc('seconds', job_date), " \
-                    "       multicore " \
+                    "       multicore," \
+                    "       username " \
                     "FROM freesurfer_interface.jobs " \
                     "WHERE purged IS NOT TRUE "
         if args.username:
@@ -107,7 +108,8 @@ def list_workflows(args):
                     "       subject, " \
                     "       state, " \
                     "       date_trunc('seconds', job_date), " \
-                    "       multicore " \
+                    "       multicore," \
+                    "       username " \
                     "FROM freesurfer_interface.jobs " \
                     "WHERE purged IS NOT TRUE AND " \
                     "      age(job_date) < '1 week' "
@@ -125,9 +127,10 @@ def list_workflows(args):
         sys.stdout.write("{0:10} {1:10} {2:27} ".format('Subject',
                                                         'Workflow',
                                                         'Submit time (Central Time)'))
-        sys.stdout.write("{0:10} {1:15} {2:10}\n".format('Cores',
-                                                         'Status',
-                                                         'Tasks completed'))
+        sys.stdout.write("{0:10} {1:15} {2:10} {2:10}\n".format('Cores',
+                                                                'Status',
+                                                                'Tasks completed',
+                                                                'Username'))
         for row in cursor.fetchall():
             cursor2 = conn.cursor()
             cursor2.execute(accounting_query, [row[0]])
@@ -141,7 +144,8 @@ def list_workflows(args):
                                                               str(row[3])))
             sys.stdout.write("{0:<10} {1:<15} {2:<10}\n".format(8 if row[4] else 2,
                                                                 row[2],
-                                                                completion))
+                                                                completion,
+                                                                row[5]))
     except Exception, e:
         sys.stderr.write("Exception caught: {0}".format(e))
         return 1
