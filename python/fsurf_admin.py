@@ -69,7 +69,7 @@ def delete_workflow(args):
                                  "change workflow state\n")
                 sys.exit(1)
             conn.commit()
-            sys.stdout.write("Workflow {0} marked for deletion".format(args.id))
+            sys.stdout.write("Workflow {0} marked for deletion\n".format(args.id))
     except Exception as e:
         conn.rollback()
         sys.stderr.write("Exception caught: {0}".format(e))
