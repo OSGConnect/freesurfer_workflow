@@ -98,8 +98,10 @@ def list_workflows(args):
                     "       date_trunc('seconds', job_date), " \
                     "       multicore " \
                     "FROM freesurfer_interface.jobs " \
-                    "WHERE purged IS NOT TRUE " \
-                    "ORDER BY job_date DESC;"
+                    "WHERE purged IS NOT TRUE "
+        if args.username:
+            job_query += " AND username = %s"
+        job_query += "ORDER BY job_date DESC;"
     else:
         job_query = "SELECT id, " \
                     "       subject, " \
@@ -108,10 +110,15 @@ def list_workflows(args):
                     "       multicore " \
                     "FROM freesurfer_interface.jobs " \
                     "WHERE purged IS NOT TRUE AND " \
-                    "      age(job_date) < '1 month' " \
-                    "ORDER BY job_date DESC;"
+                    "      age(job_date) < '1 week' " \
+        if args.username:
+            job_query += " AND username = %s"
+        job_query += "ORDER BY job_date DESC;"
     try:
-        cursor.execute(job_query, [])
+        if args.username:
+            cursor.execute(job_query, [args.username])
+        else:
+            cursor.execute(job_query, [])
         if cursor.rowcount == 0:
             sys.stdout.write("\nNo workflows present\n")
             return 0
@@ -131,7 +138,7 @@ def list_workflows(args):
                 completion = '{0}/{1}'.format(result[0], result[1])
             sys.stdout.write("{0:10} {1:<10} {2:<27} ".format(row[1],
                                                               row[0],
-                                                              time.mktime(row[3].timetuple())))
+                                                              str(row[3])))
             sys.stdout.write("{0:<10} {1:<15} {2:<10}\n".format(8 if row[4] else 2,
                                                                 row[2],
                                                                 completion))
