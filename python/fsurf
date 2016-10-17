@@ -72,6 +72,7 @@ def error_message(message):
                      "version {0}, give your username, \n".format(VERSION) +
                      "and a description of the issue.\n")
 
+
 def format_seconds(duration, max_comp=2):
     """
     Utility for converting time to a readable format
