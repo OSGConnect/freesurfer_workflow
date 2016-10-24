@@ -149,11 +149,12 @@ def delete_job():
                                 break
             logger.info("Jobs removed, removing workflow directory\n")
             try:
-                if not args.dry_run:
+                if not args.dry_run and os.path.exists(workflow_dir):
                     shutil.rmtree(workflow_dir)
             except shutil.Error:
                 logger.exception("Can't remove directory at "
                                  "{0}, exiting...\n".format(workflow_dir))
+
 
             deletion_list = []
             # add input file
