@@ -26,7 +26,7 @@ PEGASUSRC_PATH = '/stash2/user/fsurf/pegasusconf/pegasusrc'
 VERSION = fsurfer.__version__
 
 
-def pegasus_submit(dax, workflow_directory):
+def pegasus_submit(dax, workflow_directory, output_directory):
     """
     Submit a workflow to pegasus
 
@@ -116,7 +116,8 @@ def submit_workflow(subject_files, version, subject_name, user, jobid,
                                                  "local"))
         dax_subject_files.append(dax_subject_file)
         dax.addFile(dax_subject_file)
-    workflow_directory = os.path.join(FREESURFER_BASE, user, 'workflows')
+    workflow_directory = os.path.join('/local-scratch', 'fsurf', user, 'workflows')
+    output_directory = os.path.join(workflow_directory, 'output')
     job_invoke_cmd = "/usr/bin/task_completed.py --id {0}".format(jobid)
     if workflow == 'serial':
         created = fsurfer.create_serial_workflow(dax,
@@ -159,7 +160,8 @@ def submit_workflow(subject_files, version, subject_name, user, jobid,
         with open(dax_name, 'w') as f:
             dax.writeXML(f)
         exit_code, output = pegasus_submit(dax="{0}".format(dax_name),
-                                           workflow_directory=workflow_directory)
+                                           workflow_directory=workflow_directory,
+                                           output_directory=output_directory)
         logger.info("Submitted workflow, got exit code {0}".format(exit_code))
         logger.info("Pegasus output: {0}".format(output))
         if exit_code != 0:
