@@ -289,7 +289,7 @@ def get_current_jobs():
                     "       date_trunc('seconds', job_date), " \
                     "       multicore " \
                     "FROM freesurfer_interface.jobs " \
-                    "WHERE purged IS NOT TRUE AND " \
+                    "WHERE purged IS FALSE AND " \
                     "      username = %s " \
                     "ORDER BY job_date DESC;"
     else:
@@ -299,9 +299,9 @@ def get_current_jobs():
                     "       date_trunc('seconds', job_date), " \
                     "       multicore " \
                     "FROM freesurfer_interface.jobs " \
-                    "WHERE purged IS NOT TRUE AND " \
-                    "      state IS NOT IN ('DELETED', " \
-                    "                       'DELETE PENDING') AND " \
+                    "WHERE purged IS FALSE AND " \
+                    "      state NOT IN ('DELETED', " \
+                    "                    'DELETE PENDING') AND " \
                     "      age(job_date) < '1 month' AND " \
                     "      username = %s " \
                     "ORDER BY job_date DESC;"
