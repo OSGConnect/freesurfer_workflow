@@ -15,7 +15,7 @@ import zipfile
 import tempfile
 
 REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer_test"
-VERSION = '2.0.4'
+VERSION = '2.0.5'
 CREDENTIAL_FILE = os.path.expanduser('~/.fsurf/credentials')
 # supported versions of FreeSurfer
 FREESURFER_VERSIONS = ['5.3.0']
@@ -28,12 +28,11 @@ usage_text = """
 |---------------|----------------|----------------------|---------------------
 | submit        | Upload and     | --subject='[subject]'| --help
 |               | process scan   |                      | --user='[user name]'
-|               |                |                      | --input-file='[path]'
+|               |                |                      | --input='[path]'
 |               |                |                      | --dualcore
 |               |                |                      | --defaced
 |               |                |                      | --deidentified
-|               |                |                      | --subject-dir='[dir]'
-|               |                |                      | --options='[options]'
+|               |                |                      | --freesurfer-options='[options]'
 |---------------|----------------|----------------------|---------------------
 | list          | List workflows |                      | --help
 |               |                |                      | --user='[user name]'
@@ -513,26 +512,91 @@ def remove_workflow(args):
     return 0
 
 
-def validate_inputs(subject_files=None, subject_dir=None):
+def validate_inputs(subject_files=None, options=None):
     """
     Validate input files or subject dir and make sure that they are present
     and valid files
 
     :param subject_files: a list of paths to files to use as input
-    :param subject_dir:   path to a zipfile with a subject directory
+    :param options:       args.options
     :return:              True if inputs are valid, False otherwise
     """
-    if (subject_files == [] or subject_files is None) and subject_dir is None:
-        return False
-    if subject_files:
-        for f in subject_files:
-            if not os.path.isfile(f):
-                return False
-    if subject_dir:
-        if not os.path.isfile(subject_dir) and \
-           not os.path.isdir(subject_dir):
+    VALID_EXTENSIONS = ['nii.gz',
+                        'nii',
+                        'mgz',
+                        'mgh',
+                        'mnc']
+    num_inputs = len(subject_files)
+    for subject_file in subject_files:
+        fields = subject_file.split('.')
+        if fields == 2:
+            extension = fields[-1].lower()
+        elif fields > 2:
+            extension = ".".join(fields[-2:]).lower()
+        elif os.path.isdir(subject_file):
+            extension = None
+            pass
+        else:
             return False
-    return True
+
+        # handle cases with custom workflows not being specified
+        # properly
+        custom_workflow_input = (extension.lower() == 'zip' or
+                                 os.path.isdir(subject_file))
+        if custom_workflow_input and not options:
+            if extension == 'zip':
+                sys.stderr.write("Zipfile used as input without "
+                                 "--freesurfer-options, was this an error?\n")
+            else:
+                sys.stderr.write("Directory used as input without "
+                                 "--freesurfer-options, exiting\n")
+                return False
+        if custom_workflow_input and (num_inputs > 1):
+            sys.stderr.write("Custom workflows can only have a single input, "
+                             "exiting.\n")
+            return False
+        if options:
+            if custom_workflow_input:
+                return True
+            else:
+                return False
+
+        if extension in VALID_EXTENSIONS:
+            return True
+
+        sys.stderr.write("Extension not recognized, this workflow "
+                         "may fail\n")
+        # allow submission to continue after warning
+        return True
+
+
+def send_file(send_params, filename, body):
+    """
+    Upload a file with retry and parameters
+
+    :param send_params: parameters to use when uploading
+    :param filename: name of file being uploaded
+    :param body: binary data to upload
+    :return: True on success, False otherwise
+    """
+    attempts = 1
+    while attempts < 6:
+
+        status, response = upload_item(send_params,
+                                       'job/input',
+                                       filename,
+                                       body,
+                                       'POST')
+        if status == 200:
+            sys.stdout.write("Uploaded {0} successfully\n".format(filename))
+            return True
+        response_obj = json.loads(response)
+        sys.stdout.write("Error while uploading {0}\n".format(filename))
+        sys.stdout.write("Error: {0}\n".format(response_obj['result']))
+        sys.stdout.write("Retrying upload, attempt {0}/5\n".format(attempts))
+        attempts += 1
+
+    return False
 
 
 def submit_workflow(args):
@@ -545,6 +609,11 @@ def submit_workflow(args):
     if args.subject is None:
         sys.stdout.write("Subject name is missing, exiting...\n")
         sys.exit(1)
+
+    if not validate_inputs(args.input_file, args.options):
+        sys.stderr.write("Inputs not specified correctly")
+        sys.exit(1)
+
     if not args.deidentified:
         agree = get_user_response("Has the MRI data been deidentified "
                                   "(This is required) (y/n)? ")
@@ -565,25 +634,10 @@ def submit_workflow(args):
     username, password = get_user_info(args)
     timestamp, token = get_token(username, password)
     num_inputs = len(args.input_file)
-    if num_inputs == 0 and args.subject_dir:
-        num_inputs = 1
     if args.version not in FREESURFER_VERSIONS:
         sys.stderr.write("FreeSurfer version requested is not available!\n")
         sys.stderr.write("You requested {0}\n".format(args.version))
         sys.stderr.write("Available versions: {0}\n".format(",".join(FREESURFER_VERSIONS)))
-        sys.exit(1)
-    if args.options and not args.subject_dir:
-        sys.stderr.write("You must provide a subject directory file if "
-                         "using custom options!\n")
-        sys.exit(1)
-    if args.subject_dir and args.input_file:
-        sys.stderr.write("You can not provide a subject directory file and "
-                         "input files at the same time!\n")
-        sys.exit(1)
-    if not validate_inputs(args.input_file, args.subject_dir):
-        sys.stderr.write("You must provide either an input file using "
-                         "--input-file or \na subject directory using "
-                         "--subject-dir\n")
         sys.exit(1)
     if num_inputs == 0:
         sys.stderr.write("No inputs found, refusing to submit workflow\n")
@@ -597,7 +651,7 @@ def submit_workflow(args):
                     'subject': args.subject,
                     'timestamp': timestamp,
                     'jobname': "{0}_{1}".format(args.subject, timestamp)}
-    if args.subject_dir:
+    if args.options:
         query_params['multicore'] = False
     sys.stdout.write("Creating and submitting workflow\n")
     status, response = get_response(query_params, 'job', 'POST')
@@ -613,90 +667,62 @@ def submit_workflow(args):
     sys.stdout.write("Uploading input files\n")
     file_num = 0
     for input_file in args.input_file:
-        attempts = 1
         sys.stdout.write("Uploading {0} (file {1}/{2})\n".format(input_file,
                                                                  file_num + 1,
                                                                  num_inputs))
-        while attempts < 6:
-            query_params = {'userid': username,
-                            'timestamp': timestamp,
-                            'token': token,
-                            'jobid': job_id,
-                            'filename': os.path.basename(input_file),
-                            'subjectdir': False}
-            input_path = os.path.abspath(input_file)
-            if not os.path.isfile(input_path):
-                sys.stderr.write("{0} is not present and is needed, "
-                                 "exiting\n".format(input_path))
+        send_params = {'userid': username,
+                       'timestamp': timestamp,
+                       'token': token,
+                       'jobid': job_id,
+                       'filename': os.path.basename(input_file),
+                       'subjectdir': False}
+        input_path = os.path.abspath(file_path)
+        filename = os.path.basename(input_file)
+        if not os.path.isfile(input_path):
+            sys.stderr.write("{0} is not present and is needed, "
+                             "exiting\n".format(input_path))
+            sys.exit(1)
+        with open(subject_file, 'rb') as f:
+            body = f.read()
+            if send_file(send_params, filename, body):
+                continue
+            else:
+                sys.stdout.write("Could not upload {0}\n".format(filename))
+                sys.stdout.write("Exiting...\n")
                 sys.exit(1)
-            with open(input_path, 'rb') as f:
-                body = f.read()
-
-            status, response = upload_item(query_params,
-                                           'job/input',
-                                           os.path.basename(input_file),
-                                           body,
-                                           'POST')
-            if status == 200:
-                sys.stdout.write("Uploaded {0} successfully\n".format(input_file))
-                break
-            response_obj = json.loads(response)
-            sys.stdout.write("Error while uploading {0}\n".format(input_file))
-            sys.stdout.write("Error: {0}\n".format(response_obj['result']))
-            sys.stdout.write("Retrying upload, attempt {0}/5\n".format(attempts))
-            attempts += 1
-        if attempts == 6:
-            sys.stdout.write("Could not upload {0}\n".format(input_file))
-            sys.stdout.write("Exiting...\n")
 
         file_num += 1
-    if args.subject_dir:
-        attempts = 1
-        if os.path.isdir(args.subject_dir):
+    if args.options:
+        if os.path.isdir(args.input_file[0]):
             zip_file = tempfile.NamedTemporaryFile()
             sys.stdout.write("Creating a zip file to hold "
-                             "{0}\n".format(args.subject_dir))
+                             "{0}\n".format(args.input_file[0]))
             input_zip = zipfile.ZipFile(zip_file, 'w')
             sys.stdout.write("Zip file created\n")
-            zip_directory(input_zip, args.subject_dir)
+            zip_directory(input_zip, args.input_file[0])
             input_zip.close()
             input_file = "{0}_dir.zip".format(args.subject)
             zip_file.seek(0)
             body = zip_file.read()
             zip_file.close()
-        elif os.path.isfile(args.subject_dir):
-            input_file = os.path.abspath(args.subject_dir)
+        elif os.path.isfile(args.input_file[0]):
+            input_file = os.path.abspath(args.input_file[0])
+            filename = os.path.basename(input_file)
             with open(input_file, 'rb') as f:
                 body = f.read()
-        else:
-            sys.stderr.write("{0} is not present and is needed, "
-                             "exiting\n".format(args.subject_dir))
-            sys.exit(1)
 
         sys.stdout.write("Uploading {0}\n".format(input_file))
-        while attempts < 6:
-            query_params = {'userid': username,
-                            'timestamp': timestamp,
-                            'token': token,
-                            'jobid': job_id,
-                            'filename': os.path.basename(input_file),
-                            'subjectdir': True}
-            status, response = upload_item(query_params,
-                                           'job/input',
-                                           os.path.basename(input_file),
-                                           body,
-                                           'POST')
-            if status == 200:
-                sys.stdout.write("Uploaded {0} successfully\n".format(input_file))
-                break
-            response_obj = json.loads(response)
-            sys.stdout.write("Error while uploading {0}\n".format(input_file))
-            sys.stdout.write("Error: {0}\n".format(response_obj['result']))
-            sys.stdout.write("Retrying upload, attempt {0}/5\n".format(attempts))
-            attempts += 1
-        if attempts == 6:
-            sys.stdout.write("Could not upload {0}\n".format(input_file))
+        send_params = {'userid': username,
+                       'timestamp': timestamp,
+                       'token': token,
+                       'jobid': job_id,
+                       'filename': os.path.basename(input_file),
+                       'subjectdir': True}
+        if send_file(send_params, filename, body):
+            sys.stdout.write("Could not upload {0}\n".format(filename))
             sys.stdout.write("Exiting...\n")
+            sys.exit(0)
+
 
     sys.exit(0)
 
@@ -946,17 +972,12 @@ def main():
                                dest="defaced",
                                action="store_true",
                                help=argparse.SUPPRESS)
-    submit_parser.add_argument('--input-file',
+    submit_parser.add_argument('--input',
                                dest='input_file',
                                action='append',
                                default=[],
                                help='path to input file(s), this can be used '
                                     'multiple times')
-    submit_parser.add_argument('--subject-dir',
-                               dest='subject_dir',
-                               default=None,
-                               help='name of zip file with subject directory '
-                                    'to use')
     submit_parser.add_argument('--freesurfer-options',
                                dest='options',
                                default=None,
