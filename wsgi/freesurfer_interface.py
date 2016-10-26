@@ -300,7 +300,10 @@ def get_current_jobs():
                     "       multicore " \
                     "FROM freesurfer_interface.jobs " \
                     "WHERE purged IS NOT TRUE AND " \
-                    "      age(job_date) < '1 month' AND username = %s " \
+                    "      state IS NOT IN ('DELETED', " \
+                    "                       'DELETE PENDING') AND " \
+                    "      age(job_date) < '1 month' AND " \
+                    "      username = %s " \
                     "ORDER BY job_date DESC;"
     try:
         cursor.execute(job_query, [userid])
