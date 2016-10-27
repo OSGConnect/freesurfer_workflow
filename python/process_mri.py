@@ -31,12 +31,11 @@ def pegasus_submit(dax, workflow_directory, output_directory):
     Submit a workflow to pegasus
 
     :param dax:  path to xml file with DAX, used for submit
-    :param workflow_directory:  directory for pegasus to keep it's workflow
-                              information
+    :param workflow_directory:  directory for workflow information
+    :param output_directory:  directory for workflow output
     :return:            the output from pegasus
     """
     try:
-        output_directory = os.path.join(workflow_directory, 'output')
         output = subprocess.check_output(['/usr/bin/pegasus-plan',
                                           '--sites',
                                           'condorpool',
@@ -117,7 +116,7 @@ def submit_workflow(subject_files, version, subject_name, user, jobid,
         dax_subject_files.append(dax_subject_file)
         dax.addFile(dax_subject_file)
     workflow_directory = os.path.join('/local-scratch', 'fsurf', user, 'workflows')
-    output_directory = os.path.join(workflow_directory, 'output')
+    output_directory = os.path.join(FREESURFER_BASE, user, 'workflows', 'output')
     job_invoke_cmd = "/usr/bin/task_completed.py --id {0}".format(jobid)
     if workflow == 'serial':
         created = fsurfer.create_serial_workflow(dax,
@@ -142,7 +141,7 @@ def submit_workflow(subject_files, version, subject_name, user, jobid,
     elif workflow == 'custom':
         created = fsurfer.create_custom_workflow(dax,
                                                  version,
-                                                 2, # custom workflows get 2 cores
+                                                 2,  # custom workflows get 2 cores
                                                  dax_subject_files[0],
                                                  subject_name,
                                                  options)
@@ -250,7 +249,8 @@ def process_images():
         for row in cursor.fetchall():
             logger.info("Processing workflow {0} for user {1}".format(row[0], row[1]))
 
-            workflow_directory = os.path.join(FREESURFER_BASE, row[1])
+            # workflow_directory = os.path.join(FREESURFER_BASE, row[1])
+            workflow_directory = os.path.join('/local-scratch', 'fsurf', row[1], 'workflows')
             if not os.path.exists(workflow_directory):
                 if args.dry_run:
                     sys.stdout.write("Would have created {0}".format(workflow_directory))
@@ -289,13 +289,13 @@ def process_images():
             if not args.dry_run:
                 if custom_workflow:
                     errors = submit_workflow(input_files, row[5], row[3],
-                                             workflow_directory, row[0],
+                                             row[1], row[0],
                                              options=row[4],
                                              workflow='custom')
                     num_tasks = 1
                 else:
                     errors = submit_workflow(input_files, row[5], row[3],
-                                             workflow_directory, row[0])
+                                             row[1], row[0])
                     num_tasks = 4
             else:
                 errors = False
