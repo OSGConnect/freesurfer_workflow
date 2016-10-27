@@ -249,7 +249,6 @@ def process_images():
         for row in cursor.fetchall():
             logger.info("Processing workflow {0} for user {1}".format(row[0], row[1]))
 
-            # workflow_directory = os.path.join(FREESURFER_BASE, row[1])
             workflow_directory = os.path.join('/local-scratch', 'fsurf', row[1], 'workflows')
             if not os.path.exists(workflow_directory):
                 if args.dry_run:
