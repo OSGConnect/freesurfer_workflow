@@ -376,7 +376,7 @@ def get_job_status():
             response['options'] = row[1]
             response['num_inputs'] = row[2]
             response['subject'] = row[3]
-            response['started'] = row[4]
+            response['started'] = time.mktime(row[4].timetuple())
             response['purged'] = row[5]
         cursor.execute(accounting_query, [flask.request.args['jobid']])
         row = cursor.fetchone()
