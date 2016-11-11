@@ -18,11 +18,13 @@ import psycopg2
 
 import Pegasus.DAX3
 import fsurfer
+import fsurfer.helpers
 import fsurfer.log
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
-FREESURFER_BASE = '/stash2/user/fsurf/'
-PEGASUSRC_PATH = '/stash2/user/fsurf/pegasusconf/pegasusrc'
+FREESURFER_BASE = '/local-scratch/fsurf/'
+FREESURFER_SCRATCH = '/local-scratch/fsurf/scratch'
+PEGASUSRC_PATH = '/etc/fsurf/pegasusconf/pegasusrc'
 VERSION = fsurfer.__version__
 
 
@@ -72,16 +74,6 @@ def get_db_parameters():
             parameters['hostname'])
 
 
-def get_db_client():
-    """
-    Get a postgresql client instance and return it
-
-    :return: a redis client instance or None if failure occurs
-    """
-    db, user, password, host = get_db_parameters()
-    return psycopg2.connect(database=db, user=user, host=host, password=password)
-
-
 def submit_workflow(subject_files, version, subject_name, user, jobid,
                     multicore=True, options=None, workflow='diamond'):
     """
@@ -115,7 +107,7 @@ def submit_workflow(subject_files, version, subject_name, user, jobid,
                                                  "local"))
         dax_subject_files.append(dax_subject_file)
         dax.addFile(dax_subject_file)
-    workflow_directory = os.path.join('/local-scratch', 'fsurf', user, 'workflows')
+    workflow_directory = os.path.join(FREESURFER_SCRATCH, user, 'workflows')
     output_directory = os.path.join(FREESURFER_BASE, user, 'workflows', 'output')
     job_invoke_cmd = "/usr/bin/task_completed.py --id {0}".format(jobid)
     if workflow == 'serial':
@@ -153,8 +145,8 @@ def submit_workflow(subject_files, version, subject_name, user, jobid,
                                                  subject_name)
     if created:
         curr_date = time.strftime("%Y%m%d_%H%M%S", time.gmtime(time.time()))
-        dax.invoke('on_success', "/usr/bin/update_fsurf_job.py --success --id {0}".format(jobid))
-        dax.invoke('on_error', "/usr/bin/update_fsurf_job.py --failure --id {0}".format(jobid))
+        dax.invoke('on_success', "/usr/bin/workflow_completed.py --success --id {0}".format(jobid))
+        dax.invoke('on_error', "/usr/bin/workflow_completed.py --failure --id {0}".format(jobid))
         dax_name = "freesurfer_{0}.xml".format(curr_date)
         with open(dax_name, 'w') as f:
             dax.writeXML(f)
@@ -168,7 +160,7 @@ def submit_workflow(subject_files, version, subject_name, user, jobid,
             return 1
         os.unlink(dax_name)
         capture_id = False
-        conn = get_db_client()
+        conn = fsurfer.helpers.get_db_client()
         for line in cStringIO.StringIO(output).readlines():
             if 'Your workflow has been started' in line:
                 capture_id = True
@@ -227,7 +219,7 @@ def process_images():
         logger.warn('Lock file present, exiting')
         sys.exit(1)
 
-    conn = get_db_client()
+    conn = fsurfer.helpers.get_db_client()
     cursor = conn.cursor()
     job_query = "SELECT id, username, num_inputs, subject, options, version " \
                 "FROM freesurfer_interface.jobs " \
@@ -309,6 +301,8 @@ def process_images():
     except psycopg2.Error as e:
         logger.exception("Got pgsql error: {0}".format(e))
         pass
+    finally:
+        conn.close()
 
     fcntl.flock(x, fcntl.LOCK_UN)
     x.close()
