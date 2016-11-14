@@ -13,7 +13,7 @@ from flask import Flask
 import flask
 
 CONFIG_FILE_LOCATION = "/etc/fsurf/fsurf-prod.config"
-FREESURFER_BASE = '/stash2/user/fsurf/'
+FREESURFER_BASE = '/local-scratch/fsurf/'
 TIMEZONE = "US/Central"
 URL_PREFIX = "/freesurfer"
 
