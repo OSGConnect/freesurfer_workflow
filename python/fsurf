@@ -13,9 +13,10 @@ import re
 import cPickle
 import zipfile
 import tempfile
+from functools import wraps
 
 REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer_test"
-VERSION = '2.0.6'
+VERSION = '2.0.7'
 CREDENTIAL_FILE = os.path.expanduser('~/.fsurf/credentials')
 # supported versions of FreeSurfer
 FREESURFER_VERSIONS = ['5.3.0']
@@ -61,6 +62,23 @@ usage_text = """
 See https://support.opensciencegrid.org/solution/folders/12000002373 for more
 help
 """
+
+
+def protect(f):
+    """
+    Decorator to protect a function in a try/except block
+
+    :param f: function to protect
+    :return:
+    """
+    @wraps(f)
+    def wrapped(*args, **kwargs):
+        try:
+            f(*args, **kwargs)
+        except Exception:
+            error_message('Unexpected error occurred')
+            sys.exit(1)
+    return wrapped
 
 
 def error_message(message):
@@ -492,7 +510,7 @@ def list_workflows(args):
     except IOError:
         sys.exit(1)
 
-
+@protect
 def remove_workflow(args):
     """
     Stop and remove a specified pegasus workflow
@@ -606,7 +624,7 @@ def send_file(send_params, filename, body):
 
     return False
 
-
+@protect
 def submit_workflow(args):
     """
     Submit a workflow to OSG for processing
@@ -737,6 +755,7 @@ def submit_workflow(args):
     sys.exit(0)
 
 
+@protect
 def get_output(args):
     """
     Get output for a completed workflow
@@ -774,6 +793,7 @@ def get_output(args):
     sys.exit(0)
 
 
+@protect
 def get_status(args):
     """
     Get status for a workflow
