@@ -1,49 +1,16 @@
 #!/usr/bin/env python
 import argparse
-import os
-import subprocess
 import sys
-import shutil
-import xml
-import parser
-import re
-import datetime
-from email.mime.text import MIMEText
 
 import psycopg2
+
 import fsurfer
+import fsurfer.helpers
 
 VERSION = fsurfer.__version__
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
-FREESURFER_BASE = '/stash2/user/fsurf/'
-
-
-def get_db_parameters():
-    """
-    Read database parameters from a file and return it
-
-    :return: a tuple of (database_name, user, password, hostname)
-    """
-    parameters = {}
-    with open(PARAM_FILE_LOCATION) as param_file:
-        for line in param_file:
-            key, val = line.strip().split('=')
-            parameters[key.strip()] = val.strip()
-    return (parameters['database'],
-            parameters['user'],
-            parameters['password'],
-            parameters['hostname'])
-
-
-def get_db_client():
-    """
-    Get a postgresql client instance and return it
-
-    :return: a redis client instance or None if failure occurs
-    """
-    db, user, password, host = get_db_parameters()
-    return psycopg2.connect(database=db, user=user, host=host, password=password)
+FREESURFER_BASE = '/local-scratch/fsurf/'
 
 
 def update_completed_tasks(jobid):
@@ -57,7 +24,7 @@ def update_completed_tasks(jobid):
     logger = fsurfer.log.get_logger()
 
     try:
-        conn = get_db_client()
+        conn = fsurfer.helpers.get_db_client()
         cursor = conn.cursor()
         logger.info("Incrementing tasks completd for workflow {0}".format(jobid))
 
