@@ -59,6 +59,7 @@ def get_input_files(workflow_id):
         cursor.execute(input_query, [workflow_id])
         for row in cursor.fetchall():
             input_files.append(row[0])
+            input_files.append(os.path.dirname(row[0]))
     except psycopg2.Error as e:
         logger.exception("Error: {0}".format(e))
         return None
