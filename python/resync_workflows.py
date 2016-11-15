@@ -34,7 +34,7 @@ def reset_workflow(workflow_id):
     conn = fsurfer.helpers.get_db_client()
     cursor = conn.cursor()
     if DRY_RUN:
-        sys.stdout.write("")
+        sys.stdout.write("Resetting workflow {0}\n".format(workflow_id))
     job_run_delete = "DELETE FROM freesurfer_interface.job_run " \
                      "WHERE job_id = %s"
     job_reset = "UPDATE freesurfer_interface.jobs " \
@@ -114,7 +114,7 @@ def resync_workflows():
                 if 'Failure' in cStringIO.StringIO(output).readlines()[2]:
                     if DRY_RUN:
                         sys.stdout.write("Would have failed "
-                                         "workflow {0}".format(workflow_id))
+                                         "workflow {0}\n".format(workflow_id))
                         continue
                     cursor.execute(update_workflow_state, [workflow_id,
                                                            'FAILED'])
@@ -125,7 +125,7 @@ def resync_workflows():
                 elif 'Success' in cStringIO.StringIO(output).readlines()[2]:
                     if DRY_RUN:
                         sys.stdout.write("Would have completed "
-                                         "workflow {0}".format(workflow_id))
+                                         "workflow {0}\n".format(workflow_id))
                         continue
                     cursor.execute(update_workflow_state, [workflow_id,
                                                            'COMPLETED'])
