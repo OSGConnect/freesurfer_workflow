@@ -6,7 +6,7 @@
 import psycopg2
 
 
-PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
+PARAM_FILE_LOCATION = "/etc/fsurf/db_info"
 
 
 def get_db_parameters():
