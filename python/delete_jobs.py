@@ -41,6 +41,32 @@ def purge_workflow_file(path):
         return False
 
 
+def get_input_files(workflow_id):
+    """
+    Get a list of input files and return this as a list
+
+    :param workflow_id:  id for workflow
+    :return: a list of input files for specified id
+    """
+    logger = fsurfer.log.get_logger()
+    input_files = []
+    try:
+        conn = fsurfer.helpers.get_db_client()
+        cursor = conn.cursor()
+        input_query = "SELECT path " \
+                      "FROM freesurfer_interface.input_files " \
+                      "WHERE job_id = %s"
+        cursor.execute(input_query, [workflow_id])
+        for row in cursor.fetchall():
+            input_files.append(row[0])
+    except psycopg2.Error as e:
+        logger.exception("Error: {0}".format(e))
+        return None
+    finally:
+        conn.close()
+    return input_files
+
+
 def delete_job():
     """
     Delete all jobs in a delete pending state, stopping pegasus
@@ -79,8 +105,10 @@ def delete_job():
     try:
         cursor.execute(job_query)
         for row in cursor.fetchall():
-            logger.info("Deleting workflow {0} for user {1}".format(row[0],
-                                                                    row[1]))
+            workflow_id = row[0]
+            username = row[1]
+            logger.info("Deleting workflow {0} for user {1}".format(workflow_id,
+                                                                    username))
             username = row[1]
             # pegasus_ts is stored as datetime in the database, convert it to what we have on the fs
             pegasus_ts = row[3]
@@ -88,7 +116,7 @@ def delete_job():
             if pegasus_ts is None:
                 # not submitted yet
                 logger.info("Workflow {0} not submitted, updating")
-                cursor.execute(job_update, [row[0]])
+                cursor.execute(job_update, [workflow_id])
                 if args.dry_run:
                     conn.rollback()
                 else:
@@ -157,10 +185,12 @@ def delete_job():
 
             deletion_list = []
             # add input file
-            deletion_list.append(os.path.join(fsurfer.FREESURFER_BASE,
-                                              username,
-                                              'input',
-                                              row[2]))
+            input_files =  get_input_files(workflow_id)
+            if input_files is None:
+                logger.error("Can't find input files for " +
+                             "workflow {0}".format(workflow_id))
+            else:
+                deletion_list.extend(input_files)
             # remove files in result dir
             if os.path.isdir(result_dir):
                 for entry in os.listdir(result_dir):
@@ -172,11 +202,11 @@ def delete_job():
             deletion_list.append(os.path.join(fsurfer.FREESURFER_BASE,
                                               username,
                                               'results',
-                                              'recon_all-{0}.log'.format(row[0])))
+                                              'recon_all-{0}.log'.format(workflow_id)))
             deletion_list.append(os.path.join(fsurfer.FREESURFER_BASE,
                                               username,
                                               'results',
-                                              "{0}_{1}_output.tar.bz2".format(row[0],
+                                              "{0}_{1}_output.tar.bz2".format(workflow_id,
                                                                               row[4])))
             for entry in deletion_list:
                 if args.dry_run:
@@ -185,9 +215,9 @@ def delete_job():
                     logger.info("Removing {0}".format(entry))
                     if not purge_workflow_file(entry):
                         logger.error("Can't remove {0} for job {1}".format(entry,
-                                                                           row[0]))
-            logger.info("Setting workflow {0} to DELETED".format(row[0]))
-            cursor.execute(job_update, [row[0]])
+                                                                           workflow_id))
+            logger.info("Setting workflow {0} to DELETED".format(workflow_id))
+            cursor.execute(job_update, [workflow_id])
             if args.dry_run:
                 conn.rollback()
             else:
