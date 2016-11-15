@@ -85,7 +85,7 @@ def resync_workflows():
     job_query = "SELECT id, username, pegasus_ts " \
                 "FROM freesurfer_interface.jobs " \
                 "WHERE state = 'RUNNING' AND " \
-                "      age(job_date) > ='1 day'"
+                "      age(job_date) >= '1 day'"
     update_workflow_state = "UPDATE freesurfer_interface.jobs " \
                             "SET state = %s " \
                             "WHERE id = %s "
