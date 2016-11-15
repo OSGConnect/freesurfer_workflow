@@ -6,7 +6,6 @@ import subprocess
 import sys
 from email.mime.text import MIMEText
 
-REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer"
 VERSION = '0.2'
 
 EMAIL_TEMPLATE = '''

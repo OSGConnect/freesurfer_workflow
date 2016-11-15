@@ -12,7 +12,7 @@ import re
 import subprocess
 
 
-REST_ENDPOINT = "http://postgres.ci-connect.net/freesurfer_test"
+REST_ENDPOINT = "http://fsurf.ci-connect.net/freesurfer_test"
 VERSION = 'PKG_VERSION'
 
 

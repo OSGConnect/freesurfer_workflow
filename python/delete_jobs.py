@@ -17,7 +17,7 @@ import fsurfer.helpers
 import fsurfer.log
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
-FREESURFER_BASE = '/stash2/user/fsurf/'
+FREESURFER_BASE = '/local-scratch/fsurf/'
 VERSION = fsurfer.__version__
 
 

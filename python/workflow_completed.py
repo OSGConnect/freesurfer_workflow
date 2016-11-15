@@ -18,7 +18,7 @@ import fsurfer
 VERSION = fsurfer.__version__
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
-FREESURFER_BASE = '/stash2/user/fsurf/'
+FREESURFER_BASE = '/local-scratch/fsurf/'
 
 EMAIL_TEMPLATE = '''
 This email is being sent to inform you that your FreeSurfer workflow {0}

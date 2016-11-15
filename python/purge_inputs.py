@@ -12,7 +12,7 @@ import fsurfer
 import fsurfer.helpers
 import fsurfer.log
 
-FREESURFER_BASE = '/stash2/user/fsurf/'
+FREESURFER_BASE = '/local-scratch/fsurf/'
 VERSION = fsurfer.__version__
 
 
