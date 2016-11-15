@@ -19,6 +19,7 @@ VERSION = fsurfer.__version__
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
 FREESURFER_BASE = '/local-scratch/fsurf/'
+FREESURFER_SCRATCH = '/local-scratch/fsurf/scratch'
 
 EMAIL_TEMPLATE = '''
 This email is being sent to inform you that your FreeSurfer workflow {0}
@@ -314,7 +315,7 @@ def process_results(jobid, success=True):
     walltime = 0
     cputime = 0
     try:
-        submit_dir = os.path.join(FREESURFER_BASE,
+        submit_dir = os.path.join(FREESURFER_SCRATCH,
                                   username,
                                   'workflows',
                                   'fsurf',
