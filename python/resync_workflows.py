@@ -116,8 +116,8 @@ def resync_workflows():
                         sys.stdout.write("Would have failed "
                                          "workflow {0}\n".format(workflow_id))
                         continue
-                    cursor.execute(update_workflow_state, [workflow_id,
-                                                           'FAILED'])
+                    cursor.execute(update_workflow_state, ['FAILED',
+                                                           workflow_id])
                     subprocess.check_call(['/usr/bin/workflow_completed.py',
                                            '--failure',
                                            '--id',
@@ -127,8 +127,8 @@ def resync_workflows():
                         sys.stdout.write("Would have completed "
                                          "workflow {0}\n".format(workflow_id))
                         continue
-                    cursor.execute(update_workflow_state, [workflow_id,
-                                                           'COMPLETED'])
+                    cursor.execute(update_workflow_state, ['COMPLETED',
+                                                           workflow_id])
                     subprocess.check_call(['/usr/bin/workflow_completed.py',
                                            '--success',
                                            '--id',
