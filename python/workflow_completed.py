@@ -8,18 +8,17 @@ import xml
 import xml.parsers.expat
 import xml.dom.minidom
 import re
-import datetime
-import dateutil.parser
+import json
 from email.mime.text import MIMEText
 
+import datetime
+import dateutil.parser
 import psycopg2
+
 import fsurfer
+import fsurfer.helpers
 
 VERSION = fsurfer.__version__
-
-PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
-FREESURFER_BASE = '/local-scratch/fsurf/'
-FREESURFER_SCRATCH = '/local-scratch/fsurf/scratch'
 
 EMAIL_TEMPLATE = '''
 This email is being sent to inform you that your FreeSurfer workflow {0}
@@ -184,7 +183,6 @@ def calculate_usage(submit_dir):
     start_ts = float('inf')
     end_ts = -float('inf')
     total_core_time = 0.0
-
     for f in os.listdir(submit_dir):
 
         # only consider files with out and numbers in them
@@ -243,33 +241,6 @@ def usage_msg(walltime, cputime):
     return msg
 
 
-def get_db_parameters():
-    """
-    Read database parameters from a file and return it
-
-    :return: a tuple of (database_name, user, password, hostname)
-    """
-    parameters = {}
-    with open(PARAM_FILE_LOCATION) as param_file:
-        for line in param_file:
-            key, val = line.strip().split('=')
-            parameters[key.strip()] = val.strip()
-    return (parameters['database'],
-            parameters['user'],
-            parameters['password'],
-            parameters['hostname'])
-
-
-def get_db_client():
-    """
-    Get a postgresql client instance and return it
-
-    :return: a redis client instance or None if failure occurs
-    """
-    db, user, password, host = get_db_parameters()
-    return psycopg2.connect(database=db, user=user, host=host, password=password)
-
-
 def process_results(jobid, success=True):
     """
     Email user informing them that a workflow has completed
@@ -291,7 +262,7 @@ def process_results(jobid, success=True):
                  "FROM freesurfer_interface.jobs AS jobs, " \
                  "     freesurfer_interface.users AS users " \
                  "WHERE jobs.id  = %s AND jobs.username = users.username"
-    conn = get_db_client()
+    conn = fsurfer.helpers.get_db_client()
     cursor = conn.cursor()
     try:
         cursor.execute(info_query, [jobid])
@@ -315,7 +286,7 @@ def process_results(jobid, success=True):
     walltime = 0
     cputime = 0
     try:
-        submit_dir = os.path.join(FREESURFER_SCRATCH,
+        submit_dir = os.path.join(fsurfer.FREESURFER_SCRATCH,
                                   username,
                                   'workflows',
                                   'fsurf',
@@ -351,12 +322,12 @@ def process_results(jobid, success=True):
         pass
 
     # copy output to the results directory
-    output_filename = os.path.join(FREESURFER_BASE,
+    output_filename = os.path.join(fsurfer.FREESURFER_BASE,
                                    username,
                                    'results',
                                    "{0}_{1}_output.tar.bz2".format(jobid,
                                                                    subject_name))
-    result_filename = os.path.join(FREESURFER_BASE,
+    result_filename = os.path.join(fsurfer.FREESURFER_BASE,
                                    username,
                                    'workflows',
                                    'output',
@@ -370,7 +341,7 @@ def process_results(jobid, success=True):
     except shutil.Error as e:
         logger.exception("Exception while copying file: {0}".format(e))
     logger.info("Copied {0} to {1}".format(result_filename, output_filename))
-    result_logfile = os.path.join(FREESURFER_BASE,
+    result_logfile = os.path.join(fsurfer.FREESURFER_BASE,
                                   username,
                                   'workflows',
                                   'output',
@@ -379,7 +350,7 @@ def process_results(jobid, success=True):
                                   'freesurfer',
                                   pegasus_ts,
                                   'recon-all.log')
-    log_filename = os.path.join(FREESURFER_BASE,
+    log_filename = os.path.join(fsurfer.FREESURFER_BASE,
                                 username,
                                 'results',
                                 'recon_all-{0}.log'.format(jobid))

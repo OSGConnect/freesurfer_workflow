@@ -9,10 +9,6 @@ import fsurfer.helpers
 
 VERSION = fsurfer.__version__
 
-PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
-FREESURFER_BASE = '/local-scratch/fsurf/'
-
-
 def update_completed_tasks(jobid):
     """
     Email user informing them that a workflow has completed

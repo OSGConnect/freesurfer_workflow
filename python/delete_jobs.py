@@ -17,7 +17,6 @@ import fsurfer.helpers
 import fsurfer.log
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
-FREESURFER_BASE = '/local-scratch/fsurf/'
 VERSION = fsurfer.__version__
 
 
@@ -96,14 +95,14 @@ def delete_job():
                     conn.commit()
                 continue
 
-            workflow_dir = os.path.join(FREESURFER_BASE,
+            workflow_dir = os.path.join(fsurfer.FREESURFER_BASE,
                                         username,
                                         'workflows',
                                         'fsurf',
                                         'pegasus',
                                         'freesurfer',
                                         pegasus_ts)
-            result_dir = os.path.join(FREESURFER_BASE,
+            result_dir = os.path.join(fsurfer.FREESURFER_BASE,
                                       username,
                                       'workflows',
                                       'output',
@@ -158,7 +157,10 @@ def delete_job():
 
             deletion_list = []
             # add input file
-            deletion_list.append(os.path.join(FREESURFER_BASE, username, 'input', row[2]))
+            deletion_list.append(os.path.join(fsurfer.FREESURFER_BASE,
+                                              username,
+                                              'input',
+                                              row[2]))
             # remove files in result dir
             if os.path.isdir(result_dir):
                 for entry in os.listdir(result_dir):
@@ -167,11 +169,11 @@ def delete_job():
                 deletion_list.append(result_dir)
             # delete output and log copied over after workflow completion
             # if present
-            deletion_list.append(os.path.join(FREESURFER_BASE,
+            deletion_list.append(os.path.join(fsurfer.FREESURFER_BASE,
                                               username,
                                               'results',
                                               'recon_all-{0}.log'.format(row[0])))
-            deletion_list.append(os.path.join(FREESURFER_BASE,
+            deletion_list.append(os.path.join(fsurfer.FREESURFER_BASE,
                                               username,
                                               'results',
                                               "{0}_{1}_output.tar.bz2".format(row[0],

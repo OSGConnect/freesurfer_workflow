@@ -25,5 +25,7 @@ __all__ = ['create_single_job',
            'create_single_workflow',
            'create_custom_workflow',
            'get_db_client',
-           'get_db_parameters']
+           'get_db_parameters',
+           'FREESURFER_BASE',
+           'FREESURFER_SCRATCH']
 

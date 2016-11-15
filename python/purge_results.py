@@ -14,7 +14,6 @@ import fsurfer.log
 import fsurfer.helpers
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
-FREESURFER_BASE = '/local-scratch/fsurf/'
 VERSION = fsurfer.__version__
 
 
@@ -127,12 +126,12 @@ def process_results():
     try:
         cursor.execute(job_query)
         for row in cursor.fetchall():
-            logger.info("Processing workflow {0} for user {1}".format(row[0],
-                                                                      row[1]))
+            workflow_id = row[0]
             username = row[1]
-            # pegasus_ts is stored as datetime in the database, convert it to what we have on the fs
             pegasus_ts = row[4]
-            result_dir = os.path.join(FREESURFER_BASE,
+            logger.info("Processing workflow {0} for user {1}".format(workflow_id,
+                                                                      username))
+            result_dir = os.path.join(fsurfer.FREESURFER_BASE,
                                       username,
                                       'workflows',
                                       'output',
@@ -140,17 +139,17 @@ def process_results():
                                       'pegasus',
                                       'freesurfer',
                                       pegasus_ts)
-            log_filename = os.path.join(FREESURFER_BASE,
+            log_filename = os.path.join(fsurfer.FREESURFER_BASE,
                                         username,
                                         'results',
-                                        'recon_all-{0}.log'.format(row[0]))
-            output_filename = os.path.join(FREESURFER_BASE,
+                                        'recon_all-{0}.log'.format(workflow_id))
+            output_filename = os.path.join(fsurfer.FREESURFER_BASE,
                                            username,
                                            'results',
-                                           "{0}_{1}_output.tar.bz2".format(row[0],
+                                           "{0}_{1}_output.tar.bz2".format(workflow_id,
                                                                            row[4]))
             cursor2 = conn.cursor()
-            cursor2.execute(input_select, [row[0]])
+            cursor2.execute(input_select, [workflow_id])
             file_removal_error = False
             input_directory = None
             for input_row in cursor2.fetchall():
@@ -166,7 +165,7 @@ def process_results():
                 if not remove_input_file(input_file):
                     file_removal_error = True
                     logger.error("Can't remove {0} for job {1}".format(input_file,
-                                                                       row[0]))
+                                                                       workflow_id))
                 cursor3 = conn.cursor()
                 cursor3.execute(input_update, [input_row[0]])
 
@@ -175,7 +174,7 @@ def process_results():
                     sys.stdout.write("Would delete directory {0}\n".format(input_directory))
                 if not remove_input_directory(input_directory):
                     logger.error("Can't remove {0} for job {1}".format(input_directory,
-                                                                        row[0]))
+                                                                        workflow_id))
 
             if args.dry_run:
                 sys.stdout.write("Would delete {0}\n".format(result_dir))
@@ -188,9 +187,9 @@ def process_results():
             if not purge_workflow_files(result_dir,
                                         log_filename,
                                         output_filename):
-                logger.error("Can't remove files for job {1}".format(row[0]))
+                logger.error("Can't remove files for job {1}".format(workflow_id))
                 continue
-            logger.info("Setting workflow {0} to DELETED".format(row[0]))
+            logger.info("Setting workflow {0} to DELETED".format(workflow_id))
             cursor.execute(job_update, [row[0]])
             conn.commit()
     except psycopg2.Error as e:

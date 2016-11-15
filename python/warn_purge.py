@@ -13,8 +13,6 @@ import fsurfer.helpers
 import fsurfer
 
 
-PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
-FREESURFER_BASE = '/local-scratch/fsurf/'
 VERSION = fsurfer.__version__
 
 

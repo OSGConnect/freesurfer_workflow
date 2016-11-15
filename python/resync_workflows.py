@@ -16,8 +16,6 @@ import fsurfer
 import fsurfer.log
 
 PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
-FREESURFER_BASE = '/local-scratch/fsurf/'
-FREESURFER_SCRATCH = '/local-scratch/fsurf/scratch'
 PEGASUSRC_PATH = '/etc/fsurf/pegasusconf/pegasusrc'
 VERSION = fsurfer.__version__
 DRY_RUN = False
@@ -93,14 +91,16 @@ def resync_workflows():
     try:
         cursor.execute(job_query)
         for row in cursor.fetchall():
-            logger.info("Examining workflow {0} started by user {1}".format(row[0], row[1]))
+            workflow_id = row[0]
+            username = row[1]
+            logger.info("Examining workflow {0} started ".format(workflow_id) +
+                        "by user {1}".format(username))
             if row[2] is None:
                 logger.error("No workflow directory for running "
-                             "workflow {0}".format(row[0]))
-                return reset_workflow(row[0])
-            workflow_id = row[0]
-            scratch_directory = os.path.join(FREESURFER_SCRATCH,
-                                             row[1],
+                             "workflow {0}".format(workflow_id))
+                return reset_workflow(workflow_id)
+            scratch_directory = os.path.join(fsurfer.FREESURFER_SCRATCH,
+                                             username,
                                              'workflows',
                                              'fsurf',
                                              'pegasus',

@@ -21,9 +21,6 @@ import fsurfer
 import fsurfer.helpers
 import fsurfer.log
 
-PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
-FREESURFER_BASE = '/local-scratch/fsurf/'
-FREESURFER_SCRATCH = '/local-scratch/fsurf/scratch'
 PEGASUSRC_PATH = '/etc/fsurf/pegasusconf/pegasusrc'
 VERSION = fsurfer.__version__
 
@@ -55,23 +52,6 @@ def pegasus_submit(dax, workflow_directory, output_directory):
         return err.returncode, err.output
 
     return 0, output
-
-
-def get_db_parameters():
-    """
-    Read database parameters from a file and return it
-
-    :return: a tuple of (database_name, user, password, hostname)
-    """
-    parameters = {}
-    with open(PARAM_FILE_LOCATION) as param_file:
-        for line in param_file:
-            key, val = line.strip().split('=')
-            parameters[key.strip()] = val.strip()
-    return (parameters['database'],
-            parameters['user'],
-            parameters['password'],
-            parameters['hostname'])
 
 
 def submit_workflow(subject_files, version, subject_name, user, jobid,
@@ -107,8 +87,8 @@ def submit_workflow(subject_files, version, subject_name, user, jobid,
                                                  "local"))
         dax_subject_files.append(dax_subject_file)
         dax.addFile(dax_subject_file)
-    workflow_directory = os.path.join(FREESURFER_SCRATCH, user, 'workflows')
-    output_directory = os.path.join(FREESURFER_BASE, user, 'workflows', 'output')
+    workflow_directory = os.path.join(fsurfer.FREESURFER_SCRATCH, user, 'workflows')
+    output_directory = os.path.join(fsurfer.FREESURFER_BASE, user, 'workflows', 'output')
     job_invoke_cmd = "/usr/bin/task_completed.py --id {0}".format(jobid)
     if workflow == 'serial':
         created = fsurfer.create_serial_workflow(dax,
@@ -239,23 +219,31 @@ def process_images():
     try:
         cursor.execute(job_query)
         for row in cursor.fetchall():
-            logger.info("Processing workflow {0} for user {1}".format(row[0], row[1]))
+            workflow_id = row[0]
+            username = row[1]
+            logger.info("Processing workflow {0} for user {1}".format(workflow_id,
+                                                                      username))
 
-            workflow_directory = os.path.join('/local-scratch', 'fsurf', row[1], 'workflows')
+            workflow_directory = os.path.join('/local-scratch',
+                                              'fsurf',
+                                              username,
+                                              'workflows')
             if not os.path.exists(workflow_directory):
                 if args.dry_run:
                     sys.stdout.write("Would have created {0}".format(workflow_directory))
                 else:
                     os.makedirs(workflow_directory)
             cursor2 = conn.cursor()
-            cursor2.execute(input_file_query, [row[0]])
+            cursor2.execute(input_file_query, [workflow_id])
             input_files = []
             custom_workflow = False
             if cursor2.rowcount < 1:
-                logger.error("No input files, skipping workflow {0}".format(row[0]))
+                logger.error("No input files, skipping workflow {0}".format(workflow_id))
                 continue
             for input_info in cursor2.fetchall():
-                input_file = os.path.join(FREESURFER_BASE, input_info[0], input_info[1])
+                input_file = os.path.join(fsurfer.FREESURFER_BASE,
+                                          input_info[0],
+                                          input_info[1])
                 if not os.path.isfile(input_file):
                     logger.warn("Input file {0} missing, skipping".format(input_file))
                     break
@@ -268,10 +256,10 @@ def process_images():
                         cursor3 = conn.cursor()
                         if args.dry_run:
                             sys.stdout.write("Would have changed workflow "
-                                             "{0} to ERROR state\n".format(row[0]))
+                                             "{0} to ERROR state\n".format(workflow_id))
                         else:
-                            logger.error("Changed {0} to ERROR state".format(row[0]))
-                            cursor3.execute(job_error, [row[0]])
+                            logger.error("Changed {0} to ERROR state".format(workflow_id))
+                            cursor3.execute(job_error, [workflow_id])
                             break
                     input_files.append(input_file)
                 else:
@@ -279,22 +267,29 @@ def process_images():
             num_tasks = 0
             if not args.dry_run:
                 if custom_workflow:
-                    errors = submit_workflow(input_files, row[5], row[3],
-                                             row[1], row[0],
+
+                    errors = submit_workflow(input_files,
+                                             version=row[5],
+                                             subject_name=row[3],
+                                             user=username,
+                                             jobid=workflow_id,
                                              options=row[4],
                                              workflow='custom')
                     num_tasks = 1
                 else:
-                    errors = submit_workflow(input_files, row[5], row[3],
-                                             row[1], row[0])
+                    errors = submit_workflow(input_files,
+                                             version=row[5],
+                                             subject_name=row[3],
+                                             user=username,
+                                             jobid=workflow_id)
                     num_tasks = 4
             else:
                 errors = False
             if not errors and not args.dry_run:
-                cursor.execute(job_update, [row[0]])
-                cursor.execute(account_start, [row[0], num_tasks])
+                cursor.execute(job_update, [workflow_id])
+                cursor.execute(account_start, [workflow_id, num_tasks])
                 conn.commit()
-                logger.info("Set workflow {0} status to RUNNING".format(row[0]))
+                logger.info("Set workflow {0} status to RUNNING".format(workflow_id))
             else:
                 conn.rollback()
                 logger.info("Rolled back transaction")
