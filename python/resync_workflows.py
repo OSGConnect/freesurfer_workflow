@@ -121,7 +121,7 @@ def resync_workflows():
                     subprocess.check_call(['/usr/bin/workflow_completed.py',
                                            '--failure',
                                            '--id',
-                                           workflow_id])
+                                           str(workflow_id)])
                 elif 'Success' in cStringIO.StringIO(output).readlines()[2]:
                     if DRY_RUN:
                         sys.stdout.write("Would have completed "
@@ -132,7 +132,7 @@ def resync_workflows():
                     subprocess.check_call(['/usr/bin/workflow_completed.py',
                                            '--success',
                                            '--id',
-                                           workflow_id])
+                                           str(workflow_id)])
             except subprocess.CalledProcessError as err:
                 conn.rollback()
                 logger.error("Couldn't run commands: {0}".format(err))
