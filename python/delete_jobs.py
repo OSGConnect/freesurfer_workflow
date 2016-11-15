@@ -116,7 +116,8 @@ def delete_job():
 
             if pegasus_ts is None:
                 # not submitted yet
-                logger.info("Workflow {0} not submitted, updating")
+                logger.info("Workflow {0} not ".format(workflow_id) +
+                            "submitted, updating")
                 cursor.execute(job_update, [workflow_id])
                 if args.dry_run:
                     conn.rollback()
