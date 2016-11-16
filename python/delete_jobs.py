@@ -110,7 +110,6 @@ def delete_job():
             username = row[1]
             logger.info("Deleting workflow {0} for user {1}".format(workflow_id,
                                                                     username))
-            username = row[1]
             # pegasus_ts is stored as datetime in the database, convert it to what we have on the fs
             pegasus_ts = row[3]
 
@@ -184,10 +183,9 @@ def delete_job():
                 logger.exception("Can't remove directory at "
                                  "{0}, exiting...\n".format(workflow_dir))
 
-
             deletion_list = []
             # add input file
-            input_files =  get_input_files(workflow_id)
+            input_files = get_input_files(workflow_id)
             if input_files is None:
                 logger.error("Can't find input files for " +
                              "workflow {0}".format(workflow_id))
