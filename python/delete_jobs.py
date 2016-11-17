@@ -124,7 +124,7 @@ def delete_job():
                     conn.commit()
                 continue
 
-            workflow_dir = os.path.join(fsurfer.FREESURFER_BASE,
+            workflow_dir = os.path.join(fsurfer.FREESURFER_SCRATCH,
                                         username,
                                         'workflows',
                                         'fsurf',
