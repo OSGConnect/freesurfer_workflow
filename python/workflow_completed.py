@@ -20,13 +20,27 @@ import fsurfer.helpers
 
 VERSION = fsurfer.__version__
 
-EMAIL_TEMPLATE = '''
+SUCCESS_EMAIL_TEMPLATE = '''
 This email is being sent to inform you that your FreeSurfer workflow {0}
-submitted on {1} has completed {2}.  You can download the output by running
-`fsurf output --id {0} ` or download the FreeSurfer log files by running
-`fsurf output --id {0} --log-only .`
+submitted on {1} has completed successfully.  You can download the
+output by running `fsurf output --id {0} ` or download the FreeSurfer
+log files by running `fsurf output --id {0} --log-only .`
 
-{4}
+{2}
+
+Please contact user-support@opensciencegrid.org  if you have any questions.
+'''
+
+FAIL_EMAIL_TEMPLATE = '''
+This email is being sent to inform you that your FreeSurfer workflow {0}
+submitted on {1} has been removed or has completed with errors.  You may
+be able download the output by running `fsurf output --id {0} ` or download
+the FreeSurfer log files by running `fsurf output --id {0} --log-only .`
+
+Please note the output from FreeSurfer or the log files may not be
+available depending on the type of error that was encountered.
+
+{2}
 
 Please contact user-support@opensciencegrid.org  if you have any questions.
 '''
@@ -300,14 +314,14 @@ def process_results(jobid, success=True):
         pass
 
     if success:
-        status = 'successfully'
+        msg = MIMEText(SUCCESS_EMAIL_TEMPLATE.format(jobid,
+                                                     submit_date,
+                                                     stats))
+
     else:
-        status = 'with errors'
-    msg = MIMEText(EMAIL_TEMPLATE.format(jobid,
-                                         submit_date,
-                                         status,
-                                         username,
-                                         stats))
+        msg = MIMEText(FAIL_EMAIL_TEMPLATE.format(jobid,
+                                                  submit_date,
+                                                  stats))
 
     msg['Subject'] = 'FreeSurfer workflow {0} completed'.format(jobid)
     sender = 'fsurf@login.osgconnect.net'
@@ -337,8 +351,13 @@ def process_results(jobid, success=True):
                                    pegasus_ts,
                                    '{0}_output.tar.bz2'.format(subject_name))
     try:
-        shutil.copyfile(result_filename, output_filename)
+        if not os.path.isfile(result_filename):
+            logger.error("Output file {0} not found".format(result_filename))
+        else:
+            shutil.copyfile(result_filename, output_filename)
     except shutil.Error as e:
+        logger.exception("Exception while copying file: {0}".format(e))
+    except IOError as e:
         logger.exception("Exception while copying file: {0}".format(e))
     logger.info("Copied {0} to {1}".format(result_filename, output_filename))
     result_logfile = os.path.join(fsurfer.FREESURFER_BASE,
@@ -355,8 +374,13 @@ def process_results(jobid, success=True):
                                 'results',
                                 'recon_all-{0}.log'.format(jobid))
     try:
-        shutil.copyfile(result_logfile, log_filename)
+        if not os.path.isfile(result_logfile):
+            logger.error("Output file {0} not found".format(result_logfile))
+        else:
+            shutil.copyfile(result_logfile, log_filename)
     except shutil.Error as e:
+        logger.exception("Exception while copying file: {0}".format(e))
+    except IOError as e:
         logger.exception("Exception while copying file: {0}".format(e))
     logger.info("Copied {0} to {1}".format(result_logfile, log_filename))
     try:
