@@ -175,6 +175,9 @@ def delete_job():
                             if count > 30:
                                 logger.error("Can't remove job, exiting...\n")
                                 break
+                else:
+                    logger.error("Got error while removing workflow, "
+                                 "exitcode: {0} error: {1}".format(exit_code, output))
             logger.info("Jobs removed, removing workflow directory\n")
             try:
                 if not args.dry_run and os.path.exists(workflow_dir):
