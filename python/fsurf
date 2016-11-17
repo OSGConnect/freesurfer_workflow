@@ -824,7 +824,7 @@ def get_status(args):
     sys.stdout.write("Workflow {0} Summary\n".format(args.workflow_id))
     if response_obj['num_inputs'] > 1:
         workflow_type = 'Multiple Input'
-    elif response_obj['options']:
+    elif response_obj['options'] is None:
         workflow_type = 'Custom Workflow'
     else:
         workflow_type = 'Standard'
