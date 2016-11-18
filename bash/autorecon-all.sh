@@ -30,17 +30,20 @@ do
     input_args="$input_args -i $1"
     shift
 done
-
+exitcode=0
 ######################################################################## run all steps
 recon-all                                                               \
         -all                                                            \
         -s $2                                                           \
         $input_args                                                     \
         -openmp $3
-
+if [ $? -ne 0 ];
+then
+  exitcode=1
+fi
 cd  $SUBJECTS_DIR
 cp $2/scripts/recon-all.log $WD
 tar cjf $WD/$1_output.tar.bz2 *
 cd $WD
 
-
+exit $exitcode

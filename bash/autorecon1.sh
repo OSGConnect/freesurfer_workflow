@@ -33,22 +33,31 @@ do
     input_args="$input_args -i $1"
     shift
 done
+exitcode=0
 ######################################################################## 1st stage - serial
 recon-all                                                               \
         -s $subject                                                     \
         $input_args                                                     \
         -autorecon1                                                     \
         -openmp $cores
-
+if [ $? -ne 0 ];
+then
+  exitcode=1
+fi
 ######################################################################## 2nd stage - serial
 SW="autorecon2-volonly"
 recon-all                                                               \
         -s $subject                                                     \
         -autorecon2-volonly                                             \
         -openmp $cores
+if [ $? -ne 0 ];
+then
+  exitcode=1
+fi
 
 cd ${SUBJECTS_DIR}
 mv $subject/scripts/recon-all.log $subject/scripts/recon-all-step1.log
 tar cJf ${WD}/${subject}_recon1_output.tar.xz *
 cd ${WD}
 
+exit $exitcode

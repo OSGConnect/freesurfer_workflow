@@ -31,15 +31,19 @@ cd $SUBJECTS_DIR
 unzip $subject_file
 rm $subject_file
 shift 4
+exitcode=0
 ######################################################################## run all steps
 recon-all                                                           \
         $@                                                          \
         -subjid $subject                                            \
         -openmp $cores
-
+if [ $? -ne 0 ];
+then
+  exitcode=1
+fi
 cd $SUBJECTS_DIR
 cp $subject/scripts/recon-all.log $WD
 tar cjf $WD/${subject}_output.tar.bz2 *
 cd $WD
-
+exit $exitcode
 

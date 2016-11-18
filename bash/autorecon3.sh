@@ -33,11 +33,15 @@ then
     tar xvaf $2_recon2_output.tar.xz
     rm $2_recon2_output.tar.xz
 fi
+exitcode=0
 recon-all                                                               \
         -s $2                                                           \
         -autorecon3                                                     \
         -openmp $3
-
+if [ $? -ne 0 ];
+then
+  exitcode=1
+fi
 cd $SUBJECTS_DIR
 mv $2/scripts/recon-all.log $2/scripts/recon-all-step3.log
 cat $2/scripts/recon-all-step1.log $2/scripts/recon-all-step2*.log $2/scripts/recon-all-step3.log > $2/scripts/recon-all.log
@@ -45,3 +49,4 @@ rm fsaverage lh.EC_average rh.EC_average
 tar cjf $WD/$2_output.tar.bz2 *
 cp $2/scripts/recon-all.log $WD
 cd $WD
+exit $exitcode
