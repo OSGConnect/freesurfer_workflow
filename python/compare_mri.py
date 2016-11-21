@@ -114,7 +114,7 @@ def compare_surfaces(subject1_dir, subject2_dir):
         differences = True
         sys.stdout.write("Number of files in " +
                          "{0} ".format(subject1_dir) +
-                         "and {1} differ\n".format(subject2_dir))
+                         "and {0} differ\n".format(subject2_dir))
 
     for hemi in ['rh', 'lh']:
         for surface in SURFACES:
@@ -231,7 +231,7 @@ def compare_volumes(subject1_dir, subject2_dir):
     if len(subj1_files) != len(subj2_files):
         sys.stdout.write("Number of files in " +
                          "{0} ".format(subject1_dir) +
-                         "and {1} differ\n".format(subject2_dir))
+                         "and {0} differ\n".format(subject2_dir))
     for volume in VOLUMES:
             sys.stdout.write("Comparing volume {0}... ".format(volume))
             volume_1 = os.path.join(subject1_dir,
@@ -344,7 +344,7 @@ def compare_annotations(subject1_dir, subject2_dir):
             differences = True
             sys.stdout.write("Number of files in " +
                              "{0} ".format(dir_entry_1) +
-                             "and {1} differ\n".format(dir_entry_2))
+                             "and {0} differ\n".format(dir_entry_2))
         for filename in input_1_files:
             input_1_file = os.path.join(dir_entry_1, filename)
             input_2_file = os.path.join(dir_entry_2, filename)
@@ -403,9 +403,9 @@ def main(work_dir):
                                        subject1_dir, subject2_dir, 
                                        subjects_dir)
     if inputs_different:
-        sys.stdout.write("Differences between the two files!")
+        sys.stdout.write("Differences between the two files!\n")
     else:
-        sys.stdout.write("Files check out!")
+        sys.stdout.write("Files check out!\n")
     return 0
 
 if __name__ == '__main__':
@@ -414,4 +414,3 @@ if __name__ == '__main__':
         sys.exit(main(scratch_dir))
     finally:
         shutil.rmtree(scratch_dir)
-
