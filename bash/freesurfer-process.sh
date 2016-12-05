@@ -6,12 +6,20 @@
 # $4 - num of cores to use
 # $5 - options
 
-module load freesurfer/$1
-if [ $? != 0 ];
+command -v module
+if [[ $? -ne 0 ]];
 then
     source /cvmfs/oasis.opensciencegrid.org/osg/modules/lmod/current/init/bash
-    module load freesurfer/$1
 fi
+
+# load tcsh if not present
+command -v tcsh
+if [[ $? -ne 0 ]];
+then
+    module load tcsh/6.20.00
+fi
+
+module load freesurfer/$1
 module load xz/5.2.2
 date
 start=`date +%s`
