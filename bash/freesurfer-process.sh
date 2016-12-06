@@ -27,11 +27,11 @@ subject=$2
 subject_file=$3
 cores=$4
 WD=$PWD
-if [ "$OSG_WN_TMP" != "" ];
+if [ -d "$OSG_WN_TMP" ];
 then
-
     SUBJECTS_DIR=`mktemp -d --tmpdir=$OSG_WN_TMP`
 else
+    # OSG_WN_TMP doesn't exist or isn't defined
     SUBJECTS_DIR=`mktemp -d --tmpdir=$PWD`
 fi
 cp $subject_file $SUBJECTS_DIR
