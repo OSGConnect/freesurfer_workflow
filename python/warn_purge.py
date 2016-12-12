@@ -27,7 +27,8 @@ def email_user(workflow_id, email):
     logger = fsurfer.log.get_logger()
     msg = MIMEText('The results from your freesurfer ' +
                    'workflow {0} '.format(workflow_id) +
-                   'will be deleted in 7 days')
+                   'will be deleted in 7 days, please download ' +
+                   'them if you would like to save the results.')
 
     msg['Subject'] = 'Results for freesurfer workflow {0} '.format(workflow_id)
     msg['Subject'] += 'will be deleted'
