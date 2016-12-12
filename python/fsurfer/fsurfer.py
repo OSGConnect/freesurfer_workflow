@@ -8,6 +8,7 @@ SCRIPT_DIR = os.path.abspath("/usr/share/fsurfer/scripts")
 FREESURFER_BASE = '/local-scratch/fsurf/'
 FREESURFER_SCRATCH = '/local-scratch/fsurf/scratch'
 
+
 def create_single_job(dax, version, cores, subject_files, subject):
     """
     Create a workflow with a single job that runs entire freesurfer workflow
