@@ -41,8 +41,11 @@ do
     shift
 done
 exitcode=0
-######################################################################## 1st stage - serial
-recon-all                                                               \
+############################################################ 1st stage - serial
+# do this to handle compute nodes where tcsh is not installed by default
+# load tcsh module and then call tcsh on the recon-all script
+recon_cmd=`command -v recon-all`
+tcsh ${recon_cmd}                                                       \
         -s $subject                                                     \
         $input_args                                                     \
         -autorecon1                                                     \
@@ -51,9 +54,8 @@ if [ $? -ne 0 ];
 then
   exitcode=1
 fi
-######################################################################## 2nd stage - serial
-SW="autorecon2-volonly"
-recon-all                                                               \
+############################################################ 2nd stage - serial
+tcsh ${recon_cmd}                                                       \
         -s $subject                                                     \
         -autorecon2-volonly                                             \
         -openmp $cores

@@ -36,7 +36,10 @@ cd $SUBJECTS_DIR
 tar xvaf $2_recon1_output.tar.xz
 rm $2_recon1_output.tar.xz
 exitcode=0
-recon-all                                                               \
+# do this to handle compute nodes where tcsh is not installed by default
+# load tcsh module and then call tcsh on the recon-all script
+recon_cmd=`command -v recon-all`
+tcsh ${recon_cmd}                                                       \
         -s $2                                                           \
         -autorecon2-perhemi                                             \
         -hemi $3                                                        \

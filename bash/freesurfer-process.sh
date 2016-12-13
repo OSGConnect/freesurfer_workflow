@@ -40,8 +40,11 @@ unzip $subject_file
 rm $subject_file
 shift 4
 exitcode=0
-######################################################################## run all steps
-recon-all                                                           \
+################################################################# run all steps
+# do this to handle compute nodes where tcsh is not installed by default
+# load tcsh module and then call tcsh on the recon-all script
+recon_cmd=`command -v recon-all`
+tcsh ${recon_cmd}                                                   \
         $@                                                          \
         -subjid $subject                                            \
         -openmp $cores

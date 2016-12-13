@@ -43,7 +43,10 @@ then
     rm $2_recon2_output.tar.xz
 fi
 exitcode=0
-recon-all                                                               \
+# do this to handle compute nodes where tcsh is not installed by default
+# load tcsh module and then call tcsh on the recon-all script
+recon_cmd=`command -v recon-all`
+tcsh ${recon_cmd}                                                       \
         -s $2                                                           \
         -autorecon3                                                     \
         -openmp $3
