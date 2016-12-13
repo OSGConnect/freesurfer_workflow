@@ -11,13 +11,6 @@ then
     source /cvmfs/oasis.opensciencegrid.org/osg/modules/lmod/current/init/bash
 fi
 
-# load tcsh if not present
-command -v tcsh
-if [[ $? -ne 0 ]];
-then
-    module load tcsh/6.20.00
-fi
-
 module load freesurfer/$1
 module load xz/5.2.2
 date
@@ -41,10 +34,7 @@ done
 exitcode=0
 ################################################################# run all steps
 
-# do this to handle compute nodes where tcsh is not installed by default
-# load tcsh module and then call tcsh on the recon-all script
-recon_cmd=`command -v recon-all`
-tcsh ${recon_cmd}                                                       \
+recon-all                                                               \
         -all                                                            \
         -s $2                                                           \
         $input_args                                                     \
