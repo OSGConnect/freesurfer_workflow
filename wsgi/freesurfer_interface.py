@@ -129,6 +129,60 @@ def delete_job():
     return flask.jsonify(response)
 
 
+@app.route(URL_PREFIX + '/job/retry', methods=['PUT'])
+def delete_job():
+    """
+    Remove a job from being processed
+
+    :return: a tuple with response_body, status
+    """
+    response = {"status": 200,
+                "result": "success"}
+    parameters = {'userid': str,
+                  'token': str,
+                  'jobid': str}
+    if not validate_parameters(parameters):
+        return flask_error_response(400, "Invalid or missing parameter")
+
+    userid, token, timestamp = get_user_params()
+    if not validate_user(userid, token, timestamp):
+        return flask_error_response(401, "Invalid username or password")
+    job_id = flask.request.args['jobid']
+    conn = get_db_client()
+    cursor = conn.cursor()
+    job_query = "SELECT state FROM freesurfer_interface.jobs  " \
+                "WHERE id = %s;"
+    try:
+        cursor.execute(job_query, [job_id])
+        if cursor.rowcount != 1:
+            return flask_error_response(400, "Job not found")
+        row = cursor.fetchone()
+        if row:
+            state = row[0]
+        else:
+            state = 'None'
+        if state not in ['FAILED']:
+            return flask_error_response(400,
+                                        "Workflow is not in a FAILED state "
+                                        "and can not be retried")
+        else:
+            job_update = "UPDATE freesurfer_interface.jobs  " \
+                         "SET state = 'QUEUED'" \
+                         "WHERE id = %s;"
+            cursor.execute(job_update, [job_id])
+            if cursor.rowcount != 1:
+                conn.rollback()
+                return flask_error_response(400, "Job not found")
+            conn.commit()
+
+    except Exception as e:
+        conn.rollback()
+        return flask_error_response(500, str(e))
+    finally:
+        conn.close()
+    return flask.jsonify(response)
+
+
 def get_user_params():
     """
     Get user id and security token from CGI query string

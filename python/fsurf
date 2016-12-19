@@ -510,6 +510,7 @@ def list_workflows(args):
     except IOError:
         sys.exit(1)
 
+
 @protect
 def remove_workflow(args):
     """
@@ -530,6 +531,32 @@ def remove_workflow(args):
     resp_dict = json.loads(response)
     if status != 200:
         error_message("Error deleting workflow:\n" +
+                      resp_dict['result'])
+        return 1
+    sys.stdout.write("Workflow removed\n")
+    return 0
+
+
+@protect
+def retry_workflow(args):
+    """
+    Retry a failed pegasus workflow
+
+    :param args: parsed command line args from argparse
+    :return: exits with 0 on success, 1 on error
+    """
+    username, password = get_user_info(args)
+    timestamp, token = get_token(username, password)
+    if token is None:
+        return 1
+    query_params = {'userid': username,
+                    'timestamp': timestamp,
+                    'token': token,
+                    'jobid': args.workflow_id}
+    status, response = get_response(query_params, 'job/retry', 'PUT')
+    resp_dict = json.loads(response)
+    if status != 200:
+        error_message("Error retrying workflow:\n" +
                       resp_dict['result'])
         return 1
     sys.stdout.write("Workflow removed\n")
@@ -955,6 +982,19 @@ def main():
     remove_parser.add_argument('--user', dest='user', default=None,
                                help='Username to use to login')
     remove_parser.set_defaults(func=remove_workflow)
+
+    # create subparser for retry action
+    remove_parser = subparsers.add_parser('retry',
+                                          help='Retry specified workflow')
+    remove_parser.add_argument('--id',
+                               dest='workflow_id',
+                               type=int,
+                               required=True,
+                               action='store',
+                               help='ID for workflow to retry')
+    remove_parser.add_argument('--user', dest='user', default=None,
+                               help='Username to use to login')
+    remove_parser.set_defaults(func=retry_workflow)
 
     # create subparser for output action
     output_parser = subparsers.add_parser('output',

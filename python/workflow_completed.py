@@ -168,8 +168,7 @@ def parse_submit_file(fname):
     :return: a dictionary of the classad
     """
 
-    ad = {}
-    ad['request_cpus'] = 1
+    ad = {'request_cpus': 1}
     with open(fname) as f:
         for line in f:
             line = line.strip()
@@ -395,15 +394,24 @@ def process_results(jobid, success=True):
                      "SET state = %s " \
                      "WHERE id = %s;"
         cursor.execute(job_update, [state, jobid])
+        select_run = "SELECT id " \
+                     "FROM freesurfer_interface.job_run " \
+                     "WHERE job_id = %s " \
+                     "ORDER BY started DESC " \
+                     "LIMIT 1"
+        cursor.execute(select_run, [jobid])
+        run_id = cursor.fetchone()[0]
+        logger.info("Updating run {0}".format(run_id))
+
         accounting_update = "UPDATE freesurfer_interface.job_run " \
                             "SET walltime = %s, " \
                             "    cputime = %s, " \
                             "    ended = CURRENT_TIMESTAMP," \
                             "    tasks_completed = tasks " \
-                            "WHERE job_id = %s"
+                            "WHERE id = %s"
         cursor.execute(accounting_update, [walltime,
                                            cputime,
-                                           jobid])
+                                           run_id])
 
         conn.commit()
         conn.close()

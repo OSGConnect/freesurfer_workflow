@@ -9,6 +9,7 @@ import fsurfer.helpers
 
 VERSION = fsurfer.__version__
 
+
 def update_completed_tasks(jobid):
     """
     Email user informing them that a workflow has completed
@@ -24,10 +25,18 @@ def update_completed_tasks(jobid):
         cursor = conn.cursor()
         logger.info("Incrementing tasks completd for workflow {0}".format(jobid))
 
-        run_update = "UPDATE freesurfer_interface.job_run  " \
+        select_run = "SELECT id " \
+                     "FROM freesurfer_interface.job_run " \
+                     "WHERE job_id = %s " \
+                     "ORDER BY started DESC " \
+                     "LIMIT 1"
+        run_update = "UPDATE freesurfer_interface.job_run " \
                      "SET tasks_completed = tasks_completed + 1 " \
-                     "WHERE job_id = %s;"
-        cursor.execute(run_update, [jobid])
+                     "WHERE id = %s;"
+        cursor.execute(select_run, [jobid])
+        run_id = cursor.fetchone()[0]
+        logger.info("Updating run {0}".format(run_id))
+        cursor.execute(run_update, [run_id])
         conn.commit()
         conn.close()
     except psycopg2.Error as e:
