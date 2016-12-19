@@ -35,7 +35,8 @@ def email_user(success=True):
 
     msg = MIMEText(EMAIL_TEMPLATE.format(workflow,
                                          status))
-    msg['Subject'] = 'Freesurfer workflow {0} completed'.format(workflow)
+    msg['Subject'] = 'Freesurfer workflow {0} completed {1}'.format(workflow,
+                                                                    status)
     sender = 'fsurf@login.osgconnect.net'
     dest = getpass.getuser()
     msg['From'] = sender
