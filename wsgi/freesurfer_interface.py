@@ -419,7 +419,8 @@ def get_job_status():
                        "       tasks, " \
                        "       tasks_completed " \
                        "FROM  freesurfer_interface.job_run  " \
-                       "WHERE job_id = %s"
+                       "WHERE job_id = %s " \
+                       "ORDER BY started ASC"
     try:
         cursor.execute(job_query, [flask.request.args['jobid'], userid])
         row = cursor.fetchone()
@@ -433,16 +434,21 @@ def get_job_status():
             response['started'] = time.mktime(row[4].timetuple())
             response['purged'] = row[5]
         cursor.execute(accounting_query, [flask.request.args['jobid']])
-        row = cursor.fetchone()
-        if row is None:
-            pass
-        else:
-            response['walltime'] = row[0]
-            response['cputime'] = row[1]
+        retries = 0
+        walltime = 0
+        cputime = 0
+        for row in cursor.fetchall():
+            retries += 1
+            walltime += row[0]
+            cputime += row[1]
             response['started'] = time.mktime(row[2].timetuple())
             response['ended'] = time.mktime(row[3].timetuple())
             response['tasks'] = row[4]
             response['tasks_completed'] = row[5]
+        response['walltime'] = walltime
+        response['cputime'] = cputime
+        response['retries'] = retries
+
     except Exception as e:
         return flask_error_response(500,
                                     "500 Server Error\n"

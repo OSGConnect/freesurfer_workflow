@@ -875,6 +875,8 @@ def get_status(args):
     sys.stdout.write("Active for: {0:<20}\n".format(walltime))
     sys.stdout.write("Completed: {0}/{1} tasks\n".format(response_obj['tasks_completed'],
                                                          response_obj['tasks']))
+    if response_obj['retries'] > 0:
+        sys.stdout.write("Retries: {0}\n".format(response_obj['retries']))
 
     sys.exit(0)
 
