@@ -130,7 +130,7 @@ def delete_job():
 
 
 @app.route(URL_PREFIX + '/job/retry', methods=['PUT'])
-def delete_job():
+def retry_job():
     """
     Remove a job from being processed
 
