@@ -447,7 +447,7 @@ def get_job_status():
             response['tasks_completed'] = row[5]
         response['walltime'] = walltime
         response['cputime'] = cputime
-        response['retries'] = retries
+        response['retries'] = retries - 1  # retries = number of rows - 1
 
     except Exception as e:
         return flask_error_response(500,
