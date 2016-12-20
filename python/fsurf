@@ -559,7 +559,7 @@ def retry_workflow(args):
         error_message("Error retrying workflow:\n" +
                       resp_dict['result'])
         return 1
-    sys.stdout.write("Workflow removed\n")
+    sys.stdout.write("Workflow requeued\n")
     return 0
 
 
