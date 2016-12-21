@@ -165,15 +165,26 @@ def retry_job():
             return flask_error_response(400,
                                         "Workflow is not in a FAILED state "
                                         "and can not be retried")
-        else:
-            job_update = "UPDATE freesurfer_interface.jobs  " \
-                         "SET state = 'QUEUED'" \
-                         "WHERE id = %s;"
-            cursor.execute(job_update, [job_id])
-            if cursor.rowcount != 1:
-                conn.rollback()
-                return flask_error_response(400, "Job not found")
-            conn.commit()
+        # make sure input files are still present
+        input_query = "SELECT path, purged " \
+                      "FROM freesurfer_interface.input_files " \
+                      "WHERE job_id = %s"
+        cursor.execute(input_query, [job_id])
+        for row in cursor.fetchall():
+            if row[2] or not os.path.isfile(row[0]):
+                return flask_error_response(400,
+                                            "One or more input files for this"
+                                            "workflow have been removed  "
+                                            "and it can not be retried")
+
+        job_update = "UPDATE freesurfer_interface.jobs  " \
+                     "SET state = 'QUEUED'" \
+                     "WHERE id = %s;"
+        cursor.execute(job_update, [job_id])
+        if cursor.rowcount != 1:
+            conn.rollback()
+            return flask_error_response(400, "Error retrying workflow")
+        conn.commit()
 
     except Exception as e:
         conn.rollback()
