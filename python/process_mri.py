@@ -55,7 +55,8 @@ def pegasus_submit(dax, workflow_directory, output_directory):
 
 
 def submit_workflow(subject_files, version, subject_name, user, jobid,
-                    multicore=True, options=None, workflow='diamond'):
+                    multicore=True, options=None, workflow='diamond',
+                    job_run_id=None):
     """
     Submit a workflow to OSG for processing
 
@@ -70,6 +71,7 @@ def submit_workflow(subject_files, version, subject_name, user, jobid,
     :param options:       Options to pass to FreeSurfer
     :param workflow:      string indicating type of workflow to run (serial,
                           diamond, single)
+    :param job_run_id:    id for job_run_entry associated with this job run
     :return:              0 on success, 1 on error
     """
     if multicore:
@@ -149,13 +151,13 @@ def submit_workflow(subject_files, version, subject_name, user, jobid,
                                      line)
                 if id_match is not None:
                     workflow_id = id_match.group(1)
-                    job_update = "UPDATE freesurfer_interface.jobs " \
+                    job_update = "UPDATE freesurfer_interface.job_run " \
                                  "SET pegasus_ts = %s " \
                                  "WHERE id = %s;"
                     try:
                         with conn:
                             with conn.cursor() as cursor:
-                                cursor.execute(job_update, [workflow_id, jobid])
+                                cursor.execute(job_update, [workflow_id, job_run_id])
                                 logger.info("Updated DB")
                                 return 0
                     except psycopg2.Error as e:
@@ -215,7 +217,8 @@ def process_images():
                 "WHERE id = %s;"
     account_start = "INSERT INTO freesurfer_interface.job_run(job_id, " \
                     "                                         tasks) " \
-                    "VALUES(%s, %s)"
+                    "VALUES(%s, %s) " \
+                    "RETURNING id"
     try:
         cursor.execute(job_query)
         for row in cursor.fetchall():
@@ -264,30 +267,31 @@ def process_images():
                     input_files.append(input_file)
                 else:
                     input_files.append(input_file)
-            num_tasks = 0
             if not args.dry_run:
                 if custom_workflow:
-
+                    cursor.execute(account_start, [workflow_id, 1])
+                    job_run_id = cursor.fetchone()[0]
                     errors = submit_workflow(input_files,
                                              version=row[5],
                                              subject_name=row[3],
                                              user=username,
                                              jobid=workflow_id,
                                              options=row[4],
-                                             workflow='custom')
-                    num_tasks = 1
+                                             workflow='custom',
+                                             job_run_id =job_run_id)
                 else:
+                    cursor.execute(account_start, [workflow_id, 4])
+                    job_run_id = cursor.fetchone()[0]
                     errors = submit_workflow(input_files,
                                              version=row[5],
                                              subject_name=row[3],
                                              user=username,
-                                             jobid=workflow_id)
-                    num_tasks = 4
+                                             jobid=workflow_id,
+                                             job_run_id =job_run_id)
             else:
                 errors = False
             if not errors and not args.dry_run:
                 cursor.execute(job_update, [workflow_id])
-                cursor.execute(account_start, [workflow_id, num_tasks])
                 conn.commit()
                 logger.info("Set workflow {0} status to RUNNING".format(workflow_id))
             else:

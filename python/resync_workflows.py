@@ -80,10 +80,12 @@ def resync_workflows():
 
     conn = fsurfer.helpers.get_db_client()
     cursor = conn.cursor()
-    job_query = "SELECT id, username, pegasus_ts " \
-                "FROM freesurfer_interface.jobs " \
+    job_query = "SELECT jobs.id, jobs.username, job_run.pegasus_ts " \
+                "FROM freesurfer_interface.jobs AS jobs," \
+                "     freesurfer_interface.job_run AS job_run " \
                 "WHERE state = 'RUNNING' AND " \
-                "      age(job_date) >= '1 day'"
+                "      age(job_date) >= '1 day' AND " \
+                "      jobs.id = job_run.job_id"
     update_workflow_state = "UPDATE freesurfer_interface.jobs " \
                             "SET state = %s " \
                             "WHERE id = %s "

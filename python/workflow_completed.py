@@ -269,12 +269,16 @@ def process_results(jobid, success=True):
                  "       date_trunc('second'," \
                  "                  jobs.job_date), " \
                  "       date_trunc('second', " \
-                 "                  jobs.pegasus_ts::timestamp with time zone), " \
+                 "                  job_run.pegasus_ts::timestamp with time zone), " \
                  "       users.email, " \
                  "       users.username " \
                  "FROM freesurfer_interface.jobs AS jobs, " \
+                 "     freesurfer_interface.job_run AS job_run, " \
                  "     freesurfer_interface.users AS users " \
-                 "WHERE jobs.id  = %s AND jobs.username = users.username"
+                 "WHERE jobs.id  = %s AND " \
+                 "      jobs.username = users.username AND " \
+                 "      job_run.tasks < job_run.tasks_completed AND " \
+                 "      jobs.id = job_run.job_id"
     conn = fsurfer.helpers.get_db_client()
     cursor = conn.cursor()
     try:

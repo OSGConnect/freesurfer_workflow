@@ -35,7 +35,6 @@ CREATE TABLE freesurfer_interface.jobs (
     username        VARCHAR(128) NOT NULL REFERENCES freesurfer_interface.users(username),
     subject         VARCHAR(128) NOT NULL,
     multicore       BOOLEAN NOT NULL DEFAULT FALSE,
-    pegasus_ts      VARCHAR(128),
     state           freesurfer_interface.job_state NOT NULL,
     job_date        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     options         VARCHAR(1024),
@@ -46,6 +45,7 @@ CREATE TABLE freesurfer_interface.jobs (
 
 CREATE TABLE freesurfer_interface.job_run (
     id              SERIAL PRIMARY KEY,
+    pegasus_ts      VARCHAR(128),
     job_id          INTEGER NOT NULL REFERENCES freesurfer_interface.jobs(id),
     walltime        INTEGER NOT NULL DEFAULT 0,
     cputime         INTEGER NOT NULL DEFAULT 0,
