@@ -28,7 +28,7 @@ VALID_EXTENSIONS = ['nii.gz',
 
 
 usage_text = """
-%(prog)s {list|status|remove|output|change-password|submit} [options]
+%(prog)s {list|status|remove|output|retry|change-password|submit} [options]
 
 |------------------------------------------------------------------------------
 | Command       | Function       | Required Switches    | Optional Switches
@@ -51,6 +51,9 @@ usage_text = """
 | output        | Get output     | --id='[workflow id]' | --help
 |               | from completed |                      | --user='[user name]'
 |               | workflow       |                      | --log-only
+|---------------|----------------|----------------------|---------------------
+| retry         | Retry a failed | --id='[workflow id]' | --help
+|               | workflow       |                      | --user='[user name]'
 |---------------|----------------|----------------------|---------------------
 | remove        | Remove         | --id='[workflow id]' | --help
 |               | workflow       |                      | --user='[user name]'
@@ -851,10 +854,11 @@ def get_status(args):
     sys.stdout.write("Workflow {0} Summary\n".format(args.workflow_id))
     if response_obj['num_inputs'] > 1:
         workflow_type = 'Multiple Input'
-    elif response_obj['options'] is None:
-        workflow_type = 'Custom Workflow'
-    else:
+    elif response_obj['options'] == 'None':
         workflow_type = 'Standard'
+    else:
+        workflow_type = 'Custom Workflow'
+    print workflow_type
 
     sys.stdout.write("Workflow Type: {0}\n".format(workflow_type))
     sys.stdout.write("Subject: {0}\n".format(response_obj['subject']))
@@ -986,17 +990,18 @@ def main():
     remove_parser.set_defaults(func=remove_workflow)
 
     # create subparser for retry action
-    remove_parser = subparsers.add_parser('retry',
-                                          help='Retry specified workflow')
-    remove_parser.add_argument('--id',
-                               dest='workflow_id',
-                               type=int,
-                               required=True,
-                               action='store',
-                               help='ID for workflow to retry')
-    remove_parser.add_argument('--user', dest='user', default=None,
-                               help='Username to use to login')
-    remove_parser.set_defaults(func=retry_workflow)
+    retry_parser = subparsers.add_parser('retry',
+                                         help='Retry a specified failed '
+                                              'workflow')
+    retry_parser.add_argument('--id',
+                              dest='workflow_id',
+                              type=int,
+                              required=True,
+                              action='store',
+                              help='ID for workflow to retry')
+    retry_parser.add_argument('--user', dest='user', default=None,
+                              help='Username to use to login')
+    retry_parser.set_defaults(func=retry_workflow)
 
     # create subparser for output action
     output_parser = subparsers.add_parser('output',
