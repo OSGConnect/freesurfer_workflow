@@ -96,7 +96,7 @@ def resync_workflows():
             workflow_id = row[0]
             username = row[1]
             logger.info("Examining workflow {0} started ".format(workflow_id) +
-                        "by user {1}".format(username))
+                        "by user {0}".format(username))
             if row[2] is None:
                 logger.error("No workflow directory for running "
                              "workflow {0}".format(workflow_id))
