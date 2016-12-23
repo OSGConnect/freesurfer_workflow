@@ -277,7 +277,7 @@ def process_results(jobid, success=True):
                  "     freesurfer_interface.users AS users " \
                  "WHERE jobs.id  = %s AND " \
                  "      jobs.username = users.username AND " \
-                 "      job_run.tasks < job_run.tasks_completed AND " \
+                 "      job_run.tasks_completed < job_run.tasks AND " \
                  "      jobs.id = job_run.job_id"
     conn = fsurfer.helpers.get_db_client()
     cursor = conn.cursor()
@@ -291,6 +291,8 @@ def process_results(jobid, success=True):
             user_email = row[3]
             username = row[4]
         else:
+            logger.error("No matches to query: "
+                         "{0}".format(cursor.mogrify(info_query, [jobid])))
             return
     except psycopg2.Error as e:
         logger.exception("Got pgsql error: {0}".format(e))

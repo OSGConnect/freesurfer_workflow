@@ -55,8 +55,7 @@ def pegasus_submit(dax, workflow_directory, output_directory):
 
 
 def submit_workflow(subject_files, version, subject_name, user, jobid,
-                    multicore=True, options=None, workflow='diamond',
-                    job_run_id=None):
+                    multicore=True, options=None, workflow='diamond'):
     """
     Submit a workflow to OSG for processing
 
@@ -71,8 +70,7 @@ def submit_workflow(subject_files, version, subject_name, user, jobid,
     :param options:       Options to pass to FreeSurfer
     :param workflow:      string indicating type of workflow to run (serial,
                           diamond, single)
-    :param job_run_id:    id for job_run_entry associated with this job run
-    :return:              0 on success, 1 on error
+    :return:              pegasus workflow id  on success, None on error
     """
     if multicore:
         cores = 8
@@ -139,10 +137,9 @@ def submit_workflow(subject_files, version, subject_name, user, jobid,
         logger.info("Pegasus output: {0}".format(output))
         if exit_code != 0:
             os.unlink(dax_name)
-            return 1
+            return None
         os.unlink(dax_name)
         capture_id = False
-        conn = fsurfer.helpers.get_db_client()
         for line in cStringIO.StringIO(output).readlines():
             if 'Your workflow has been started' in line:
                 capture_id = True
@@ -151,22 +148,9 @@ def submit_workflow(subject_files, version, subject_name, user, jobid,
                                      line)
                 if id_match is not None:
                     workflow_id = id_match.group(1)
-                    job_update = "UPDATE freesurfer_interface.job_run " \
-                                 "SET pegasus_ts = %s " \
-                                 "WHERE id = %s;"
-                    try:
-                        with conn:
-                            with conn.cursor() as cursor:
-                                cursor.execute(job_update, [workflow_id, job_run_id])
-                                logger.info("Updated DB")
-                                return 0
-                    except psycopg2.Error as e:
-                        logger.exception("Got pgsql error: {0}".format(e))
-                        pass
+                    return workflow_id
 
-                break
-
-    return 1
+    return None
 
 
 def process_images():
@@ -212,9 +196,13 @@ def process_images():
     job_update = "UPDATE freesurfer_interface.jobs " \
                  "SET state = 'RUNNING' " \
                  "WHERE id = %s;"
+    job_run_update = "UPDATE freesurfer_interface.job_run " \
+                     "SET pegasus_ts = %s " \
+                     "WHERE id = %s;"
     job_error = "UPDATE freesurfer_interface.jobs " \
                 "SET state = 'ERROR' " \
                 "WHERE id = %s;"
+
     account_start = "INSERT INTO freesurfer_interface.job_run(job_id, " \
                     "                                         tasks) " \
                     "VALUES(%s, %s) " \
@@ -267,30 +255,30 @@ def process_images():
                     input_files.append(input_file)
                 else:
                     input_files.append(input_file)
-            if not args.dry_run:
-                if custom_workflow:
-                    cursor.execute(account_start, [workflow_id, 1])
-                    job_run_id = cursor.fetchone()[0]
-                    errors = submit_workflow(input_files,
+
+            pegasus_ts = None
+            if custom_workflow and not args.dry_run:
+                cursor.execute(account_start, [workflow_id, 1])
+                job_run_id = cursor.fetchone()[0]
+                pegasus_ts = submit_workflow(input_files,
                                              version=row[5],
                                              subject_name=row[3],
                                              user=username,
                                              jobid=workflow_id,
                                              options=row[4],
-                                             workflow='custom',
-                                             job_run_id =job_run_id)
-                else:
-                    cursor.execute(account_start, [workflow_id, 4])
-                    job_run_id = cursor.fetchone()[0]
-                    errors = submit_workflow(input_files,
+                                             workflow='custom')
+            elif not args.dry_run:
+                cursor.execute(account_start, [workflow_id, 4])
+                job_run_id = cursor.fetchone()[0]
+                pegasus_ts = submit_workflow(input_files,
                                              version=row[5],
                                              subject_name=row[3],
                                              user=username,
-                                             jobid=workflow_id,
-                                             job_run_id =job_run_id)
-            else:
-                errors = False
-            if not errors and not args.dry_run:
+                                             jobid=workflow_id)
+            if pegasus_ts:
+                cursor.execute(job_run_update, [pegasus_ts,
+                                                job_run_id])
+            if pegasus_ts and not args.dry_run:
                 cursor.execute(job_update, [workflow_id])
                 conn.commit()
                 logger.info("Set workflow {0} status to RUNNING".format(workflow_id))
