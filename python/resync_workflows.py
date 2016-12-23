@@ -100,7 +100,7 @@ def resync_workflows():
             if row[2] is None:
                 logger.error("No workflow directory for running "
                              "workflow {0}".format(workflow_id))
-                return reset_workflow(workflow_id)
+                reset_workflow(workflow_id)
             scratch_directory = os.path.join(fsurfer.FREESURFER_SCRATCH,
                                              username,
                                              'workflows',
@@ -113,7 +113,8 @@ def resync_workflows():
                                                   '-l',
                                                   scratch_directory],
                                                  stderr=subprocess.STDOUT)
-                if 'Failure' in cStringIO.StringIO(output).readlines()[2]:
+                if ("no matching jobs" in output or
+                   'Failure' in cStringIO.StringIO(output).readlines()[2]):
                     if DRY_RUN:
                         sys.stdout.write("Would have failed "
                                          "workflow {0}\n".format(workflow_id))
@@ -139,8 +140,7 @@ def resync_workflows():
                 conn.rollback()
                 logger.error("Couldn't run commands: {0}".format(err))
             else:
-                conn.rollback()
-                logger.error("Rolled back transaction")
+                logger.info("Committing workflow {0} update".format(workflow_id))
         if DRY_RUN:
             conn.rollback()
         else:
