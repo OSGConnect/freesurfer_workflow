@@ -54,7 +54,7 @@ def pegasus_submit(dax, workflow_directory, output_directory):
     return 0, output
 
 
-def submit_workflow(subject_files, version, subject_name, user, jobid,
+def submit_workflow(subject_files, version, subject_name, user, job_run_id,
                     multicore=True, options=None, workflow='diamond'):
     """
     Submit a workflow to OSG for processing
@@ -64,7 +64,7 @@ def submit_workflow(subject_files, version, subject_name, user, jobid,
     :param version:        FreeSurfer version to use
     :param subject_name:   name of subject being processed
     :param user:          freesurfer user that workflow is being run for
-    :param jobid:         job id for the workflow
+    :param job_run_id:         job run id for the workflow
     :param multicore:     boolean indicating whether to use a multicore
                           workflow or not
     :param options:       Options to pass to FreeSurfer
@@ -89,7 +89,7 @@ def submit_workflow(subject_files, version, subject_name, user, jobid,
         dax.addFile(dax_subject_file)
     workflow_directory = os.path.join(fsurfer.FREESURFER_SCRATCH, user, 'workflows')
     output_directory = os.path.join(fsurfer.FREESURFER_BASE, user, 'workflows', 'output')
-    job_invoke_cmd = "/usr/bin/task_completed.py --id {0}".format(jobid)
+    job_invoke_cmd = "/usr/bin/task_completed.py --id {0}".format(job_run_id)
     if workflow == 'serial':
         created = fsurfer.create_serial_workflow(dax,
                                                  version,
@@ -125,8 +125,8 @@ def submit_workflow(subject_files, version, subject_name, user, jobid,
                                                  subject_name)
     if created:
         curr_date = time.strftime("%Y%m%d_%H%M%S", time.gmtime(time.time()))
-        dax.invoke('on_success', "/usr/bin/workflow_completed.py --success --id {0}".format(jobid))
-        dax.invoke('on_error', "/usr/bin/workflow_completed.py --failure --id {0}".format(jobid))
+        dax.invoke('on_success', "/usr/bin/workflow_completed.py --success --id {0}".format(job_run_id))
+        dax.invoke('on_error', "/usr/bin/workflow_completed.py --failure --id {0}".format(job_run_id))
         dax_name = "freesurfer_{0}.xml".format(curr_date)
         with open(dax_name, 'w') as f:
             dax.writeXML(f)
@@ -264,7 +264,7 @@ def process_images():
                                              version=row[5],
                                              subject_name=row[3],
                                              user=username,
-                                             jobid=workflow_id,
+                                             job_run_id=job_run_id,
                                              options=row[4],
                                              workflow='custom')
             elif not args.dry_run:
@@ -274,7 +274,7 @@ def process_images():
                                              version=row[5],
                                              subject_name=row[3],
                                              user=username,
-                                             jobid=workflow_id)
+                                             job_run_id=job_run_id)
             if pegasus_ts:
                 cursor.execute(job_run_update, [pegasus_ts,
                                                 job_run_id])

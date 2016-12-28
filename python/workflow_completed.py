@@ -254,12 +254,12 @@ def usage_msg(walltime, cputime):
     return msg
 
 
-def process_results(jobid, success=True):
+def process_results(job_run_id, success=True):
     """
     Email user informing them that a workflow has completed
 
     :param success: True if workflow completed successfully
-    :param jobid: id for workflow
+    :param job_run_id: id for job run id for workflow
     :return: None
     """
     fsurfer.log.initialize_logging()
@@ -271,18 +271,19 @@ def process_results(jobid, success=True):
                  "       date_trunc('second', " \
                  "                  job_run.pegasus_ts::timestamp with time zone), " \
                  "       users.email, " \
-                 "       users.username " \
+                 "       users.username," \
+                 "       jobs.id " \
                  "FROM freesurfer_interface.jobs AS jobs, " \
                  "     freesurfer_interface.job_run AS job_run, " \
                  "     freesurfer_interface.users AS users " \
-                 "WHERE jobs.id  = %s AND " \
+                 "WHERE job_run.id  = %s AND " \
                  "      jobs.username = users.username AND " \
                  "      job_run.tasks_completed < job_run.tasks AND " \
                  "      jobs.id = job_run.job_id"
     conn = fsurfer.helpers.get_db_client()
     cursor = conn.cursor()
     try:
-        cursor.execute(info_query, [jobid])
+        cursor.execute(info_query, [job_run_id])
         row = cursor.fetchone()
         if row:
             subject_name = row[0]
@@ -290,9 +291,10 @@ def process_results(jobid, success=True):
             pegasus_ts = row[2]
             user_email = row[3]
             username = row[4]
+            job_id = row[5]
         else:
             logger.error("No matches to query: "
-                         "{0}".format(cursor.mogrify(info_query, [jobid])))
+                         "{0}".format(cursor.mogrify(info_query, [job_run_id])))
             return
     except psycopg2.Error as e:
         logger.exception("Got pgsql error: {0}".format(e))
@@ -319,23 +321,25 @@ def process_results(jobid, success=True):
         pass
 
     if success:
-        msg = MIMEText(SUCCESS_EMAIL_TEMPLATE.format(jobid,
+        msg = MIMEText(SUCCESS_EMAIL_TEMPLATE.format(job_run_id,
                                                      submit_date,
                                                      stats))
 
     else:
-        msg = MIMEText(FAIL_EMAIL_TEMPLATE.format(jobid,
+        msg = MIMEText(FAIL_EMAIL_TEMPLATE.format(job_run_id,
                                                   submit_date,
                                                   stats))
 
-    msg['Subject'] = 'FreeSurfer workflow {0} completed'.format(jobid)
+    msg['Subject'] = 'FreeSurfer workflow {0} completed'.format(job_id)
     sender = 'fsurf@login.osgconnect.net'
     msg['From'] = sender
     msg['To'] = user_email
     try:
-        sendmail = subprocess.Popen(['/usr/sbin/sendmail', '-t'], stdin=subprocess.PIPE)
+        sendmail = subprocess.Popen(['/usr/sbin/sendmail', '-t'],
+                                    stdin=subprocess.PIPE)
         sendmail.communicate(msg.as_string())
-        logger.info("Emailing {0} about workflow {1}".format(user_email, jobid))
+        logger.info("Emailing {0} about workflow {1}".format(user_email,
+                                                             job_id))
     except subprocess.CalledProcessError as e:
         logger.exception("Can't email user, got exception: {0}".format(e))
         pass
@@ -344,7 +348,7 @@ def process_results(jobid, success=True):
     output_filename = os.path.join(fsurfer.FREESURFER_BASE,
                                    username,
                                    'results',
-                                   "{0}_{1}_output.tar.bz2".format(jobid,
+                                   "{0}_{1}_output.tar.bz2".format(job_id,
                                                                    subject_name))
     result_filename = os.path.join(fsurfer.FREESURFER_BASE,
                                    username,
@@ -377,7 +381,7 @@ def process_results(jobid, success=True):
     log_filename = os.path.join(fsurfer.FREESURFER_BASE,
                                 username,
                                 'results',
-                                'recon_all-{0}.log'.format(jobid))
+                                'recon_all-{0}.log'.format(job_id))
     try:
         if not os.path.isfile(result_logfile):
             logger.error("Output file {0} not found".format(result_logfile))
@@ -391,23 +395,16 @@ def process_results(jobid, success=True):
     try:
         if success:
             state = 'COMPLETED'
-            logger.info("Updating workflow {0} to COMPLETED".format(jobid))
+            logger.info("Updating workflow {0} to COMPLETED".format(job_id))
         else:
             state = 'FAILED'
-            logger.warning("Updating workflow {0} to FAILED".format(jobid))
+            logger.warning("Updating workflow {0} to FAILED".format(job_id))
 
         job_update = "UPDATE freesurfer_interface.jobs  " \
                      "SET state = %s " \
                      "WHERE id = %s;"
-        cursor.execute(job_update, [state, jobid])
-        select_run = "SELECT id " \
-                     "FROM freesurfer_interface.job_run " \
-                     "WHERE job_id = %s " \
-                     "ORDER BY started DESC " \
-                     "LIMIT 1"
-        cursor.execute(select_run, [jobid])
-        run_id = cursor.fetchone()[0]
-        logger.info("Updating run {0}".format(run_id))
+        cursor.execute(job_update, [state, job_id])
+        logger.info("Updating run {0}".format(job_run_id))
 
         accounting_update = "UPDATE freesurfer_interface.job_run " \
                             "SET walltime = %s, " \
@@ -417,7 +414,7 @@ def process_results(jobid, success=True):
                             "WHERE id = %s"
         cursor.execute(accounting_update, [walltime,
                                            cputime,
-                                           run_id])
+                                           job_run_id])
 
         conn.commit()
         conn.close()
@@ -446,14 +443,14 @@ def main():
                         action='store_false',
                         help='Workflow completed with errors')
     # Arguments identifying workflow
-    parser.add_argument('--id', dest='workflow_id',
-                        action='store', help='Pegasus workflow id to use')
+    parser.add_argument('--id', dest='job_run_id',
+                        action='store', help='job run id to use')
 
     args = parser.parse_args(sys.argv[1:])
     if args.success:
-        process_results(args.workflow_id, success=True)
+        process_results(args.job_run_id, success=True)
     else:
-        process_results(args.workflow_id, success=False)
+        process_results(args.job_run_id, success=False)
 
     sys.exit(0)
 

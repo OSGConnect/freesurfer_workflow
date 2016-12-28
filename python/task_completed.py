@@ -10,11 +10,11 @@ import fsurfer.helpers
 VERSION = fsurfer.__version__
 
 
-def update_completed_tasks(jobid):
+def update_completed_tasks(job_run_id):
     """
     Email user informing them that a workflow has completed
 
-    :param jobid: id for workflow
+    :param job_run_id: id for job run entry
     :return: None
     """
     fsurfer.log.initialize_logging()
@@ -23,20 +23,14 @@ def update_completed_tasks(jobid):
     try:
         conn = fsurfer.helpers.get_db_client()
         cursor = conn.cursor()
-        logger.info("Incrementing tasks completd for workflow {0}".format(jobid))
+        logger.info("Incrementing tasks completd for workflow {0}".format(job_run_id))
 
-        select_run = "SELECT id " \
-                     "FROM freesurfer_interface.job_run " \
-                     "WHERE job_id = %s " \
-                     "ORDER BY started DESC " \
-                     "LIMIT 1"
         run_update = "UPDATE freesurfer_interface.job_run " \
                      "SET tasks_completed = tasks_completed + 1 " \
-                     "WHERE id = %s;"
-        cursor.execute(select_run, [jobid])
-        run_id = cursor.fetchone()[0]
-        logger.info("Updating run {0}".format(run_id))
-        cursor.execute(run_update, [run_id])
+                     "WHERE id = %s AND" \
+                     "      tasks_completed < tasks "
+        logger.info("Updating run {0}".format(job_run_id))
+        cursor.execute(run_update, [job_run_id])
         conn.commit()
         conn.close()
     except psycopg2.Error as e:
@@ -51,14 +45,13 @@ def main():
 
     :return: True if any errors occurred during DAX generaton
     """
-    parser = argparse.ArgumentParser(description="Update fsurf job info and "
-                                                 "email user about job "
-                                                 "completion")
+    parser = argparse.ArgumentParser(description="Update fsurf job run entry "
+                                                 "when a task completes")
     # version info
     parser.add_argument('--version', action='version', version='%(prog)s ' + VERSION)
     # Arguments identifying workflow
     parser.add_argument('--id', dest='workflow_id',
-                        action='store', help='Pegasus workflow id to use')
+                        action='store', help='Workflow id for job being incremented')
 
     args = parser.parse_args(sys.argv[1:])
     update_completed_tasks(args.workflow_id)
