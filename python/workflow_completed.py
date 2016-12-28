@@ -195,6 +195,8 @@ def calculate_usage(submit_dir):
     start_ts = float('inf')
     end_ts = -float('inf')
     total_core_time = 0.0
+    if not os.path.isdir(submit_dir):
+        return [None, None]
     for f in os.listdir(submit_dir):
 
         # only consider files with out and numbers in them
