@@ -237,7 +237,7 @@ def process_images():
                                           input_info[1])
                 if not os.path.isfile(input_file):
                     logger.warn("Input file {0} missing, skipping".format(input_file))
-                    break
+                    continue
                 elif bool(input_info[2]):
                     # input file is a subject dir
                     custom_workflow = True
@@ -251,7 +251,7 @@ def process_images():
                         else:
                             logger.error("Changed {0} to ERROR state".format(workflow_id))
                             cursor3.execute(job_error, [workflow_id])
-                            break
+                            continue
                     input_files.append(input_file)
                 else:
                     input_files.append(input_file)

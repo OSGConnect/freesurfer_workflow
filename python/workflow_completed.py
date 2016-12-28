@@ -8,7 +8,6 @@ import xml
 import xml.parsers.expat
 import xml.dom.minidom
 import re
-import json
 from email.mime.text import MIMEText
 
 import datetime

@@ -80,11 +80,14 @@ def resync_workflows():
 
     conn = fsurfer.helpers.get_db_client()
     cursor = conn.cursor()
-    job_query = "SELECT jobs.id, jobs.username, job_run.pegasus_ts " \
+    job_query = "SELECT jobs.id, " \
+                "       jobs.username, " \
+                "       job_run.pegasus_ts," \
+                "       job_run.id  " \
                 "FROM freesurfer_interface.jobs AS jobs," \
                 "     freesurfer_interface.job_run AS job_run " \
                 "WHERE state = 'RUNNING' AND " \
-                "      age(job_date) >= '1 day' AND " \
+                "      age(job_run.started) >= '1 day' AND " \
                 "      jobs.id = job_run.job_id"
     update_workflow_state = "UPDATE freesurfer_interface.jobs " \
                             "SET state = %s " \
@@ -95,6 +98,7 @@ def resync_workflows():
         for row in cursor.fetchall():
             workflow_id = row[0]
             username = row[1]
+            job_run_id = row[3]
             logger.info("Examining workflow {0} started ".format(workflow_id) +
                         "by user {0}".format(username))
             if row[2] is None:
@@ -124,7 +128,7 @@ def resync_workflows():
                     subprocess.check_call(['/usr/bin/workflow_completed.py',
                                            '--failure',
                                            '--id',
-                                           str(workflow_id)])
+                                           str(job_run_id)])
                 elif 'Success' in cStringIO.StringIO(output).readlines()[2]:
                     if DRY_RUN:
                         sys.stdout.write("Would have completed "
@@ -135,7 +139,7 @@ def resync_workflows():
                     subprocess.check_call(['/usr/bin/workflow_completed.py',
                                            '--success',
                                            '--id',
-                                           str(workflow_id)])
+                                           str(job_run_id)])
             except subprocess.CalledProcessError as err:
                 conn.rollback()
                 logger.error("Couldn't run commands: {0}".format(err))
