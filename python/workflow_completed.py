@@ -407,6 +407,10 @@ def process_results(job_run_id, success=True):
         cursor.execute(job_update, [state, job_id])
         logger.info("Updating run {0}".format(job_run_id))
 
+        if walltime is None:
+            walltime = 0
+        if cputime is None:
+            cputime = 0
         accounting_update = "UPDATE freesurfer_interface.job_run " \
                             "SET walltime = %s, " \
                             "    cputime = %s, " \
