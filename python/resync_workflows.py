@@ -89,9 +89,6 @@ def resync_workflows():
                 "WHERE state = 'RUNNING' AND " \
                 "      age(job_run.started) >= '1 day' AND " \
                 "      jobs.id = job_run.job_id"
-    update_workflow_state = "UPDATE freesurfer_interface.jobs " \
-                            "SET state = %s " \
-                            "WHERE id = %s "
 
     try:
         cursor.execute(job_query)
@@ -123,8 +120,6 @@ def resync_workflows():
                         sys.stdout.write("Would have failed "
                                          "workflow {0}\n".format(workflow_id))
                         continue
-                    cursor.execute(update_workflow_state, ['FAILED',
-                                                           workflow_id])
                     subprocess.check_call(['/usr/bin/workflow_completed.py',
                                            '--failure',
                                            '--id',
@@ -134,8 +129,6 @@ def resync_workflows():
                         sys.stdout.write("Would have completed "
                                          "workflow {0}\n".format(workflow_id))
                         continue
-                    cursor.execute(update_workflow_state, ['COMPLETED',
-                                                           workflow_id])
                     subprocess.check_call(['/usr/bin/workflow_completed.py',
                                            '--success',
                                            '--id',
