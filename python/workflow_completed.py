@@ -321,12 +321,12 @@ def process_results(job_run_id, success=True):
         pass
 
     if success:
-        msg = MIMEText(SUCCESS_EMAIL_TEMPLATE.format(job_run_id,
+        msg = MIMEText(SUCCESS_EMAIL_TEMPLATE.format(job_id,
                                                      submit_date,
                                                      stats))
 
     else:
-        msg = MIMEText(FAIL_EMAIL_TEMPLATE.format(job_run_id,
+        msg = MIMEText(FAIL_EMAIL_TEMPLATE.format(job_id,
                                                   submit_date,
                                                   stats))
 
