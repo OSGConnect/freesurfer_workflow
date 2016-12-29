@@ -23,7 +23,7 @@ import fsurfer.log
 
 PEGASUSRC_PATH = '/etc/fsurf/pegasusconf/pegasusrc'
 VERSION = fsurfer.__version__
-
+MAX_RUNNING_WORKFLOWS = 200
 
 def pegasus_submit(dax, workflow_directory, output_directory):
     """
@@ -153,6 +153,35 @@ def submit_workflow(subject_files, version, subject_name, user, job_run_id,
     return None
 
 
+def exceeded_running_limit(conn):
+    """
+    Check to see if the number of workflows in
+    RUNNING state is more than MAX_RUNNING_WORKFLOWS
+
+    :param conn: database connection to use
+    :return: True if condition holds, False otherwise
+    """
+    running_workflow_query = "SELECT COUNT(*) " \
+                             "FROM freesurfer_interface.jobs " \
+                             "WHERE state = 'RUNNING"
+    try:
+        fsurfer.log.initialize_logging()
+        logger = fsurfer.log.get_logger()
+        cursor = conn.cursor()
+        cursor.execute(running_workflow_query)
+        running_workflows = cursor.fetchone()[0]
+        if running_workflows >= MAX_RUNNING_WORKFLOWS:
+            logger.warn("Number of running workflows at or above" +
+                        "MAX_RUNNING_WORKFLOWS: " +
+                        "{0} vs {1}".format(running_workflows,
+                                            MAX_RUNNING_WORKFLOWS))
+            return True
+        return False
+    except psycopg2.Error as e:
+        logger.exception("Got pgsql error: {0}".format(e))
+        return False
+
+
 def process_images():
     """
     Process uploaded images
@@ -209,6 +238,12 @@ def process_images():
                     "RETURNING id"
     try:
         cursor.execute(job_query)
+        if exceeded_running_limit(conn):
+            logger.warn("Max number of running workflows reached, exiting")
+            fcntl.flock(x, fcntl.LOCK_UN)
+            x.close()
+            os.unlink('/tmp/fsurf_process.lock')
+            return 0
         for row in cursor.fetchall():
             workflow_id = row[0]
             username = row[1]
@@ -294,6 +329,7 @@ def process_images():
     fcntl.flock(x, fcntl.LOCK_UN)
     x.close()
     os.unlink('/tmp/fsurf_process.lock')
+    return 0
 
 if __name__ == '__main__':
     # workaround missing subprocess.check_output
