@@ -16,7 +16,7 @@ import tempfile
 from functools import wraps
 
 REST_ENDPOINT = "http://fsurf.ci-connect.net/freesurfer_test"
-VERSION = '2.0.26'
+VERSION = '2.0.27'
 CREDENTIAL_FILE = os.path.expanduser('~/.fsurf/credentials')
 # supported versions of FreeSurfer
 FREESURFER_VERSIONS = ['5.3.0']
