@@ -25,6 +25,7 @@ PEGASUSRC_PATH = '/etc/fsurf/pegasusconf/pegasusrc'
 VERSION = fsurfer.__version__
 MAX_RUNNING_WORKFLOWS = 200
 
+
 def pegasus_submit(dax, workflow_directory, output_directory):
     """
     Submit a workflow to pegasus
@@ -163,7 +164,7 @@ def exceeded_running_limit(conn):
     """
     running_workflow_query = "SELECT COUNT(*) " \
                              "FROM freesurfer_interface.jobs " \
-                             "WHERE state = 'RUNNING"
+                             "WHERE state = 'RUNNING'"
     try:
         fsurfer.log.initialize_logging()
         logger = fsurfer.log.get_logger()
