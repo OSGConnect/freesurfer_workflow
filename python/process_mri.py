@@ -172,7 +172,7 @@ def exceeded_running_limit(conn):
         cursor.execute(running_workflow_query)
         running_workflows = cursor.fetchone()[0]
         if running_workflows >= MAX_RUNNING_WORKFLOWS:
-            logger.warn("Number of running workflows at or above" +
+            logger.warn("Number of running workflows at or above " +
                         "MAX_RUNNING_WORKFLOWS: " +
                         "{0} vs {1}".format(running_workflows,
                                             MAX_RUNNING_WORKFLOWS))
