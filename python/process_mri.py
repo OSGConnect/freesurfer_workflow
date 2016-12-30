@@ -239,18 +239,18 @@ def process_images():
                     "RETURNING id"
     try:
         cursor.execute(job_query)
-        if exceeded_running_limit(conn):
-            logger.warn("Max number of running workflows reached, exiting")
-            fcntl.flock(x, fcntl.LOCK_UN)
-            x.close()
-            os.unlink('/tmp/fsurf_process.lock')
-            return 0
         for row in cursor.fetchall():
             workflow_id = row[0]
             username = row[1]
             logger.info("Processing workflow {0} for user {1}".format(workflow_id,
                                                                       username))
 
+            if exceeded_running_limit(conn):
+                logger.warn("Max number of running workflows reached, exiting")
+                fcntl.flock(x, fcntl.LOCK_UN)
+                x.close()
+                os.unlink('/tmp/fsurf_process.lock')
+                return 0
             workflow_directory = os.path.join('/local-scratch',
                                               'fsurf',
                                               username,
