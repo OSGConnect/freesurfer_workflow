@@ -278,8 +278,7 @@ def process_results(job_run_id, success=True):
                  "     freesurfer_interface.job_run AS job_run, " \
                  "     freesurfer_interface.users AS users " \
                  "WHERE job_run.id  = %s AND " \
-                 "      jobs.username = users.username AND " \
-                 "      job_run.tasks_completed < job_run.tasks AND " \
+                 "      jobs.username = users.username " \
                  "      jobs.id = job_run.job_id"
     conn = fsurfer.helpers.get_db_client()
     cursor = conn.cursor()
