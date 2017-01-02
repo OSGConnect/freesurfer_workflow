@@ -114,8 +114,12 @@ def resync_workflows():
                                                   '-l',
                                                   scratch_directory],
                                                  stderr=subprocess.STDOUT)
-                if ("no matching jobs" in output or
-                   'Failure' in cStringIO.StringIO(output).readlines()[2]):
+                output_lines = cStringIO.StringIO(output).readlines()
+                if (len(output_lines) == 0 or
+                    (len(output_lines) == 1 and
+                     "no matching jobs" in output)):
+                    # handle odd output from pegasus
+                    # e.g. workflow was never run or has been removed
                     if DRY_RUN:
                         sys.stdout.write("Would have failed "
                                          "workflow {0}\n".format(workflow_id))
@@ -124,7 +128,18 @@ def resync_workflows():
                                            '--failure',
                                            '--id',
                                            str(job_run_id)])
-                elif 'Success' in cStringIO.StringIO(output).readlines()[2]:
+                elif 'Failure' in output_lines[2]:
+                    # workflow run and failed
+                    if DRY_RUN:
+                        sys.stdout.write("Would have failed "
+                                         "workflow {0}\n".format(workflow_id))
+                        continue
+                    subprocess.check_call(['/usr/bin/workflow_completed.py',
+                                           '--failure',
+                                           '--id',
+                                           str(job_run_id)])
+                elif 'Success' in output_lines[2]:
+                    # workflow run and failed
                     if DRY_RUN:
                         sys.stdout.write("Would have completed "
                                          "workflow {0}\n".format(workflow_id))
