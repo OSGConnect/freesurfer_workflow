@@ -215,13 +215,13 @@ def create_serial_workflow(dax, version, cores, subject_file, subject,
         if initial_job is True:
             return True
         if invoke_cmd:
-            initial_job.invoke('at_end', invoke_cmd)
+            initial_job.invoke('on_success', invoke_cmd)
         dax.addJob(initial_job)
     recon2_job = create_recon2_job(dax, version, cores, subject)
     if recon2_job is True:
         return True
     if invoke_cmd:
-        recon2_job.invoke('at_end', invoke_cmd)
+        recon2_job.invoke('on_success', invoke_cmd)
     dax.addJob(recon2_job)
     dax.addDependency(Pegasus.DAX3.Dependency(parent=initial_job, child=recon2_job))
     final_job = create_final_job(dax, version, subject, serial_job=True)
@@ -268,20 +268,20 @@ def create_diamond_workflow(dax, version, cores, subject_files, subject,
         if not initial_job:
             return False
         if invoke_cmd:
-            initial_job.invoke('at_end', invoke_cmd)
+            initial_job.invoke('on_success', invoke_cmd)
         dax.addJob(initial_job)
     recon2_rh_job = create_hemi_job(dax, version, cores, 'rh', subject)
     if not recon2_rh_job:
         return False
     if invoke_cmd:
-        recon2_rh_job.invoke('at_end', invoke_cmd)
+        recon2_rh_job.invoke('on_success', invoke_cmd)
     dax.addJob(recon2_rh_job)
     dax.addDependency(Pegasus.DAX3.Dependency(parent=initial_job, child=recon2_rh_job))
     recon2_lh_job = create_hemi_job(dax, version, cores, 'lh', subject)
     if not recon2_lh_job:
         return False
     if invoke_cmd:
-        recon2_lh_job.invoke('at_end', invoke_cmd)
+        recon2_lh_job.invoke('on_success', invoke_cmd)
     dax.addJob(recon2_lh_job)
     dax.addDependency(Pegasus.DAX3.Dependency(parent=initial_job, child=recon2_lh_job))
     final_job = create_final_job(dax, version, subject)
