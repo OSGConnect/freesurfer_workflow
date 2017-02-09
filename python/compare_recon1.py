@@ -59,7 +59,7 @@ def compare_volumes(subject1_dir, subject2_dir):
     if len(subj1_files) != len(subj2_files):
         sys.stdout.write("Number of files in " +
                          "{0} ".format(subject1_dir) +
-                         "and {1} differ\n".format(subject2_dir))
+                         "and {0} differ\n".format(subject2_dir))
     for volume in VOLUMES:
             sys.stdout.write("Comparing volume {0}... ".format(volume))
             volume_1 = os.path.join(subject1_dir,
