@@ -18,7 +18,7 @@ REST_ENDPOINT = "http://fsurf.ci-connect.net/freesurfer_test"
 VERSION = 'PKG_VERSION'
 FIRST_OP = '-autorecon1'
 SECOND_OP = '-autorecon2-perhemi -hemi lh'
-
+TIME_WAIT=3600
 
 def zip_directory(zip_obj, directory):
     """
@@ -107,7 +107,7 @@ def wait_for_completion(jobid, user, password, timeout=3):
         if (time.time() - start_time) > (86400 * timeout):
             sys.stderr.write("Timed out while processing\n")
             return False
-        time.sleep(60)
+        time.sleep(TIME_WAIT)
 
 
 def convert_to_zip(tar_file):
