@@ -141,9 +141,10 @@ def main(work_dir):
     return 0
 
 if __name__ == '__main__':
+    scratch_dir = None
     try:
         scratch_dir = tempfile.mkdtemp()
         sys.exit(main(scratch_dir))
     finally:
-        shutil.rmtree(scratch_dir)
-
+        if scratch_dir:
+            shutil.rmtree(scratch_dir)
