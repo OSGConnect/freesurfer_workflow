@@ -16,9 +16,9 @@ import zipfile
 
 REST_ENDPOINT = "http://fsurf.ci-connect.net/freesurfer_test"
 VERSION = 'PKG_VERSION'
-FIRST_OP = '-autorecon1'
-SECOND_OP = '-autorecon2-perhemi -hemi lh'
-TIME_WAIT=3600
+STAGE_OPTIONS = ['-autorecon1', '-autorecon2-volonly', '-autorecon2']
+TIME_WAIT = 3600
+
 
 def zip_directory(zip_obj, directory):
     """
@@ -57,7 +57,15 @@ def check_output(job_id, user, password):
     :return: True if output is okay, False otherwise
     """
     response = get_log(job_id, user, password)
-    log_file = open(response['filename'], 'r').read()
+    try:
+        log_file = open(response['filename'], 'r').read()
+        os.unlink(response['filename'])
+    except IOError:
+        sys.stderr.write("Can't get log file contents")
+        return False
+    except OSError:
+        sys.stderr.write("Can't get log file contents")
+        return False
     count = len(re.findall('recon-all -s MRN_1 finished without error',
                            log_file[-200:]))
     if count == 1:
@@ -120,10 +128,11 @@ def convert_to_zip(tar_file):
     input_1_tarball = tarfile.open(tar_file, 'r:*')
     subject = input_1_tarball.getmembers()[0].path
     input_1_tarball.extractall(work_dir)
-    subject_file = zipfile.ZipFile('recon2_input.zip', 'w')
+    zip_file = tar_file.replace('tar.bz2', 'zip').replace('output', 'input')
+    subject_file = zipfile.ZipFile(zip_file, 'w')
     zip_directory(subject_file, os.path.join(work_dir, subject))
     shutil.rmtree(work_dir)
-    return 'recon2_input.zip'
+    return zip_file
 
 
 def get_response(query_parameters, noun, method, endpoint=REST_ENDPOINT):
@@ -445,11 +454,11 @@ def get_log(workflow_id, username, password):
     query_params['timestamp'] = timestamp
     query_params['token'] = token
     query_params['jobid'] = workflow_id
-    sys.stdout.write("Downloading results, this may take a while\n")
+    sys.stdout.write("Downloading log file, this may take a while\n")
     status, response = download_output(query_params, 'job/log')
     response_obj = json.loads(response)
     if status != 200:
-        sys.stdout.write("Error while downloading results:\n")
+        sys.stdout.write("Error while downloading log file:\n")
         sys.stdout.write("{0}\n".format(response_obj['result']))
         return response_obj
     sys.stdout.write("Downloaded to {0}\n".format(response_obj['filename']))
@@ -486,6 +495,46 @@ def get_status(workflow_id, username, password):
         return response_obj['result']
     sys.stdout.write("Current job status: {0}\n".format(response_obj['job_status']))
     return response_obj['job_status']
+
+
+def run_stage(options, input_filename, args):
+    """
+    Run a Freesurfer stage
+
+    :param options: options for running the stage
+    :param input_filename: name of file to use as input
+    :param args: argparse output
+    :return: name of output file, None if error occurred
+    """
+    stage_job_id = submit_custom_workflow(args.user,
+                                          args.password,
+                                          args.freesurfer_version,
+                                          args.subject,
+                                          input_filename,
+                                          options)
+    if stage_job_id is None:
+        sys.stderr.write("Can't submit jobs\n")
+        sys.exit(1)
+    if not wait_for_completion(stage_job_id, args.user, args.password):
+        remove_workflow(stage_job_id, args.user, args.password)
+        return None
+    response = get_output(stage_job_id, args.user, args.password)
+    if response['status'] != 200:
+        remove_workflow(stage_job_id, args.user, args.password)
+        return None
+    output_filename = response['filename']
+    if check_output(stage_job_id, args.user, args.password):
+        sys.stdout.write("recon-all log indicates success\n")
+    else:
+        sys.stdout.write("recon-all log indicates error!\n")
+        os.unlink(output_filename)
+        return None
+
+    if not remove_workflow(stage_job_id, args.user, args.password):
+        sys.stderr.write("Can't remove workflow, exiting...\n")
+        os.unlink(output_filename)
+        return None
+    return output_filename
 
 
 def main():
@@ -527,57 +576,21 @@ def main():
         sys.stderr.write("FreeSurfer binaries not in path, exiting\n")
         sys.exit(1)
 
-    stage1_job_id = submit_custom_workflow(args.user,
-                                           args.password,
-                                           args.freesurfer_version,
-                                           args.subject,
-                                           args.subject_dir,
-                                           FIRST_OP)
-    if stage1_job_id is None:
-        sys.stderr.write("Can't submit jobs\n")
-        sys.exit(1)
-    if not wait_for_completion(stage1_job_id, args.user, args.password):
-        remove_workflow(stage1_job_id, args.user, args.password)
-        sys.exit(1)
-    response = get_output(stage1_job_id, args.user, args.password)
-    if response['status'] != 200:
-        remove_workflow(stage1_job_id, args.user, args.password)
-        sys.exit(1)
-    output_file = response['filename']
-    input_file = convert_to_zip(output_file)
-    if check_output(stage1_job_id, args.user, args.password):
-        sys.stdout.write("recon-all log indicates success\n")
-    else:
-        sys.stdout.write("recon-all log indicates error!\n")
-        sys.exit(1)
+    input_filename = args.subject_dir
+    for option_set in STAGE_OPTIONS:
+        try:
+            output_filename = run_stage(option_set, input_filename, args)
+            if output_filename is None:
+                sys.stderr.write("Error running Fsurf " +
+                                 "with {0}\n".format(option_set))
+            input_filename = convert_to_zip(output_filename)
+            sys.stdout.write("Using {0} as ".format(input_filename) +
+                             "input for next step\n")
+        except:
+            sys.stderr.write("Error running with {0}\n".format(option_set))
+            sys.exit(1)
 
-    if not remove_workflow(stage1_job_id, args.user, args.password):
-        sys.stderr.write("Can't remove workflow, exiting...\n")
-        sys.exit(1)
-
-    stage2_job_id = submit_custom_workflow(args.user,
-                                           args.password,
-                                           args.freesurfer_version,
-                                           args.subject,
-                                           input_file,
-                                           SECOND_OP)
-    if not wait_for_completion(stage2_job_id, args.user, args.password):
-        remove_workflow(stage2_job_id, args.user, args.password)
-        sys.exit(1)
-    response = get_output(stage2_job_id, args.user, args.password)
-    if response['status'] != 200:
-        remove_workflow(stage2_job_id, args.user, args.password)
-        sys.exit(1)
-    if check_output(stage2_job_id, args.user, args.password):
-        sys.stdout.write("recon-all log indicates success\n")
-    else:
-        sys.stdout.write("recon-all log indicates error!\n")
-        sys.exit(1)
-    if not remove_workflow(stage2_job_id, args.user, args.password):
-        sys.stderr.write("Can't remove workflow, exiting...\n")
-        sys.exit(1)
-
-    sys.stdout.write("Two stages run successfully!\n")
+    sys.stdout.write("Validation run successfully!\n")
     sys.exit(0)
 
 if __name__ == '__main__':
