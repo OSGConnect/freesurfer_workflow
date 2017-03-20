@@ -124,6 +124,7 @@ def create_initial_job(dax, version, subject_files, subject):
     if not dax.hasExecutable(autorecon_one):
         dax.addExecutable(autorecon_one)
     autorecon1_job = Pegasus.DAX3.Job(name="autorecon1.sh")
+
     # autorecon1 doesn't get any benefit from more than one core
     autorecon1_job.addArguments(version, subject, '1')
     for subject_file in subject_files:
@@ -177,6 +178,7 @@ def create_final_job(dax, version, subject, serial_job=False):
     if not dax.hasExecutable(autorecon_three):
         dax.addExecutable(autorecon_three)
     autorecon3_job = Pegasus.DAX3.Job(name="autorecon3.sh")
+
     # only use one core on final job, more than 1 core doesn't help things
     autorecon3_job.addArguments(version, subject, '1')
     if serial_job:

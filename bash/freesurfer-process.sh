@@ -47,11 +47,18 @@ recon-all                                                           \
         -openmp $cores
 if [ $? -ne 0 ];
 then
+  echo "Error running recon-all"
   exitcode=1
 fi
 cd $SUBJECTS_DIR
 cp $subject/scripts/recon-all.log $WD
 tar cjf $WD/${subject}_output.tar.bz2 *
+if [ $? -ne 0 ];
+then
+  echo "Error generating tarfile"
+  exitcode=1
+fi
 cd $WD
+sha1sum $WD/${subject}_output.tar.bz2
 exit $exitcode
 
