@@ -420,7 +420,8 @@ def get_job_status():
                 "       num_inputs," \
                 "       subject," \
                 "       job_date," \
-                "       purged " \
+                "       purged," \
+                "       version " \
                 "FROM freesurfer_interface.jobs " \
                 "WHERE id = %s AND username = %s;"
     accounting_query = "SELECT walltime, " \
@@ -444,6 +445,7 @@ def get_job_status():
             response['subject'] = row[3]
             response['started'] = time.mktime(row[4].timetuple())
             response['purged'] = row[5]
+            response['version'] = row[6]
         cursor.execute(accounting_query, [flask.request.args['jobid']])
         retries = 0
         walltime = 0

@@ -15,8 +15,8 @@ import zipfile
 import tempfile
 from functools import wraps
 
-REST_ENDPOINT = "http://fsurf.ci-connect.net/freesurfer_test"
-VERSION = '2.0.31'
+REST_ENDPOINT = "http://fsurf.ci-connect.net/freesurfer"
+VERSION = '2.0.32'
 CREDENTIAL_FILE = os.path.expanduser('~/.fsurf/credentials')
 # supported versions of FreeSurfer
 FREESURFER_VERSIONS = ['5.3.0']
@@ -455,6 +455,7 @@ def get_token(userid, password):
     token = hashlib.sha256(token + str(timestamp)).hexdigest()
     return str(timestamp), token
 
+
 @protect
 def list_workflows(args):
     """
@@ -654,6 +655,7 @@ def send_file(send_params, filename, body):
 
     return False
 
+
 @protect
 def submit_workflow(args):
     """
@@ -775,13 +777,13 @@ def submit_workflow(args):
         with open(input_path, 'rb') as f:
             body = f.read()
             if send_file(send_params, filename, body):
+                file_num += 1
                 continue
             else:
                 sys.stdout.write("Could not upload {0}\n".format(filename))
                 sys.stdout.write("Exiting...\n")
                 sys.exit(1)
 
-        file_num += 1
     sys.exit(0)
 
 
@@ -864,6 +866,7 @@ def get_status(args):
     sys.stdout.write("Subject: {0}\n".format(response_obj['subject']))
     if workflow_type == 'Custom Workflow':
         sys.stdout.write("Options: {0}\n".format(response_obj['options']))
+    sys.stdout.write("FreeSurfer Version: {0}\n".format(response_obj['version']))
     sys.stdout.write("Status: {0}\n".format(response_obj['job_status']))
     start_time = time.ctime(response_obj['started'])
     if response_obj['job_status'] in ['RUNNING', 'QUEUED', 'ERROR']:
