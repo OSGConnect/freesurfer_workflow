@@ -30,7 +30,7 @@ def email_user(workflow_id, email):
                    'will be deleted in 7 days, please download ' +
                    'them if you would like to save the results.')
 
-    msg['Subject'] = 'Deletion warning for freesurfer workflow {0} '.format(workflow_id)
+    msg['Subject'] = 'Results for FSurf workflow {0} '.format(workflow_id)
     msg['Subject'] += 'will be deleted'
     sender = 'fsurf@login.osgconnect.net'
     dest = email
