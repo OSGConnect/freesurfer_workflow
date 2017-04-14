@@ -13,8 +13,9 @@ CREATE TYPE freesurfer_interface.job_state AS ENUM (
 );
 
 CREATE TYPE freesurfer_interface.freesufer_version AS ENUM (
+    '5.1.0'
     '5.3.0',
-    '6.0'
+    '6.0.0'
 );
 
 CREATE TABLE freesurfer_interface.users (
