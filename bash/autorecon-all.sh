@@ -11,7 +11,8 @@ then
     source /cvmfs/oasis.opensciencegrid.org/osg/modules/lmod/current/init/bash
 fi
 
-module load freesurfer/$1
+version=$1
+module load freesurfer/$version
 module load xz/5.2.2
 date
 start=`date +%s`
@@ -33,17 +34,25 @@ do
 done
 exitcode=0
 ################################################################# run all steps
-
-recon-all                                                               \
-        -all                                                            \
-        -s $2                                                           \
-        $input_args                                                     \
-        -openmp $3
+if [[ $version -eq "5.3.0" ]];
+then
+    recon-all                                                               \
+            -all                                                            \
+            -s $2                                                           \
+            $input_args
+else
+    recon-all                                                               \
+            -all                                                            \
+            -s $2                                                           \
+            $input_args                                                     \
+            -parallel                                                       \
+            -openmp $3
+fi
 if [ $? -ne 0 ];
 then
   exitcode=1
 fi
-cd  $SUBJECTS_DIR
+cd $SUBJECTS_DIR
 cp $2/scripts/recon-all.log $WD
 tar cjf $WD/$1_output.tar.bz2 *
 cd $WD

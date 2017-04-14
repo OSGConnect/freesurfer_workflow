@@ -11,7 +11,8 @@ then
     source /cvmfs/oasis.opensciencegrid.org/osg/modules/lmod/current/init/bash
 fi
 
-module load freesurfer/$1
+version=$1
+module load freesurfer/$version
 module load xz/5.2.2
 date
 start=`date +%s`
@@ -29,13 +30,21 @@ cd $SUBJECTS_DIR
 tar xvaf $2_recon1_output.tar.xz
 rm $2_recon1_output.tar.xz
 exitcode=0
-# do this to handle compute nodes where tcsh is not installed by default
-# load tcsh module and then call tcsh on the recon-all script
-recon-all                                                               \
-        -s $2                                                           \
-        -autorecon2-perhemi                                             \
-        -hemi $3                                                        \
-        -openmp $4
+if [[ $version -eq "5.3.0" ]];
+then
+    recon-all                                                               \
+            -s $2                                                           \
+            -autorecon2-perhemi                                             \
+            -hemi $3
+else
+    recon-all                                                               \
+            -s $2                                                           \
+            -autorecon2-perhemi                                             \
+            -hemi $3                                                        \
+            -parallel                                                       \
+            -openmp $4
+fi
+
 if [ $? -ne 0 ];
 then
   exitcode=1

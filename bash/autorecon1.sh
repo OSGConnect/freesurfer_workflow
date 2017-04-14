@@ -10,8 +10,8 @@ if [[ $? -ne 0 ]];
 then
     source /cvmfs/oasis.opensciencegrid.org/osg/modules/lmod/current/init/bash
 fi
-
-module load freesurfer/$1
+version=$1
+module load freesurfer/$version
 module load xz/5.2.2
 date
 start=`date +%s`
@@ -35,20 +35,38 @@ do
 done
 exitcode=0
 ############################################################ 1st stage - serial
-recon-all                                                               \
-        -s $subject                                                     \
-        $input_args                                                     \
-        -autorecon1                                                     \
-        -openmp $cores
+if [[ $version -eq "5.3.0" ]];
+then
+    recon-all                                                               \
+            -s $subject                                                     \
+            $input_args                                                     \
+            -autorecon1
+else
+    recon-all                                                               \
+            -s $subject                                                     \
+            $input_args                                                     \
+            -autorecon1                                                     \
+            -openmp $cores
+fi
+
 if [ $? -ne 0 ];
 then
-  exitcode=1
+  exit 1
 fi
 ############################################################ 2nd stage - serial
-recon-all                                                               \
-        -s $subject                                                     \
-        -autorecon2-volonly                                             \
-        -openmp $cores
+if [[ $version -eq "5.3.0" ]];
+then
+    recon-all                                                               \
+            -s $subject                                                     \
+            -autorecon2-volonly
+else
+    recon-all                                                               \
+            -s $subject                                                     \
+            -autorecon2-volonly                                             \
+            -parallel                                                       \
+            -openmp $cores
+fi
+
 if [ $? -ne 0 ];
 then
   exitcode=1
