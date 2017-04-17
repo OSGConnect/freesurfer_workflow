@@ -35,7 +35,7 @@ do
 done
 exitcode=0
 ############################################################ 1st stage - serial
-if [[ $version -eq "5.3.0" ]];
+if [[ $version == "5.3.0" ]];
 then
     recon-all                                                               \
             -s $subject                                                     \
@@ -54,7 +54,7 @@ then
   exit 1
 fi
 ############################################################ 2nd stage - serial
-if [[ $version -eq "5.3.0" ]];
+if [[ $version == "5.3.0" ]];
 then
     recon-all                                                               \
             -s $subject                                                     \

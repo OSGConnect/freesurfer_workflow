@@ -30,7 +30,7 @@ cd $SUBJECTS_DIR
 tar xvaf $2_recon1_output.tar.xz
 rm $2_recon1_output.tar.xz
 exitcode=0
-if [[ $version -eq "5.3.0" ]];
+if [[ $version == "5.3.0" ]];
 then
     recon-all                                                               \
             -s $2                                                           \

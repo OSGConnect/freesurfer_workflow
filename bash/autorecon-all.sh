@@ -34,7 +34,7 @@ do
 done
 exitcode=0
 ################################################################# run all steps
-if [[ $version -eq "5.3.0" ]];
+if [[ $version == "5.3.0" ]];
 then
     recon-all                                                               \
             -all                                                            \
