@@ -19,7 +19,8 @@ then
     module load tcsh/6.20.00
 fi
 
-module load freesurfer/$1
+version=$1
+module load freesurfer/$version
 module load xz/5.2.2
 date
 start=`date +%s`
@@ -41,10 +42,20 @@ rm $subject_file
 shift 4
 exitcode=0
 ################################################################# run all steps
-recon-all                                                           \
-        $@                                                          \
-        -subjid $subject                                            \
-        -openmp $cores
+if [[ $version == "5.3.0" ]];
+then
+    recon-all                                                           \
+            $@                                                          \
+            -subjid $subject
+else
+    recon-all                                                           \
+            $@                                                          \
+            -subjid $subject                                            \
+            -parallel                                                   \
+            -openmp $cores
+fi
+
+
 if [ $? -ne 0 ];
 then
   echo "Error running recon-all"
