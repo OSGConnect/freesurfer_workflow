@@ -42,7 +42,7 @@ rm $subject_file
 shift 4
 exitcode=0
 ################################################################# run all steps
-if [[ $version == "5.3.0" ]];
+if [[ $version == "5.1.0" ]];
 then
     recon-all                                                           \
             $@                                                          \

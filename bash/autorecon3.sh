@@ -37,7 +37,7 @@ then
     rm $2_recon2_output.tar.xz
 fi
 exitcode=0
-if [[ $version == "5.3.0" ]];
+if [[ $version == "5.1.0" ]];
 then
     recon-all                                                               \
             -s $2
