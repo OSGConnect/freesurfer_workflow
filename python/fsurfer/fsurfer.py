@@ -132,6 +132,7 @@ def create_initial_job(dax, version, subject_files, subject):
         autorecon1_job.uses(subject_file, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_recon1_output.tar.xz".format(subject))
     autorecon1_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=False)
+    autorecon1_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
     return autorecon1_job
 
 
@@ -193,6 +194,7 @@ def create_final_job(dax, version, subject, serial_job=False):
     logs = Pegasus.DAX3.File("recon-all.log".format(subject))
     autorecon3_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=True)
     autorecon3_job.uses(logs, link=Pegasus.DAX3.Link.OUTPUT, transfer=True)
+    autorecon3_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
     return autorecon3_job
 
 
