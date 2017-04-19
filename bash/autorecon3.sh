@@ -40,7 +40,7 @@ exitcode=0
 if [[ $version == "5.1.0" ]];
 then
     recon-all                                                               \
-            -s $2
+            -s $2                                                           \
             -autorecon3
 else
     recon-all                                                               \
