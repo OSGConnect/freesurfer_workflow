@@ -63,7 +63,6 @@ else
     recon-all                                                               \
             -s $subject                                                     \
             -autorecon2-volonly                                             \
-            -parallel                                                       \
             -openmp $cores
 fi
 

@@ -38,7 +38,6 @@ else
     recon-all                                                               \
             -s $2                                                           \
             -autorecon2                                                     \
-            -parallel                                                       \
             -openmp $3
 fi
 

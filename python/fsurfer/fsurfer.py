@@ -14,7 +14,7 @@ def create_single_job(dax, version, cores, subject_files, subject):
     Create a workflow with a single job that runs entire freesurfer workflow
 
     :param dax: Pegasus ADAG
-    :param version: version of Freesurfer to use
+    :param version: string indicating version of Freesurfer to use
     :param cores: number of cores to use
     :param subject_files: list egasus File object pointing to the subject mri files
     :param subject: name of subject being processed
@@ -37,8 +37,9 @@ def create_single_job(dax, version, cores, subject_files, subject):
         full_recon_job.uses(subject_file, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_output.tar.gz".format(subject))
     full_recon_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=True)
-    full_recon_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
-    full_recon_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cpus", cores))
+    if version != '5.1.0':
+        full_recon_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
+        full_recon_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cpus", cores))
     dax.addJob(full_recon_job)
     return errors
 
@@ -49,7 +50,7 @@ def create_custom_job(dax, version, cores, subject_dir, subject, options):
     with custom options
 
     :param dax: Pegasus ADAG
-    :param version: version of Freesurfer to use
+    :param version: string indicating version of Freesurfer to use
     :param cores: number of cores to use
     :param subject_dir: pegasus File object pointing tarball containing
                          subject dir
@@ -85,7 +86,7 @@ def create_recon2_job(dax, version, cores, subject):
     Set up jobs for the autorecon2 process for freesurfer
 
     :param dax: Pegasus ADAG
-    :param version: version of Freesurfer to use
+    :param version: string indicating version of Freesurfer to use
     :param cores: number of cores to use
     :param subject: name of subject being processed
     :return: True if errors occurred, the pegasus job otherwise
@@ -114,7 +115,7 @@ def create_initial_job(dax, version, subject_files, subject):
     Set up jobs for the autorecon1 process for freesurfer
 
     :param dax: Pegasus ADAG
-    :param version: version of Freesurfer to use
+    :param version: string indicating version of Freesurfer to use
     :param subject_files: list of pegasus File objects pointing to the subject mri files
     :param subject: name of subject being processed
     :return: True if errors occurred, False otherwise
@@ -132,7 +133,8 @@ def create_initial_job(dax, version, subject_files, subject):
         autorecon1_job.uses(subject_file, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_recon1_output.tar.xz".format(subject))
     autorecon1_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=False)
-    autorecon1_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
+    if version == '6.0.0':
+        autorecon1_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
     return autorecon1_job
 
 
@@ -160,7 +162,8 @@ def create_hemi_job(dax, version, cores, hemisphere, subject):
     output = Pegasus.DAX3.File("{0}_recon2_{1}_output.tar.xz".format(subject, hemisphere))
     autorecon2_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=False)
     autorecon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
-    autorecon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cpus", cores))
+    if version != '5.1.0':
+        autorecon2_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_cpus", cores))
     return autorecon2_job
 
 
@@ -194,7 +197,8 @@ def create_final_job(dax, version, subject, serial_job=False):
     logs = Pegasus.DAX3.File("recon-all.log".format(subject))
     autorecon3_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=True)
     autorecon3_job.uses(logs, link=Pegasus.DAX3.Link.OUTPUT, transfer=True)
-    autorecon3_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
+    if version == '6.0.0':
+        autorecon3_job.addProfile(Pegasus.DAX3.Profile(Pegasus.DAX3.Namespace.CONDOR, "request_memory", "4G"))
     return autorecon3_job
 
 

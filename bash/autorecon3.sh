@@ -46,7 +46,6 @@ else
     recon-all                                                               \
             -s $2                                                           \
             -autorecon3                                                     \
-            -parallel                                                       \
             -openmp $3
 fi
 if [ $? -ne 0 ];

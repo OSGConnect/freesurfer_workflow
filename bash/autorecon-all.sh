@@ -45,7 +45,6 @@ else
             -all                                                            \
             -s $2                                                           \
             $input_args                                                     \
-            -parallel                                                       \
             -openmp $3
 fi
 if [ $? -ne 0 ];

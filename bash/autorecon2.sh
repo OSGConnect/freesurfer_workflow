@@ -41,7 +41,6 @@ else
             -s $2                                                           \
             -autorecon2-perhemi                                             \
             -hemi $3                                                        \
-            -parallel                                                       \
             -openmp $4
 fi
 
