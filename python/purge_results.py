@@ -13,7 +13,7 @@ import fsurfer
 import fsurfer.log
 import fsurfer.helpers
 
-PARAM_FILE_LOCATION = "/etc/freesurfer/db_info"
+PARAM_FILE_LOCATION = "/etc/fsurf/db_info"
 VERSION = fsurfer.__version__
 
 
