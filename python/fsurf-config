@@ -12,11 +12,11 @@ SITE_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
              version="4.0">
 
     <site  handle="local" arch="x86_64" os="LINUX">
-        <directory type="shared-scratch" path="/stash2/user/USERNAME/freesurfer_scratch/scratch">
-            <file-server operation="all" url="file:///stash2/user/USERNAME/freesurfer_scratch/scratch"/>
+        <directory type="shared-scratch" path="/local-scratch/fsurf/user/USERNAME/freesurfer_scratch/scratch">
+            <file-server operation="all" url="file:///local-scratch/fsurfUSERNAME/freesurfer_scratch/scratch"/>
         </directory>
-        <directory type="local-storage" path="/stash2/user/USERNAME/freesurfer_scratch/output">
-            <file-server operation="all" url="file:///stash2/user/USERNAME/freesurfer_scratch/output"/>
+        <directory type="local-storage" path="/local-scratch/fsurf/USERNAME/freesurfer_scratch/output">
+            <file-server operation="all" url="file:///local-scratch/fsurf/USERNAME/freesurfer_scratch/output"/>
         </directory>
     </site>
 

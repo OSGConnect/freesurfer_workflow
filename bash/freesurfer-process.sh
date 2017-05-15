@@ -51,7 +51,6 @@ else
     recon-all                                                           \
             $@                                                          \
             -subjid $subject                                            \
-            -parallel                                                   \
             -openmp $cores
 fi
 

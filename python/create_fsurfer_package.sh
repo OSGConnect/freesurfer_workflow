@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="2.0.38"
+VERSION="2.0.39"
 # create fsurfer lib rpms
 work_dir=`mktemp -d`
 cur_dir=$PWD
