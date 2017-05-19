@@ -12,7 +12,7 @@ VERSION = fsurfer.__version__
 
 def update_completed_tasks(job_run_id):
     """
-    Email user informing them that a workflow has completed
+    Increment # of tasks completed for a workflow
 
     :param job_run_id: id for job run entry
     :return: None
@@ -23,7 +23,7 @@ def update_completed_tasks(job_run_id):
     try:
         conn = fsurfer.helpers.get_db_client()
         cursor = conn.cursor()
-        logger.info("Incrementing tasks completd for workflow {0}".format(job_run_id))
+        logger.info("Incrementing tasks completed for workflow {0}".format(job_run_id))
 
         run_update = "UPDATE freesurfer_interface.job_run " \
                      "SET tasks_completed = tasks_completed + 1 " \
@@ -40,8 +40,7 @@ def update_completed_tasks(job_run_id):
 
 def main():
     """
-    Main function that parses arguments and generates the pegasus
-    workflow
+    Increment the number of jobs completed for a fsurf workflow
 
     :return: True if any errors occurred during DAX generaton
     """
