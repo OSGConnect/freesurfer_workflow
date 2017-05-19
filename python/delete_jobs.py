@@ -50,6 +50,7 @@ def get_input_files(workflow_id):
     """
     logger = fsurfer.log.get_logger()
     input_files = []
+    conn = None
     try:
         conn = fsurfer.helpers.get_db_client()
         cursor = conn.cursor()
@@ -64,7 +65,8 @@ def get_input_files(workflow_id):
         logger.exception("Error: {0}".format(e))
         return None
     finally:
-        conn.close()
+        if conn:
+            conn.close()
     return input_files
 
 
@@ -104,7 +106,7 @@ def delete_job():
                 "       jobs.subject " \
                 "FROM freesurfer_interface.jobs AS jobs, " \
                 "     freesurfer_interface.job_run AS job_run " \
-                "WHERE state = 'DELETE PENDING' AND " \
+                "WHERE jobs.state = 'DELETE PENDING' AND " \
                 "      jobs.id = job_run.job_id"
     job_update = "UPDATE freesurfer_interface.jobs " \
                  "SET state = 'DELETED' " \
