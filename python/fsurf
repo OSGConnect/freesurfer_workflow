@@ -7,16 +7,19 @@ import json
 import os
 import sys
 import time
-import urllib
+import urllib2
 import urlparse
 import re
 import cPickle
 import zipfile
 import tempfile
+import urllib
 from functools import wraps
 
+MAINTENANCE_NOTICE_URL = "http://fsurf.ci-connect.net/maintenance.txt"
+UPDATE_NOTICE_URL = "http://fsurf.ci-connect.net/update.json"
 REST_ENDPOINT = "http://fsurf.ci-connect.net/freesurfer"
-VERSION = '2.0.40'
+VERSION = '2.0.41'
 CREDENTIAL_FILE = os.path.expanduser('~/.fsurf/credentials')
 # supported versions of FreeSurfer
 FREESURFER_VERSIONS = ['5.1.0', '5.3.0', '6.0.0']
@@ -77,10 +80,48 @@ def protect(f):
     @wraps(f)
     def wrapped(*args, **kwargs):
         try:
-            f(*args, **kwargs)
+            return f(*args, **kwargs)
         except Exception:
             error_message('Unexpected error occurred')
             sys.exit(1)
+    return wrapped
+
+
+def check_maintenance(f):
+    """
+    Decorator around user functions to check for a maintenance
+    message and display it if present
+    
+    :param f: 
+    :return: 
+    """
+    @wraps(f)
+    def wrapped(*args, **kwargs):
+        maintenance_mesg = get_maintenance_notice()
+        if maintenance_mesg:
+            sys.stdout.write(maintenance_mesg)
+            sys.exit(0)
+        return f(*args, **kwargs)
+    return wrapped
+
+
+def check_update(f):
+    """
+    Decorator around user functions to check for an update message 
+    and display it if present and for a more recent version
+
+    :param f: 
+    :return: 
+    """
+
+    @wraps(f)
+    def wrapped(*args, **kwargs):
+        update_info = json.loads(get_update_notice())
+        if update_info['version'] > VERSION:
+            sys.stdout.write("---- New fsurf version available ---\n")
+            sys.stdout.write(update_info['mesg'] + "\n")
+        return f(*args, **kwargs)
+
     return wrapped
 
 
@@ -457,6 +498,8 @@ def get_token(userid, password):
 
 
 @protect
+@check_maintenance
+@check_update
 def list_workflows(args):
     """
     List the workflows currently in the system
@@ -516,6 +559,8 @@ def list_workflows(args):
 
 
 @protect
+@check_maintenance
+@check_update
 def remove_workflow(args):
     """
     Stop and remove a specified pegasus workflow
@@ -542,6 +587,8 @@ def remove_workflow(args):
 
 
 @protect
+@check_maintenance
+@check_update
 def retry_workflow(args):
     """
     Retry a failed pegasus workflow
@@ -657,6 +704,8 @@ def send_file(send_params, filename, body):
 
 
 @protect
+@check_maintenance
+@check_update
 def submit_workflow(args):
     """
     Submit a workflow to OSG for processing
@@ -788,6 +837,8 @@ def submit_workflow(args):
 
 
 @protect
+@check_maintenance
+@check_update
 def get_output(args):
     """
     Get output for a completed workflow
@@ -826,6 +877,8 @@ def get_output(args):
 
 
 @protect
+@check_maintenance
+@check_update
 def get_status(args):
     """
     Get status for a workflow
@@ -887,7 +940,9 @@ def get_status(args):
 
     sys.exit(0)
 
-
+@protect
+@check_maintenance
+@check_update
 def change_password(args):
     """
     Change the user's password
@@ -929,6 +984,42 @@ def change_password(args):
     save_user_credentials(username, new_password)
     sys.stdout.write("{0}\n".format(response_obj['result']))
     sys.exit(0)
+
+
+@protect
+def get_maintenance_notice():
+    """
+    Check for a maintenance notice on the website and return it if present
+    
+    :return: string if notice present, None otherwise
+    """
+    try:
+        result = urllib2.urlopen(MAINTENANCE_NOTICE_URL)
+
+    except urllib2.URLError:
+        return None
+    if result.getcode() == 404:
+        return None
+    else:
+        return result.read()
+
+
+@protect
+def get_update_notice():
+    """
+    Check for a update notice on the website and return it if present
+
+    :return: string if notice present, None otherwise
+    """
+    try:
+        result = urllib2.urlopen(UPDATE_NOTICE_URL)
+
+    except urllib2.URLError:
+        return None
+    if result.getcode() == 404:
+        return None
+    else:
+        return result.read()
 
 
 def main():
