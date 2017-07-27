@@ -283,6 +283,7 @@ def recover_logs(pegasus_workflow_id):
     """
     pass
 
+
 def get_workflow_info(conn, job_run_id):
     """
     Get workflow information for a specified workflow
