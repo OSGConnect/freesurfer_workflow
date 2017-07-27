@@ -128,6 +128,23 @@ def format_seconds(duration, max_comp=2):
     return formatted_duration
 
 
+def get_result_base_dir(workflow_info):
+    """
+    Return the base directory for results
+
+    :param workflow_info: dictionary with workflow info
+    :return: a string with the directory path to the results
+    """
+    return os.path.join(fsurfer.FREESURFER_BASE,
+                        workflow_info['username'],
+                        'workflows',
+                        'output',
+                        'fsurf',
+                        'pegasus',
+                        'freesurfer',
+                        workflow_info['pegasus_ts'])
+
+
 def parse_ks_record(fname):
     """
     Parses a Pegasus kickstart XML records
@@ -138,8 +155,8 @@ def parse_ks_record(fname):
 
     data = {'duration': 0.0, 'utime': 0.0}
 
-    DOMTree = xml.dom.minidom.parse(fname)
-    collection = DOMTree.documentElement
+    dom_tree = xml.dom.minidom.parse(fname)
+    collection = dom_tree.documentElement
 
     for mainjob in collection.getElementsByTagName('mainjob'):
         data['start'] = mainjob.getAttribute('start')
@@ -255,17 +272,28 @@ def usage_msg(walltime, cputime):
     return msg
 
 
-def process_results(job_run_id, success=True):
+def recover_logs(pegasus_workflow_id):
     """
-    Email user informing them that a workflow has completed
+    Try to recover any logs from a pegasus workflow that has failed. Recovered
+    logs copied to output directory
 
-    :param success: True if workflow completed successfully
-    :param job_run_id: id for job run id for workflow
+
+    :param pegasus_workflow_id: workfow id to check
     :return: None
     """
-    fsurfer.log.initialize_logging()
-    logger = fsurfer.log.get_logger()
+    pass
 
+def get_workflow_info(conn, job_run_id):
+    """
+    Get workflow information for a specified workflow
+    
+    :param conn: active pgsql connection to use
+    :param job_run_id: id for a workflow's job run to query
+    :return: a dict with (subject_name, submit_date, pegasus_ts, 
+                          user_email, username, job_id)
+    :raises psycopg2.Error
+    """
+    logger = fsurfer.log.get_logger()
     info_query = "SELECT jobs.subject, " \
                  "       date_trunc('second'," \
                  "                  jobs.job_date), " \
@@ -280,85 +308,79 @@ def process_results(job_run_id, success=True):
                  "WHERE job_run.id  = %s AND " \
                  "      jobs.username = users.username AND " \
                  "      jobs.id = job_run.job_id"
-    conn = fsurfer.helpers.get_db_client()
     cursor = conn.cursor()
-    try:
-        cursor.execute(info_query, [job_run_id])
-        row = cursor.fetchone()
-        if row:
-            subject_name = row[0]
-            submit_date = row[1]
-            pegasus_ts = row[2]
-            user_email = row[3]
-            username = row[4]
-            job_id = row[5]
-        else:
-            logger.error("No matches to query: "
-                         "{0}".format(cursor.mogrify(info_query, [job_run_id])))
-            return
-    except psycopg2.Error as e:
-        logger.exception("Got pgsql error: {0}".format(e))
+    cursor.execute(info_query, [job_run_id])
+    row = cursor.fetchone()
+    results = {}
+    if row:
+        results['subject_name'] = row[0]
+        results['submit_date'] = row[1]
+        pegasus_ts = row[2]
+        # pegasus_ts is stored as datetime in the database, convert it to what we have on the fs
+        results['pegasus_ts'] = pegasus_ts.strftime('%Y%m%dT%H%M%S%z')
+        results['user_email'] = row[3]
+        results['username'] = row[4]
+        results['job_id'] = row[5]
+        return results
+    else:
+        logger.error("No matches to query: "
+                     "{0}".format(cursor.mogrify(info_query, [job_run_id])))
         return
 
-    # pegasus_ts is stored as datetime in the database, convert it to what we have on the fs
-    pegasus_ts = pegasus_ts.strftime('%Y%m%dT%H%M%S%z')
 
-    stats = ""
-    walltime = 0
-    cputime = 0
-    try:
-        submit_dir = os.path.join(fsurfer.FREESURFER_SCRATCH,
-                                  username,
-                                  'workflows',
-                                  'fsurf',
-                                  'pegasus',
-                                  'freesurfer',
-                                  pegasus_ts)
-        walltime, cputime = calculate_usage(submit_dir)
-        stats = usage_msg(walltime, cputime)
-    except Exception as e:
-        logger.exception("Can't calculate stats, got exception: {0}".format(e))
-        pass
+def email_user(workflow_info, success, stats_text):
+    """
+    Email user with a message indicating that their job has completed.
+    
+    :param workflow_info: dictionary with information about user workflow
+    :param success: Boolean indicating whether workflow has succeeded or not
+    :param stats_text: string with message about workflow statistics
+    :return: None 
+    """
+    logger = fsurfer.log.get_logger()
 
     if success:
-        msg = MIMEText(SUCCESS_EMAIL_TEMPLATE.format(job_id,
-                                                     submit_date,
-                                                     stats))
+        msg = MIMEText(SUCCESS_EMAIL_TEMPLATE.format(workflow_info['job_id'],
+                                                     workflow_info['submit_date'],
+                                                     stats_text))
 
     else:
-        msg = MIMEText(FAIL_EMAIL_TEMPLATE.format(job_id,
-                                                  submit_date,
-                                                  stats))
-
-    msg['Subject'] = 'FreeSurfer workflow {0} completed'.format(job_id)
+        msg = MIMEText(FAIL_EMAIL_TEMPLATE.format(workflow_info['job_id'],
+                                                  workflow_info['submit_date'],
+                                                  stats_text))
+    msg['Subject'] = 'FreeSurfer workflow {0} completed'.format(workflow_info['job_id'])
     sender = 'fsurf@login.osgconnect.net'
     msg['From'] = sender
-    msg['To'] = user_email
+    msg['To'] = workflow_info['user_email']
     try:
         sendmail = subprocess.Popen(['/usr/sbin/sendmail', '-t'],
                                     stdin=subprocess.PIPE)
         sendmail.communicate(msg.as_string())
-        logger.info("Emailing {0} about workflow {1}".format(user_email,
-                                                             job_id))
+        logger.info("Emailing {0} about workflow {1}".format(workflow_info['user_email'],
+                                                             workflow_info['job_id']))
     except subprocess.CalledProcessError as e:
+        # don't want exceptions when emailing to stop rest of processing
         logger.exception("Can't email user, got exception: {0}".format(e))
         pass
 
+
+def copy_outputs(workflow_info, success):
+    """
+    Copy outputs from a workflow run to the appropriate locations
+    
+    :param workflow_info: dictionary with information about user workflow
+    :param success: Boolean indicating whether workflow has succeeded or not
+    :return: None 
+    """
+    logger = fsurfer.log.get_logger()
     # copy output to the results directory
     output_filename = os.path.join(fsurfer.FREESURFER_BASE,
-                                   username,
+                                   workflow_info['username'],
                                    'results',
-                                   "{0}_{1}_output.tar.bz2".format(job_id,
-                                                                   subject_name))
-    result_filename = os.path.join(fsurfer.FREESURFER_BASE,
-                                   username,
-                                   'workflows',
-                                   'output',
-                                   'fsurf',
-                                   'pegasus',
-                                   'freesurfer',
-                                   pegasus_ts,
-                                   '{0}_output.tar.bz2'.format(subject_name))
+                                   "{0}_{1}_output.tar.bz2".format(workflow_info['job_id'],
+                                                                   workflow_info['subject_name']))
+    result_filename = os.path.join(get_result_base_dir(workflow_info),
+                                   '{0}_output.tar.bz2'.format(workflow_info['subject_name']))
     try:
         if not os.path.isfile(result_filename):
             logger.error("Output file {0} not found".format(result_filename))
@@ -369,22 +391,93 @@ def process_results(job_run_id, success=True):
     except IOError as e:
         logger.exception("Exception while copying file: {0}".format(e))
     logger.info("Copied {0} to {1}".format(result_filename, output_filename))
-    result_logfile = os.path.join(fsurfer.FREESURFER_BASE,
-                                  username,
-                                  'workflows',
-                                  'output',
-                                  'fsurf',
-                                  'pegasus',
-                                  'freesurfer',
-                                  pegasus_ts,
+    result_logfile = os.path.join(get_result_base_dir(workflow_info),
                                   'recon-all.log')
     log_filename = os.path.join(fsurfer.FREESURFER_BASE,
-                                username,
+                                workflow_info['username'],
                                 'results',
-                                'recon_all-{0}.log'.format(job_id))
+                                'recon_all-{0}.log'.format(workflow_info['job_id']))
     try:
         if not os.path.isfile(result_logfile):
             logger.error("Output file {0} not found".format(result_logfile))
+            if not success:
+                recover_logs(workflow_info['pegasus_ts'])
+        else:
+            shutil.copyfile(result_logfile, log_filename)
+    except shutil.Error as e:
+        logger.exception("Exception while copying file: {0}".format(e))
+    except IOError as e:
+        logger.exception("Exception while copying file: {0}".format(e))
+    logger.info("Copied {0} to {1}".format(result_logfile, log_filename))
+
+
+def process_results(job_run_id, success=True):
+    """
+    Email user informing them that a workflow has completed
+
+    :param success: True if workflow completed successfully
+    :param job_run_id: id for job run id for workflow
+    :return: None
+    """
+    fsurfer.log.initialize_logging()
+    logger = fsurfer.log.get_logger()
+
+    conn = fsurfer.helpers.get_db_client()
+    cursor = conn.cursor()
+    try:
+        workflow_info = get_workflow_info(conn, job_run_id)
+    except psycopg2.Error as e:
+        logger.exception("Got pgsql error: {0}".format(e))
+        return
+
+    stats_text = ""
+    walltime = 0
+    cputime = 0
+    try:
+        submit_dir = os.path.join(fsurfer.FREESURFER_SCRATCH,
+                                  workflow_info['username'],
+                                  'workflows',
+                                  'fsurf',
+                                  'pegasus',
+                                  'freesurfer',
+                                  workflow_info['pegasus_ts'])
+        walltime, cputime = calculate_usage(submit_dir)
+        stats_text = usage_msg(walltime, cputime)
+    except Exception as e:
+        logger.exception("Can't calculate stats, got exception: {0}".format(e))
+        pass
+
+    email_user(workflow_info, success, stats_text)
+
+    # copy output to the results directory
+    output_filename = os.path.join(fsurfer.FREESURFER_BASE,
+                                   workflow_info['username'],
+                                   'results',
+                                   "{0}_{1}_output.tar.bz2".format(workflow_info['job_id'],
+                                                                   workflow_info['subject_name']))
+    result_filename = os.path.join(get_result_base_dir(workflow_info),
+                                   '{0}_output.tar.bz2'.format(workflow_info['subject_name']))
+    try:
+        if not os.path.isfile(result_filename):
+            logger.error("Output file {0} not found".format(result_filename))
+        else:
+            shutil.copyfile(result_filename, output_filename)
+    except shutil.Error as e:
+        logger.exception("Exception while copying file: {0}".format(e))
+    except IOError as e:
+        logger.exception("Exception while copying file: {0}".format(e))
+    logger.info("Copied {0} to {1}".format(result_filename, output_filename))
+    result_logfile = os.path.join(get_result_base_dir(workflow_info),
+                                  'recon-all.log')
+    log_filename = os.path.join(fsurfer.FREESURFER_BASE,
+                                workflow_info['username'],
+                                'results',
+                                'recon_all-{0}.log'.format(workflow_info['job_id']))
+    try:
+        if not os.path.isfile(result_logfile):
+            logger.error("Output file {0} not found".format(result_logfile))
+            if not success:
+                recover_logs(workflow_info['pegasus_ts'])
         else:
             shutil.copyfile(result_logfile, log_filename)
     except shutil.Error as e:
@@ -395,15 +488,15 @@ def process_results(job_run_id, success=True):
     try:
         if success:
             state = 'COMPLETED'
-            logger.info("Updating workflow {0} to COMPLETED".format(job_id))
+            logger.info("Updating workflow {0} to COMPLETED".format(workflow_info['job_id']))
         else:
             state = 'FAILED'
-            logger.warning("Updating workflow {0} to FAILED".format(job_id))
+            logger.warning("Updating workflow {0} to FAILED".format(workflow_info['job_id']))
 
         job_update = "UPDATE freesurfer_interface.jobs  " \
                      "SET state = %s " \
                      "WHERE id = %s;"
-        cursor.execute(job_update, [state, job_id])
+        cursor.execute(job_update, [state, workflow_info['job_id']])
         logger.info("Updating run {0}".format(job_run_id))
 
         if walltime is None:
