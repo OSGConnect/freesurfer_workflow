@@ -193,7 +193,7 @@ def process_results():
             if not purge_workflow_files(result_dir,
                                         log_filename,
                                         output_filename):
-                logger.error("Can't remove files for job {1}".format(workflow_id))
+                logger.error("Can't remove files for job {0}".format(workflow_id))
                 continue
             logger.info("Setting workflow {0} to DELETED".format(workflow_id))
             cursor.execute(job_update, [row[0]])
