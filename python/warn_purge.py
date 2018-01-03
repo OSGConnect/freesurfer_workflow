@@ -22,7 +22,7 @@ def email_user(workflow_id, email):
 
     :param workflow_id: id for workflow that will be deleted
     :param email: email address for user
-    :return: None
+    :return: True on success, False on failure
     """
     logger = fsurfer.log.get_logger()
     msg = MIMEText('The results from your freesurfer ' +
@@ -41,8 +41,10 @@ def email_user(workflow_id, email):
         sendmail.communicate(msg.as_string())
         logger.info("Emailed {0} about purge for workflow {1}".format(email,
                                                                       workflow_id))
+        return True
     except subprocess.CalledProcessError as e:
         logger.exception("Error emailing {0}: {1}".format(email, e))
+        return False
 
 
 def process_results():
@@ -76,7 +78,6 @@ def process_results():
                 "       users.username, " \
                 "       users.email, " \
                 "       jobs.state, " \
-                "       jobs.pegasus_ts, " \
                 "       jobs.subject " \
                 "FROM freesurfer_interface.jobs AS jobs, " \
                 "     freesurfer_interface.users AS users "\
