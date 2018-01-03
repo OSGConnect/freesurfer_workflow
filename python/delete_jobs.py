@@ -70,6 +70,67 @@ def get_input_files(workflow_id):
     return input_files
 
 
+def delete_incomplete_jobs(dry_run=False):
+    """
+    Delete jobs that were submitted and then deleted before a job run started
+
+    :param dry_run: boolean indicating whether to actually
+    :return: exit code (0 for success, non-zero for failure)
+    """
+    logger = fsurfer.log.get_logger()
+    conn = fsurfer.helpers.get_db_client()
+    cursor = conn.cursor()
+    job_query = "SELECT jobs.id, " \
+                "       jobs.username, " \
+                "       jobs.state, " \
+                "       jobs.subject " \
+                "FROM freesurfer_interface.jobs AS jobs " \
+                "LEFT JOIN freesurfer_interface.job_run " \
+                "  ON jobs.id = job_run.job_id " \
+                "WHERE jobs.state = 'DELETE PENDING' AND " \
+                "      job_run.job_id IS NULL"
+    job_update = "UPDATE freesurfer_interface.jobs " \
+                 "SET state = 'DELETED' " \
+                 "WHERE id = %s;"
+    try:
+        cursor.execute(job_query)
+        for row in cursor.fetchall():
+            workflow_id = row[0]
+            username = row[1]
+            logger.info("Deleting workflow {0} for user {1}".format(workflow_id,
+                                                                    username))
+            deletion_list = []
+            # add input file
+            input_files = get_input_files(workflow_id)
+            if input_files is None:
+                logger.error("Can't find input files for " +
+                             "workflow {0}".format(workflow_id))
+            else:
+                deletion_list.extend(input_files)
+            for entry in deletion_list:
+                if dry_run:
+                    sys.stdout.write("Would delete {0}\n".format(entry))
+                else:
+                    logger.info("Removing {0}".format(entry))
+                    if not purge_workflow_file(entry):
+                        logger.error("Can't remove {0} for job {1}".format(entry,
+                                                                           workflow_id))
+            logger.info("Setting workflow {0} to DELETED".format(workflow_id))
+            cursor.execute(job_update, [workflow_id])
+            if dry_run:
+                conn.rollback()
+            else:
+                conn.commit()
+    except psycopg2.Error as e:
+        logger.exception("Error: {0}".format(e))
+        return 1
+    finally:
+        conn.commit()
+        conn.close()
+
+    return 0
+
+
 def delete_job():
     """
     Delete all jobs in a delete pending state, stopping pegasus
@@ -239,7 +300,9 @@ def delete_job():
     finally:
         conn.commit()
         conn.close()
-    return 0
+
+    retcode = delete_incomplete_jobs()
+    return retcode
 
 
 if __name__ == '__main__':
