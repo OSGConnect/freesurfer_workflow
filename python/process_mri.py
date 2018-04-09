@@ -332,6 +332,7 @@ def process_images():
     os.unlink('/tmp/fsurf_process.lock')
     return 0
 
+
 if __name__ == '__main__':
     # workaround missing subprocess.check_output
     if "check_output" not in dir(subprocess):  # duck punch it in!
