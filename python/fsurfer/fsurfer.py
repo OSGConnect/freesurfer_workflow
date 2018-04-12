@@ -122,17 +122,19 @@ def create_initial_job(dax, version, subject_files, subject, options=None):
     :return: True if errors occurred, False otherwise
     """
     if options:
-        autorecon_one = Pegasus.DAX3.Executable(name="autorecon1-options.sh", arch="x86_64", installed=False)
+        dax_exe_name = "autorecon1-options.sh"
+        autorecon_one = Pegasus.DAX3.Executable(name=dax_exe_name, arch="x86_64", installed=False)
+        autorecon_one.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR, "autorecon1-options.sh")),
+                                              "local"))
     else:
-        autorecon_one = Pegasus.DAX3.Executable(name="autorecon1.sh", arch="x86_64", installed=False)
-    autorecon_one.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR, "autorecon1.sh")), "local"))
+        dax_exe_name = "autorecon1.sh"
+        autorecon_one = Pegasus.DAX3.Executable(name=dax_exe_name, arch="x86_64", installed=False)
+        autorecon_one.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR, "autorecon1.sh")), "local"))
+
     if not dax.hasExecutable(autorecon_one):
         dax.addExecutable(autorecon_one)
 
-    if options:
-        autorecon1_job = Pegasus.DAX3.Job(name="autorecon1-options.sh")
-    else:
-        autorecon1_job = Pegasus.DAX3.Job(name="autorecon1.sh")
+    autorecon1_job = Pegasus.DAX3.Job(name=dax_exe_name)
 
     # autorecon1 doesn't get any benefit from more than one core
     autorecon1_job.addArguments(version, subject, '1')
@@ -161,18 +163,20 @@ def create_hemi_job(dax, version, cores, hemisphere, subject, options=None):
     :return: True if errors occurred, False otherwise
     """
     if options:
-        autorecon_two = Pegasus.DAX3.Executable(name="autorecon2-options.sh", arch="x86_64", installed=False)
+        dax_exe_name = "autorecon2-options.sh"
+        autorecon_two = Pegasus.DAX3.Executable(name=dax_exe_name, arch="x86_64", installed=False)
+        autorecon_two.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR, "autorecon2-options.sh")),
+                                              "local"))
     else:
-        autorecon_two = Pegasus.DAX3.Executable(name="autorecon2.sh", arch="x86_64", installed=False)
-    autorecon_two.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR, "autorecon2.sh")), "local"))
+        dax_exe_name = "autorecon2.sh"
+        autorecon_two = Pegasus.DAX3.Executable(name=dax_exe_name, arch="x86_64", installed=False)
+        autorecon_two.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR, "autorecon2.sh")), "local"))
     if not dax.hasExecutable(autorecon_two):
         dax.addExecutable(autorecon_two)
     if hemisphere not in ['rh', 'lh']:
         return True
-    if options:
-        autorecon2_job = Pegasus.DAX3.Job(name="autorecon2-options.sh")
-    else:
-        autorecon2_job = Pegasus.DAX3.Job(name="autorecon2.sh")
+
+    autorecon2_job = Pegasus.DAX3.Job(name=dax_exe_name)
     autorecon2_job.addArguments(version, subject, hemisphere, str(cores))
     if options:
         autorecon2_job.addArguments(options)
@@ -198,16 +202,19 @@ def create_final_job(dax, version, subject, serial_job=False, options=None):
     :return: True if errors occurred, False otherwise
     """
     if options:
-        autorecon_three = Pegasus.DAX3.Executable(name="autorecon3-options.sh", arch="x86_64", installed=False)
+        dax_exe_name = "autorecon3-options.sh"
+        autorecon_three = Pegasus.DAX3.Executable(name=dax_exe_name, arch="x86_64", installed=False)
+        autorecon_three.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR, "autorecon3-options.sh")),
+                                                "local"))
     else:
-        autorecon_three = Pegasus.DAX3.Executable(name="autorecon3.sh", arch="x86_64", installed=False)
-    autorecon_three.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR, "autorecon3.sh")), "local"))
+        dax_exe_name = "autorecon3.sh"
+        autorecon_three = Pegasus.DAX3.Executable(name=dax_exe_name, arch="x86_64", installed=False)
+        autorecon_three.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR, "autorecon3.sh")),
+                                                "local"))
     if not dax.hasExecutable(autorecon_three):
         dax.addExecutable(autorecon_three)
-    if options:
-        autorecon3_job = Pegasus.DAX3.Job(name="autorecon3-options.sh")
-    else:
-        autorecon3_job = Pegasus.DAX3.Job(name="autorecon3.sh")
+
+    autorecon3_job = Pegasus.DAX3.Job(name=dax_exe_name)
 
     # only use one core on final job, more than 1 core doesn't help things
     autorecon3_job.addArguments(version, subject, '1')
@@ -297,31 +304,32 @@ def create_diamond_workflow(dax, version, cores, subject_files, subject,
     :param subject: name of subject being processed
     :param skip_recon: True to skip initial recon1 step
     :param invoke_cmd: If not None, cmd to run when each job completes
+    :param options: If not None, options to pass to FreeSurfer
     :return: False if errors occurred, True otherwise
     """
     # setup autorecon1 run
     if not skip_recon:
-        initial_job = create_initial_job(dax, version, subject_files, subject, options)
+        initial_job = create_initial_job(dax, version, subject_files, subject, options=options)
         if not initial_job:
             return False
         if invoke_cmd:
             initial_job.invoke('on_success', invoke_cmd)
         dax.addJob(initial_job)
-    recon2_rh_job = create_hemi_job(dax, version, cores, 'rh', subject, options)
+    recon2_rh_job = create_hemi_job(dax, version, cores, 'rh', subject, options=options)
     if not recon2_rh_job:
         return False
     if invoke_cmd:
         recon2_rh_job.invoke('on_success', invoke_cmd)
     dax.addJob(recon2_rh_job)
     dax.addDependency(Pegasus.DAX3.Dependency(parent=initial_job, child=recon2_rh_job))
-    recon2_lh_job = create_hemi_job(dax, version, cores, 'lh', subject, options)
+    recon2_lh_job = create_hemi_job(dax, version, cores, 'lh', subject, options=options)
     if not recon2_lh_job:
         return False
     if invoke_cmd:
         recon2_lh_job.invoke('on_success', invoke_cmd)
     dax.addJob(recon2_lh_job)
     dax.addDependency(Pegasus.DAX3.Dependency(parent=initial_job, child=recon2_lh_job))
-    final_job = create_final_job(dax, version, subject, options)
+    final_job = create_final_job(dax, version, subject, options=options)
     if not final_job:
         return False
     dax.addJob(final_job)
