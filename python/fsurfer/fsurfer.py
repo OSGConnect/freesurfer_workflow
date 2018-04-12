@@ -110,7 +110,7 @@ def create_recon2_job(dax, version, cores, subject):
     return recon2_job
 
 
-def create_initial_job(dax, version, subject_files, subject):
+def create_initial_job(dax, version, subject_files, subject, options=None):
     """
     Set up jobs for the autorecon1 process for freesurfer
 
@@ -118,19 +118,30 @@ def create_initial_job(dax, version, subject_files, subject):
     :param version: string indicating version of Freesurfer to use
     :param subject_files: list of pegasus File objects pointing to the subject mri files
     :param subject: name of subject being processed
+    :param options: If not None, options to pass to FreeSurfer
     :return: True if errors occurred, False otherwise
     """
-    autorecon_one = Pegasus.DAX3.Executable(name="autorecon1.sh", arch="x86_64", installed=False)
+    if options:
+        autorecon_one = Pegasus.DAX3.Executable(name="autorecon1-options.sh", arch="x86_64", installed=False)
+    else:
+        autorecon_one = Pegasus.DAX3.Executable(name="autorecon1.sh", arch="x86_64", installed=False)
     autorecon_one.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR, "autorecon1.sh")), "local"))
     if not dax.hasExecutable(autorecon_one):
         dax.addExecutable(autorecon_one)
-    autorecon1_job = Pegasus.DAX3.Job(name="autorecon1.sh")
+
+    if options:
+        autorecon1_job = Pegasus.DAX3.Job(name="autorecon1-options.sh")
+    else:
+        autorecon1_job = Pegasus.DAX3.Job(name="autorecon1.sh")
+
 
     # autorecon1 doesn't get any benefit from more than one core
     autorecon1_job.addArguments(version, subject, '1')
     for subject_file in subject_files:
         autorecon1_job.addArguments(subject_file)
         autorecon1_job.uses(subject_file, link=Pegasus.DAX3.Link.INPUT)
+    if options:
+        autorecon1_job.addArguments(options)
     output = Pegasus.DAX3.File("{0}_recon1_output.tar.xz".format(subject))
     autorecon1_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=False)
     if version == '6.0.0':
@@ -138,7 +149,7 @@ def create_initial_job(dax, version, subject_files, subject):
     return autorecon1_job
 
 
-def create_hemi_job(dax, version, cores, hemisphere, subject):
+def create_hemi_job(dax, version, cores, hemisphere, subject, options=None):
     """
     Set up job for processing a given hemisphere
 
@@ -147,15 +158,22 @@ def create_hemi_job(dax, version, cores, hemisphere, subject):
     :param cores: number of cores to use
     :param hemisphere: hemisphere to process (should be rh or lh)
     :param subject: name of subject being processed
+    :param options: If not None, options to pass to FreeSurfer
     :return: True if errors occurred, False otherwise
     """
-    autorecon_two = Pegasus.DAX3.Executable(name="autorecon2.sh", arch="x86_64", installed=False)
+    if options:
+        autorecon_two = Pegasus.DAX3.Executable(name="autorecon2-options.sh", arch="x86_64", installed=False)
+    else:
+        autorecon_two = Pegasus.DAX3.Executable(name="autorecon2.sh", arch="x86_64", installed=False)
     autorecon_two.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR, "autorecon2.sh")), "local"))
     if not dax.hasExecutable(autorecon_two):
         dax.addExecutable(autorecon_two)
     if hemisphere not in ['rh', 'lh']:
         return True
-    autorecon2_job = Pegasus.DAX3.Job(name="autorecon2.sh")
+    if options:
+        autorecon2_job = Pegasus.DAX3.Job(name="autorecon2-options.sh")
+    else:
+        autorecon2_job = Pegasus.DAX3.Job(name="autorecon2.sh")
     autorecon2_job.addArguments(version, subject, hemisphere, str(cores))
     output = Pegasus.DAX3.File("{0}_recon1_output.tar.xz".format(subject))
     autorecon2_job.uses(output, link=Pegasus.DAX3.Link.INPUT)
@@ -167,7 +185,7 @@ def create_hemi_job(dax, version, cores, hemisphere, subject):
     return autorecon2_job
 
 
-def create_final_job(dax, version, subject, serial_job=False):
+def create_final_job(dax, version, subject, serial_job=False, options=None):
     """
     Set up jobs for the autorecon3 process for freesurfer
 
@@ -175,16 +193,26 @@ def create_final_job(dax, version, subject, serial_job=False):
     :param version: String with the version of FreeSurfer to use
     :param subject: name of subject being processed
     :param serial_job: boolean indicating whether this is a serial workflow or not
+    :param options: If not None, options to pass to FreeSurfer
     :return: True if errors occurred, False otherwise
     """
-    autorecon_three = Pegasus.DAX3.Executable(name="autorecon3.sh", arch="x86_64", installed=False)
+    if options:
+        autorecon_three = Pegasus.DAX3.Executable(name="autorecon3-options.sh", arch="x86_64", installed=False)
+    else:
+        autorecon_three = Pegasus.DAX3.Executable(name="autorecon3.sh", arch="x86_64", installed=False)
     autorecon_three.addPFN(Pegasus.DAX3.PFN("file://{0}".format(os.path.join(SCRIPT_DIR, "autorecon3.sh")), "local"))
     if not dax.hasExecutable(autorecon_three):
         dax.addExecutable(autorecon_three)
-    autorecon3_job = Pegasus.DAX3.Job(name="autorecon3.sh")
+    if options:
+        autorecon3_job = Pegasus.DAX3.Job(name="autorecon3-options.sh")
+    else:
+        autorecon3_job = Pegasus.DAX3.Job(name="autorecon3.sh")
 
     # only use one core on final job, more than 1 core doesn't help things
-    autorecon3_job.addArguments(version, subject, '1')
+    if options:
+        autorecon3_job.addArguments(version, subject, '1')
+    else:
+        autorecon3_job.addArguments(version, subject, '1', options)
     if serial_job:
         recon2_output = Pegasus.DAX3.File("{0}_recon2_output.tar.xz".format(subject))
         autorecon3_job.uses(recon2_output, link=Pegasus.DAX3.Link.INPUT)
@@ -256,7 +284,7 @@ def create_single_workflow(dax, version, cores, subject_files, subject):
 
 
 def create_diamond_workflow(dax, version, cores, subject_files, subject,
-                            skip_recon=False, invoke_cmd=None):
+                            skip_recon=False, invoke_cmd=None, options=None):
     """
     Create a workflow that processes MRI images using a diamond workflow
     E.g. autorecon1 -->   autorecon2-lh --> autorecon3
@@ -272,27 +300,27 @@ def create_diamond_workflow(dax, version, cores, subject_files, subject,
     """
     # setup autorecon1 run
     if not skip_recon:
-        initial_job = create_initial_job(dax, version, subject_files, subject)
+        initial_job = create_initial_job(dax, version, subject_files, subject, options)
         if not initial_job:
             return False
         if invoke_cmd:
             initial_job.invoke('on_success', invoke_cmd)
         dax.addJob(initial_job)
-    recon2_rh_job = create_hemi_job(dax, version, cores, 'rh', subject)
+    recon2_rh_job = create_hemi_job(dax, version, cores, 'rh', subject, options)
     if not recon2_rh_job:
         return False
     if invoke_cmd:
         recon2_rh_job.invoke('on_success', invoke_cmd)
     dax.addJob(recon2_rh_job)
     dax.addDependency(Pegasus.DAX3.Dependency(parent=initial_job, child=recon2_rh_job))
-    recon2_lh_job = create_hemi_job(dax, version, cores, 'lh', subject)
+    recon2_lh_job = create_hemi_job(dax, version, cores, 'lh', subject, options)
     if not recon2_lh_job:
         return False
     if invoke_cmd:
         recon2_lh_job.invoke('on_success', invoke_cmd)
     dax.addJob(recon2_lh_job)
     dax.addDependency(Pegasus.DAX3.Dependency(parent=initial_job, child=recon2_lh_job))
-    final_job = create_final_job(dax, version, subject)
+    final_job = create_final_job(dax, version, subject, options)
     if not final_job:
         return False
     dax.addJob(final_job)

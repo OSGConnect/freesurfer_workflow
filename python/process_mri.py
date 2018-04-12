@@ -112,12 +112,24 @@ def submit_workflow(subject_files, version, subject_name, user, job_run_id,
                                                  dax_subject_files,
                                                  subject_name)
     elif workflow == 'custom':
-        created = fsurfer.create_custom_workflow(dax,
-                                                 version,
-                                                 2,  # custom workflows get 2 cores
-                                                 dax_subject_files[0],
-                                                 subject_name,
-                                                 options)
+        # examine workflow
+        if '-all' in options:
+            # need to use diamond dag if user wants to run complete workflow
+            options = options.replace('-all', '')
+            created = fsurfer.create_diamond_workflow(dax,
+                                                      version,
+                                                      cores,
+                                                      dax_subject_files,
+                                                      subject_name,
+                                                      options=options,
+                                                      invoke_cmd=job_invoke_cmd)
+        else:
+            created = fsurfer.create_custom_workflow(dax,
+                                                     version,
+                                                     2,  # custom workflows get 2 cores
+                                                     dax_subject_files[0],
+                                                     subject_name,
+                                                     options)
     else:
         created = fsurfer.create_serial_workflow(dax,
                                                  version,
