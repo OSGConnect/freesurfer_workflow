@@ -19,6 +19,7 @@ setup(name='fsurfer-backend',
                'delete_jobs.py',
                'task_completed.py',
                'resync_workflows.py',
-               'fsurf_user_admin.py'],
+               'fsurf_user_admin.py',
+               'email_fsurf_notification.py'],
       license='Apache 2.0')
 
