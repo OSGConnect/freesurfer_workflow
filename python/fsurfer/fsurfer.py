@@ -134,7 +134,6 @@ def create_initial_job(dax, version, subject_files, subject, options=None):
     else:
         autorecon1_job = Pegasus.DAX3.Job(name="autorecon1.sh")
 
-
     # autorecon1 doesn't get any benefit from more than one core
     autorecon1_job.addArguments(version, subject, '1')
     for subject_file in subject_files:
@@ -175,6 +174,8 @@ def create_hemi_job(dax, version, cores, hemisphere, subject, options=None):
     else:
         autorecon2_job = Pegasus.DAX3.Job(name="autorecon2.sh")
     autorecon2_job.addArguments(version, subject, hemisphere, str(cores))
+    if options:
+        autorecon2_job.addArguments(options)
     output = Pegasus.DAX3.File("{0}_recon1_output.tar.xz".format(subject))
     autorecon2_job.uses(output, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_recon2_{1}_output.tar.xz".format(subject, hemisphere))
@@ -209,10 +210,10 @@ def create_final_job(dax, version, subject, serial_job=False, options=None):
         autorecon3_job = Pegasus.DAX3.Job(name="autorecon3.sh")
 
     # only use one core on final job, more than 1 core doesn't help things
+    autorecon3_job.addArguments(version, subject, '1')
     if options:
-        autorecon3_job.addArguments(version, subject, '1')
-    else:
-        autorecon3_job.addArguments(version, subject, '1', options)
+        autorecon3_job.addArguments(options)
+
     if serial_job:
         recon2_output = Pegasus.DAX3.File("{0}_recon2_output.tar.xz".format(subject))
         autorecon3_job.uses(recon2_output, link=Pegasus.DAX3.Link.INPUT)
