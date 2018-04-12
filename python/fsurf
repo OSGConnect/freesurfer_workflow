@@ -19,7 +19,7 @@ from functools import wraps
 MAINTENANCE_NOTICE_URL = "http://fsurf.ci-connect.net/maintenance.txt"
 UPDATE_NOTICE_URL = "http://fsurf.ci-connect.net/update.json"
 REST_ENDPOINT = "http://fsurf.ci-connect.net/freesurfer"
-VERSION = '2.0.42'
+VERSION = '2.0.43'
 CREDENTIAL_FILE = os.path.expanduser('~/.fsurf/credentials')
 # supported versions of FreeSurfer
 FREESURFER_VERSIONS = ['5.1.0', '5.3.0', '6.0.0']
