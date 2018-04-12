@@ -3,8 +3,8 @@
 # $1 - Freesurfer version
 # $2 - subject name
 # $3 - num of cores to use
-# $4 - input files
-# $5 - args to freesurfer
+# $4 - args to freesurfer
+# $5 + - input files
 
 command -v module
 if [[ $? -ne 0 ]];
@@ -18,6 +18,7 @@ date
 start=`date +%s`
 subject=$2
 cores=$3
+freesurfer_args = $4
 WD=$PWD
 if [ -d "$OSG_WN_TMP" ];
 then
@@ -27,7 +28,7 @@ else
     SUBJECTS_DIR=`mktemp -d --tmpdir=$PWD`
 fi
 
-shift 3
+shift 4
 input_args=""
 while (( "$#" ));
 do
@@ -42,14 +43,14 @@ then
             -s $subject                                                     \
             $input_args                                                     \
             -autorecon1                                                     \
-            $5
+            $freesurfer_args
 else
     recon-all                                                               \
             -s $subject                                                     \
             $input_args                                                     \
             -autorecon1                                                     \
             -openmp $cores                                                  \
-            $5
+            $$freesurfer_args
 fi
 
 if [ $? -ne 0 ];
@@ -62,11 +63,13 @@ then
     recon-all                                                               \
             -s $subject                                                     \
             -autorecon2-volonly
+            $freesurfer_args
 else
     recon-all                                                               \
             -s $subject                                                     \
             -autorecon2-volonly                                             \
             -openmp $cores
+            $freesurfer_args
 fi
 
 if [ $? -ne 0 ];

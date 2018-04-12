@@ -138,11 +138,12 @@ def create_initial_job(dax, version, subject_files, subject, options=None):
 
     # autorecon1 doesn't get any benefit from more than one core
     autorecon1_job.addArguments(version, subject, '1')
+    if options:
+        # need quotes to keep options together
+        autorecon1_job.addArguments("'{0}'".format(options))
     for subject_file in subject_files:
         autorecon1_job.addArguments(subject_file)
         autorecon1_job.uses(subject_file, link=Pegasus.DAX3.Link.INPUT)
-    if options:
-        autorecon1_job.addArguments(options)
     output = Pegasus.DAX3.File("{0}_recon1_output.tar.xz".format(subject))
     autorecon1_job.uses(output, link=Pegasus.DAX3.Link.OUTPUT, transfer=False)
     if version == '6.0.0':
@@ -179,7 +180,8 @@ def create_hemi_job(dax, version, cores, hemisphere, subject, options=None):
     autorecon2_job = Pegasus.DAX3.Job(name=dax_exe_name)
     autorecon2_job.addArguments(version, subject, hemisphere, str(cores))
     if options:
-        autorecon2_job.addArguments(options)
+        # need quotes to keep options together
+        autorecon2_job.addArguments("'{0}'".format(options))
     output = Pegasus.DAX3.File("{0}_recon1_output.tar.xz".format(subject))
     autorecon2_job.uses(output, link=Pegasus.DAX3.Link.INPUT)
     output = Pegasus.DAX3.File("{0}_recon2_{1}_output.tar.xz".format(subject, hemisphere))
@@ -219,7 +221,8 @@ def create_final_job(dax, version, subject, serial_job=False, options=None):
     # only use one core on final job, more than 1 core doesn't help things
     autorecon3_job.addArguments(version, subject, '1')
     if options:
-        autorecon3_job.addArguments(options)
+        # need quotes to keep options together
+        autorecon3_job.addArguments("'{0}'".format(options))
 
     if serial_job:
         recon2_output = Pegasus.DAX3.File("{0}_recon2_output.tar.xz".format(subject))

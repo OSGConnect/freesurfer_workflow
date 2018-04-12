@@ -17,6 +17,7 @@ module load freesurfer/$version
 module load xz/5.2.2
 date
 start=`date +%s`
+freesurfer_args=$5
 WD=$PWD
 if [ -d "$OSG_WN_TMP" ];
 then
@@ -44,13 +45,13 @@ then
     recon-all                                                               \
             -s $2                                                           \
             -autorecon3                                                     \
-            $4
+            $freesurfer_args
 else
     recon-all                                                               \
             -s $2                                                           \
             -autorecon3                                                     \
             -openmp $3                                                      \
-            $4
+            $freesurfer_args
 fi
 if [ $? -ne 0 ];
 then
