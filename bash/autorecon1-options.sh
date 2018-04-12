@@ -4,7 +4,7 @@
 # $2 - subject name
 # $3 - num of cores to use
 # $4 - args to freesurfer
-# $5 + - input files
+# $5 - input file (zip file with subject dir)
 
 command -v module
 if [[ $? -ne 0 ]];
@@ -19,6 +19,7 @@ start=`date +%s`
 subject=$2
 cores=$3
 freesurfer_args = $4
+subject_file=$5
 WD=$PWD
 if [ -d "$OSG_WN_TMP" ];
 then
@@ -27,14 +28,11 @@ else
     # OSG_WN_TMP doesn't exist or isn't defined
     SUBJECTS_DIR=`mktemp -d --tmpdir=$PWD`
 fi
+cp $subject_file $SUBJECTS_DIR
+cd $SUBJECTS_DIR
+unzip $subject_file
+rm $subject_file
 
-shift 4
-input_args=""
-while (( "$#" ));
-do
-    input_args="$input_args -i $1"
-    shift
-done
 exitcode=0
 ############################################################ 1st stage - serial
 if [[ $version == "5.1.0" ]];
