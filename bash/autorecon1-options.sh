@@ -18,7 +18,7 @@ date
 start=`date +%s`
 subject=$2
 cores=$3
-freesurfer_args = $4
+freesurfer_args=$4
 subject_file=$5
 WD=$PWD
 if [ -d "$OSG_WN_TMP" ];
