@@ -48,7 +48,7 @@ else
             $input_args                                                     \
             -autorecon1                                                     \
             -openmp $cores                                                  \
-            $$freesurfer_args
+            $freesurfer_args
 fi
 
 if [ $? -ne 0 ];

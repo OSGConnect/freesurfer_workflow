@@ -17,7 +17,7 @@ module load freesurfer/$version
 module load xz/5.2.2
 date
 start=`date +%s`
-freesurfer_args=$5
+freesurfer_args=$4
 WD=$PWD
 if [ -d "$OSG_WN_TMP" ];
 then
