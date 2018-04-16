@@ -66,7 +66,7 @@ else
     recon-all                                                               \
             -s $subject                                                     \
             -autorecon2-volonly                                             \
-            -openmp $cores
+            -openmp $cores                                                  \
             $freesurfer_args
 fi
 
