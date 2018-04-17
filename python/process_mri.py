@@ -116,6 +116,7 @@ def submit_workflow(subject_files, version, subject_name, user, job_run_id,
         if '-all' in options:
             # need to use diamond dag if user wants to run complete workflow
             options = options.replace('-all', '')
+            options = options.strip()
             created = fsurfer.create_diamond_workflow(dax,
                                                       version,
                                                       cores,
