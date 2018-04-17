@@ -60,7 +60,7 @@ if [[ $version == "5.1.0" ]];
 then
     recon-all                                                               \
             -s $subject                                                     \
-            -autorecon2-volonly
+            -autorecon2-volonly                                             \
             $freesurfer_args
 else
     recon-all                                                               \
