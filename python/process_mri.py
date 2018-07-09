@@ -232,7 +232,9 @@ def process_images():
     cursor = conn.cursor()
     job_query = "SELECT id, username, num_inputs, subject, options, version " \
                 "FROM freesurfer_interface.jobs " \
-                "WHERE state = 'QUEUED'"
+                "WHERE state = 'QUEUED'" \
+                "ORDER BY RANDOM() " \
+                "LIMIT %s"
     input_file_query = "SELECT filename, path, subject_dir " \
                        "FROM freesurfer_interface.input_files " \
                        "WHERE job_id = %s AND NOT purged"
@@ -251,7 +253,7 @@ def process_images():
                     "VALUES(%s, %s) " \
                     "RETURNING id"
     try:
-        cursor.execute(job_query)
+        cursor.execute(job_query, (MAX_RUNNING_WORKFLOWS))
         for row in cursor.fetchall():
             workflow_id = row[0]
             username = row[1]
